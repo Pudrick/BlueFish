@@ -41,3 +41,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# iOS, Linux and macOS related
+ios/
+linux/
+macos/
