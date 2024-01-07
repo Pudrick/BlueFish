@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
 import 'single_thread.dart';
 
-final bbsUrl = 'https://bbs.hupu.com';
-final topicIDHI3 = 788;
+const bbsUrl = 'https://bbs.hupu.com';
+const topicIDHI3 = 788;
 
 class ThreadList {
   List<SingleThread> threadList = List.empty(growable: true);
