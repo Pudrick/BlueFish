@@ -66,10 +66,7 @@ class ThreadTitleList {
   }
 
   Future<void> refresh() async {
-    print('1');
     await getPinnedThreads();
-    print('2');
     await getNormalThreads();
-    print('3');
   }
 }
