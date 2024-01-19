@@ -1,21 +1,29 @@
-abstract class ReplyContent {}
+import 'content.dart';
 
-class TextReply implements ReplyContent {
-  late String content;
-}
-
-class ImageReply implements ReplyContent {
-  late Uri imageURL;
-
-  ImageReply(String URL) {
-    imageURL = Uri.parse(URL);
-  }
+class ReplyAuthor {
+  late Uri avatarURL;
+  late String authorName;
+  String? adminInfo;
+  late bool isOP;
+  late String puid;
 }
 
 class SingleReply {
-  List<ReplyContent> content = List.empty(growable: true);
+  late ReplyAuthor author;
 
-  void like() {}
+  List<Content> content = List.empty(growable: true);
+
+  late String pid;
+
+  late String tid;
+  late String fid;
+
+  /// need to send fid pid puid tid to server.
+  /// PC API target address : https://bbs.hupu.com/pcmapi/pc/bbs/v1/reply/light
+  /// due to lack of cookie, will be instanced later.
+  void like() {
+    //TODO:
+  }
 
   void commentTo(String replyContent) {}
 

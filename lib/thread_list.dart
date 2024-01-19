@@ -7,6 +7,7 @@ class ThreadTitleList {
   late List<SingleThreadTitle> threadTitleList = List.empty(growable: true);
 
   int topicID = 788;
+  int fid = 4875;
 
   /// 0 => main topic
   int zoneID = 0;
