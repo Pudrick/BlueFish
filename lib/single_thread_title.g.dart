@@ -24,8 +24,7 @@ SingleThreadTitle _$SingleThreadTitleFromJson(Map<String, dynamic> json) =>
       ..recommends = json['recommends'] as int
       ..time = json['time'] as String
       ..threadType = json['threadType'] as String?
-      ..contentType = json['contentType'] as int?
-      ..isPinned = json['isPinned'] as bool;
+      ..contentType = json['contentType'] as int?;
 
 Map<String, dynamic> _$SingleThreadTitleToJson(SingleThreadTitle instance) =>
     <String, dynamic>{
@@ -46,5 +45,4 @@ Map<String, dynamic> _$SingleThreadTitleToJson(SingleThreadTitle instance) =>
       'time': instance.time,
       'threadType': instance.threadType,
       'contentType': instance.contentType,
-      'isPinned': instance.isPinned,
     };

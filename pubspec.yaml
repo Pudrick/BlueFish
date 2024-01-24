@@ -38,6 +38,10 @@ dependencies:
   http: ^1.1.2
   html: ^0.15.4
   json_annotation: ^4.8.1
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -48,7 +52,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^3.0.1
   build_runner: ^2.4.8
   json_serializable: ^6.7.1
 
