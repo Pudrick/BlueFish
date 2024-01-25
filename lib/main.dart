@@ -59,10 +59,6 @@ class FirstPage extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Flexible(
                                     child: Wrap(children: [
-                                  // Text(
-                                  //   title.title,
-
-                                  // )
                                   Text.rich(TextSpan(children: [
                                     if (title.isPinned == true)
                                       const WidgetSpan(
@@ -80,6 +76,18 @@ class FirstPage extends StatelessWidget {
                                             .colorScheme.onSecondaryContainer,
                                       ),
                                     ),
+                                    if (title.threadType == "video")
+                                      const WidgetSpan(
+                                          child: Icon(
+                                        Icons.smart_display,
+                                        size: 18,
+                                      ))
+                                    else if (title.threadType == "vote")
+                                      const WidgetSpan(
+                                          child: Icon(
+                                        Icons.bar_chart,
+                                        size: 18,
+                                      ))
                                   ]))
                                 ])),
                               ],
@@ -156,15 +164,16 @@ class _BottomNavigationState extends State<BottomNavigation> {
 }
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   ThreadTitleList titleList = ThreadTitleList.defaultList();
   await titleList.refresh();
   runApp(
     MaterialApp(
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: [
+      supportedLocales: const [
         Locale('zh'),
         Locale('en'),
       ],
