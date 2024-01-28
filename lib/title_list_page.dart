@@ -14,10 +14,7 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
   bool loading = true;
   late ThreadTitleList titleList;
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
+  void refreshTitleList() {
     ReceivePort refreshPort = ReceivePort();
     Isolate.spawn(getTitleList, [refreshPort.sendPort, widget.titleList]);
     refreshPort.listen((message) {
@@ -29,106 +26,118 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    loading = true;
+    refreshTitleList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     if (loading == true) {
-      return GestureDetector(
-        onVerticalDragDown: (details) {
-          initState();
-        },
-        child: SafeArea(
-            child: Stack(
-          children: [
-            Expanded(
-              child: Container(
-                color: theme.colorScheme.surface,
-              ),
-            ),
-            const Center(
-              child: (CircularProgressIndicator()),
-            )
-          ],
-        )),
-      );
+      // TODO: detect dragdown
+      return SafeArea(
+          child: Stack(
+        children: [
+          Container(
+            color: theme.colorScheme.surface,
+          ),
+          const Center(
+            child: (CircularProgressIndicator()),
+          )
+        ],
+      ));
     } else {
       return SafeArea(
           child: (Stack(
         children: [
-          Expanded(
-            child: Container(
-              color: theme.colorScheme.surface,
-            ),
+          Container(
+            color: theme.colorScheme.background,
           ),
-          ListView(
-            children: [
-              for (var title in titleList.threadTitleList)
-                Card(
-                  elevation: 0.5,
-                  margin: const EdgeInsets.all(5),
-                  color: theme.colorScheme.secondaryContainer,
-                  child: InkWell(
-                      child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          const SizedBox(width: 10),
-                          Flexible(
-                              child: Wrap(children: [
-                            Text.rich(TextSpan(children: [
-                              if (title.isPinned == true)
-                                const WidgetSpan(
-                                    child: Icon(
-                                  Icons.push_pin,
-                                  size: 18,
-                                  color: Colors.red,
-                                )),
-                              TextSpan(
-                                text: title.title,
-                                style: const TextStyle(fontSize: 18),
+          RefreshIndicator(
+            onRefresh: () => Future(() {
+              refreshTitleList();
+            }),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                for (var title in titleList.threadTitleList)
+                  Card(
+                    elevation: 0.5,
+                    margin: const EdgeInsets.all(5),
+                    color: theme.colorScheme.secondaryContainer,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                          splashFactory: InkRipple.splashFactory,
+                          onTap: () {},
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                      child: Wrap(children: [
+                                    Text.rich(TextSpan(children: [
+                                      if (title.isPinned == true)
+                                        const WidgetSpan(
+                                            child: Icon(
+                                          Icons.push_pin,
+                                          size: 18,
+                                          color: Colors.red,
+                                        )),
+                                      TextSpan(
+                                        text: title.title,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                      if (title.threadType == "video")
+                                        const WidgetSpan(
+                                            child: Icon(
+                                          Icons.smart_display,
+                                          size: 18,
+                                        ))
+                                      else if (title.threadType == "vote")
+                                        const WidgetSpan(
+                                            child: Icon(
+                                          Icons.bar_chart,
+                                          size: 18,
+                                        ))
+                                    ]))
+                                  ])),
+                                ],
                               ),
-                              if (title.threadType == "video")
-                                const WidgetSpan(
-                                    child: Icon(
-                                  Icons.smart_display,
-                                  size: 18,
-                                ))
-                              else if (title.threadType == "vote")
-                                const WidgetSpan(
-                                    child: Icon(
-                                  Icons.bar_chart,
-                                  size: 18,
-                                ))
-                            ]))
-                          ])),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          const SizedBox(width: 10),
-                          const Icon(
-                            Icons.timer_outlined,
-                            size: 15,
-                          ),
-                          Text(title.time),
-                          Expanded(
-                              child: Container(
-                            height: 10,
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  const SizedBox(width: 10),
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    size: 15,
+                                  ),
+                                  Text(title.time),
+                                  Expanded(
+                                    child: Container(
+                                      height: 10,
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.account_circle_outlined,
+                                    size: 15,
+                                  ),
+                                  Text(title.user_name,
+                                      textAlign: TextAlign.end),
+                                  const SizedBox(width: 10),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                            ],
                           )),
-                          const Icon(
-                            Icons.account_circle_outlined,
-                            size: 15,
-                          ),
-                          Text(title.user_name, textAlign: TextAlign.end),
-                          const SizedBox(width: 10),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                    ],
-                  )),
-                )
-            ],
+                    ),
+                  )
+              ],
+            ),
           ),
         ],
       )));
