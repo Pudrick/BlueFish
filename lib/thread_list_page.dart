@@ -109,28 +109,53 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                                 ],
                               ),
                               const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  const SizedBox(width: 10),
-                                  const Icon(
-                                    Icons.timer_outlined,
-                                    size: 15,
-                                  ),
-                                  Text(title.time),
-                                  Expanded(
-                                    child: Container(
-                                      height: 10,
+                              Stack(children: [
+                                Row(
+                                  children: [
+                                    const SizedBox(width: 10),
+                                    const Icon(
+                                      Icons.timer_outlined,
+                                      size: 15,
                                     ),
-                                  ),
-                                  const Icon(
-                                    Icons.account_circle_outlined,
-                                    size: 15,
-                                  ),
-                                  Text(title.user_name,
-                                      textAlign: TextAlign.end),
-                                  const SizedBox(width: 10),
-                                ],
-                              ),
+                                    Text(title.time),
+                                    Expanded(
+                                      child: Container(
+                                        height: 10,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        height: 10,
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.account_circle_outlined,
+                                      size: 15,
+                                    ),
+                                    Text(title.user_name,
+                                        textAlign: TextAlign.end),
+                                    const SizedBox(width: 10),
+                                  ],
+                                ),
+                                Center(
+                                    child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.thumb_up_alt_outlined,
+                                      size: 15,
+                                    ),
+                                    Text(title.recommends.toString()),
+                                    const Text("/"),
+                                    const Icon(
+                                      Icons.comment_outlined,
+                                      size: 15,
+                                    ),
+                                    Text(title.replys.toString()),
+                                  ],
+                                )),
+                              ]),
                               const SizedBox(height: 3),
                             ],
                           )),
@@ -156,6 +181,21 @@ class ThreadListPage extends StatelessWidget {
         body: SafeArea(child: TitleListPageBody(titleList)));
   }
 }
+
+// TODO:
+// class TopBar extends StatefulWidget {
+//   @override
+//   State<TopBar> createState() => _TopBarState();
+// }
+
+// class _TopBarState extends State<TopBar> {
+//   int sortType = 0;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return
+//   }
+// }
 
 class BottomNavigation extends StatefulWidget {
   const BottomNavigation({super.key});
