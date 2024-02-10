@@ -3,8 +3,8 @@ import 'thread_list.dart';
 import 'dart:isolate';
 
 class TitleListPageBody extends StatefulWidget {
-  ThreadTitleList titleList;
-  TitleListPageBody(this.titleList, {super.key});
+  final ThreadTitleList titleList;
+  const TitleListPageBody(this.titleList, {super.key});
 
   @override
   State<TitleListPageBody> createState() => _TitleListPageBodyState();
@@ -36,7 +36,6 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     if (loading == true) {
-      // TODO: detect dragdown
       return SafeArea(
           child: Stack(
         children: [
