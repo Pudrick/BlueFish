@@ -1,0 +1,50 @@
+[admin list]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/bbsadmin/v1/data/listAdmins?topicId=788&clientId=152492869&crt=1704956161980&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=Bt3gwpcufSTryBYuuv16fplXKnnIr6sWPQxG41qWI1d7J9x00kTZ4C28zUMREt%2FRf3zUsgo1afBb0xSQQ%2BJ0KEA%3D%3D&sign=c1708908894c3720ac4c6d1a651ff08a
+
+https://bbs.mobileapi.hupu.com/1/8.0.30/bbsadmin/v1/data/listAdmins?topicId=788
+
+[pinned topic] 
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/788?clientId=152492869&crt=1704956161980&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=Bt3gwpcufSTryBYuuv16fplXKnnIr6sWPQxG41qWI1d7J9x00kTZ4C28zUMREt%2FRf3zUsgo1afBb0xSQQ%2BJ0KEA%3D%3D&sign=751050afe60df50426317f1aa20669cb
+
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/788
+
+[main topic]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&clientId=152492869&crt=1704956162263&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=Bt3gwpcufSTryBYuuv16fplXKnnIr6sWPQxG41qWI1d7J9x00kTZ4C28zUMREt%2FRf3zUsgo1afBb0xSQQ%2BJ0KEA%3D%3D&sign=dcb95490309342f0c5a5e1791320d8f8
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1
+
+newest_replys: https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1
+# most to page 39, page 40 is null.
+
+newest_publish: https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=1&page=1
+
+[theater topic]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&zoneId=253&clientId=152492869&crt=1704956172023&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=Bt3gwpcufSTryBYuuv16fplXKnnIr6sWPQxG41qWI1d7J9x00kTZ4C28zUMREt%2FRf3zUsgo1afBb0xSQQ%2BJ0KEA%3D%3D&sign=9e04d17385ac13c1736f5c7f98b9e5f0
+
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=253
+
+[24h rank]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=4&page=1&stamp=0&width=1039&clientId=152492869&crt=1705378373164&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=6bb723982cea5e34cabea7b9e022c3fa
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=4&page=1
+
+[essences]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=3&page=1&stamp=0&width=1039&clientId=152492869&crt=1705378397750&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=abe970b3991b2bca69a0874d5634c143
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&zoneId=228&clientId=152492869&crt=1705378397771&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=3e29c1eeff762b04840367bf0dcf5620
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=3&page=1
+
+[how to play]
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=228
+
+[help eachother]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&zoneId=233&clientId=152492869&crt=1705378491133&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=f63656c4913f412304cc147e3753a337
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=233
+
+[2nd creation]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&zoneId=229&clientId=152492869&crt=1705378532209&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=fefa44607cd0705d34bd1513d32b98a0
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=229
+
+[news]
+# https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&stamp=0&width=1039&zoneId=232&clientId=152492869&crt=1705378570798&night=0&channel=appchina&client=fb20b2390524d81a&_ssid=PHVua25vd24gc3NpZD4%3D&_imei=395500050269768&android_id=fb20b2390524d81a&time_zone=Asia%2FShanghai&deviceId=BjRfHG6Xn4%2BTi%2FktFcvcjcMv6tCa0oHeBnmUbMP%2Fq018U6Z3WfdaZ0CV3LElBAnFYxv4cFZpaOpPQEoIrmrkfIw%3D%3D&sign=28a8ea4f57bdf4b41283576d2793ae24
+https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=232
+
+
+
