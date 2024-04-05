@@ -9,13 +9,14 @@ int mainTopicID = 788;
 
 int mainZoneID = 0;
 int theaterZoneID = 253;
+String appVersionNumber = "8.0.68";
 
 /// position 0 just for index offset.
 /// as tab_type, 2 for newest reply, 1 for newest publish, 4 for 24h rank, 3 for essences
 enum SortType { sortType0Position, newestPublish, newestReply, essences, rank }
 
 class ThreadTitleList extends ChangeNotifier {
-  late List<SingleThreadTitle> threadTitleList = List.empty(growable: true);
+  List<SingleThreadTitle> threadTitleList = List.empty(growable: true);
 
   int topicID = mainTopicID;
   int fid = 4875;
@@ -28,7 +29,7 @@ class ThreadTitleList extends ChangeNotifier {
   }
 
   int page = 1;
-  String appVersion = "8.0.68";
+  String appVersion = appVersionNumber;
 
   bool isRefreshing = false;
 
