@@ -182,8 +182,6 @@ class ThreadListPage extends StatelessWidget {
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
   const TopBar({super.key});
 
-  // int sortType = 0;
-
   @override
   Widget build(BuildContext context) {
     return AppBar(
