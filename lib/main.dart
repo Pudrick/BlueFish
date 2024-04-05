@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'thread_list_page.dart';
-import 'theme_settings.dart';
+import 'pages/thread_list_page.dart';
+import 'userdata/theme_settings.dart';
 
 void main() {
   launchApp();
