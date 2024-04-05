@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'thread_list.dart';
+import '../utils/thread_list.dart';
 import 'package:provider/provider.dart';
-import 'main.dart';
 
 class TitleListPageBody extends StatefulWidget {
   final ThreadTitleList titleList;
