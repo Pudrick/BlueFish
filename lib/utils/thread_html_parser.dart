@@ -1,55 +1,47 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:bluefish/models/single_floor.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
-import 'package:http/http.dart' as http;
-import '../models/thread_detail.dart';
 
-class HttpwithUA extends http.BaseClient {
-  final String userAgent = '''
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
-''';
-  final http.Client _inner;
+import './http_with_ua.dart';
 
-  HttpwithUA(this._inner);
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) {
-    request.headers['user-agent'] = userAgent;
-    return _inner.send(request);
+Future<Map> getThreadInfoMapFromTid(dynamic tid) async {
+  if (tid is int) tid = tid.toString();
+  Uri threadURL = Uri.parse("https://bbs.hupu.com/$tid.html");
+  var response = await HttpwithUA().get(threadURL);
+  if (response.statusCode == 200) {
+    var threadHTML = parse(response.body);
+    return getThreadInfoMapFromHttp(threadHTML);
+  } else {
+    throw TimeoutException("Failed to get http response.");
   }
 }
 
-Future<Document> getHTMLFromTid(String tid) async {
-  Uri threadURL = Uri.parse("https://bbs.hupu.com/$tid.html");
-  var wholeThreadHTML = await HttpwithUA(http.Client()).get(threadURL);
-  var threadHTML = parse(wholeThreadHTML.body);
-  return threadHTML;
+Map getThreadInfoMapFromHttp(Document rawHttp) {
+  var threadJsonStr = rawHttp.getElementById("__NEXT_DATA__")!.innerHtml;
+  var threadObject = jsonDecode(threadJsonStr);
+  var detailInfo = threadObject["props"]["pageProps"]["detail"];
+  return {
+    "thread": detailInfo["thread"],
+    "lights": detailInfo["lights"],
+    "replies": detailInfo["replies"]
+  };
 }
 
-// TODO： need to rewrite
-Uri getOPAvatarUri(Document threadHTML) {}
-
-Map getOPotherInfoMap(Document threadHTML) {}
-
-String getMainContentHTML(Document threadHTML) {}
-
-SingleFloor getMainFloor(Document threadHTML) {
-  Author OP = Author();
-  OP.avatarURL = getOPAvatarUri(threadHTML);
-  var infoMap = getOPotherInfoMap(threadHTML);
-  OP.authorName = infoMap["ID"];
-  OP.isOP = true;
-  OP.profileURL = Uri.parse(infoMap["userProfileStr"]);
-  SingleFloor mainFloor = SingleFloor();
-  mainFloor.author = OP;
-  mainFloor.postDateTime = infoMap["datetime"];
-  mainFloor.postLocation = infoMap["location"];
-  mainFloor.contentHTML = getMainContentHTML(threadHTML);
-  return mainFloor;
-}
-
-List<SingleFloor> getLightReplyFloorList(Document threadHTML) {}
-
-Author getReplyAuthor(Document replyHTML) {}
-
-Uri getReplyAuthorAvatar(Element replyListContainerHTML) {}
+// SingleFloor getMainFloor(Document threadHTML) {
+  // TODO: need to refactor all.
+  // Author OP = Author();
+  // OP.avatarURL = getOPAvatarUri(threadHTML);
+  // var infoMap = getOPotherInfoMap(threadHTML);
+  // OP.authorName = infoMap["ID"];
+  // OP.isOP = true;
+  // OP.profileURL = Uri.parse(infoMap["userProfileStr"]);
+  // SingleFloor mainFloor = SingleFloor();
+  // mainFloor.author = OP;
+  // mainFloor.postDateTime = infoMap["datetime"];
+  // mainFloor.postLocation = infoMap["location"];
+  // mainFloor.contentHTML = getMainContentHTML(threadHTML);
+  // return mainFloor;
+// }
