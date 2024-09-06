@@ -1,4 +1,5 @@
 import 'single_floor.dart';
+import '../utils/thread_parser.dart';
 
 class ThreadDetail {
   late String tid;
@@ -13,8 +14,7 @@ class ThreadDetail {
 
   Future<ThreadDetail> fromTid(String tid) async {
     // TODO: change to get tuple from TID
-    // var threadHTML = await getHTMLFromTid(tid);
-    // mainFloor = getMainFloor(threadHTML);
+    var threadInfo = await getThreadInfoMapFromTid(tid);
   }
 
   void likeThread() {}

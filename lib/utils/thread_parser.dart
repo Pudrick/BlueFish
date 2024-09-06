@@ -30,6 +30,9 @@ Map getThreadInfoMapFromHttp(Document rawHttp) {
   };
 }
 
+SingleFloor getMainFloor(Map threadInfoMap) {
+  Author OP = Author(threadInfoMap["author"]);
+}
 // SingleFloor getMainFloor(Document threadHTML) {
   // TODO: need to refactor all.
   // Author OP = Author();

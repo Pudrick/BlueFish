@@ -2,8 +2,21 @@ class Author {
   late Uri avatarURL;
   late String authorName;
   late bool isOP;
-  // late String puid;
-  late Uri profileURL;
+  late String puid;
+  late String euid;
+  late Uri profileURL; // can be formed from euid.
+  late bool isBlacked;
+  late bool isAdmin;
+
+  Author(Map threadJsonMap) {
+    puid = threadJsonMap["puid"];
+    authorName = threadJsonMap["puname"];
+    euid = threadJsonMap["euid"];
+    avatarURL = Uri.parse(threadJsonMap["header"]);
+    profileURL = Uri.parse(threadJsonMap["url"]);
+    isBlacked = threadJsonMap["isBlacked"];
+    isAdmin = threadJsonMap["isAdmin"];
+  }
 }
 
 class SingleFloor {
