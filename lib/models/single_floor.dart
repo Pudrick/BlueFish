@@ -19,16 +19,21 @@ class Author {
   }
 }
 
-class SingleFloor {
+class SingleReplyFloor {
   late Author author;
-  late String postDateTime;
+  late int postDateTimeStamp;
+  late String postDateTimeString; // in fact can be find from timestamp
   late String postLocation;
-
+  late String sourceClient;
   late String contentHTML;
-}
-
-class SingleReplyFloor extends SingleFloor {
   late bool isOP;
+  late int lightCount;
+  late int pid;
+  late bool isAudit; // what's this?
+  late bool isHidden;
+  late bool isDelete;
+  late bool idSelfDelete;
+  late bool isStarter; // and what is this?
 
   /// need to send fid pid puid tid to server.
   /// PC API target address : https://bbs.hupu.com/pcmapi/pc/bbs/v1/reply/light
