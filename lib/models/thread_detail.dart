@@ -1,10 +1,12 @@
+import 'package:bluefish/models/thread_main.dart';
+
 import 'single_floor.dart';
 import '../utils/thread_parser.dart';
 
 class ThreadDetail {
   late String tid;
 
-  late SingleFloor mainFloor;
+  late ThreadMain mainFloor;
 
   List<SingleReplyFloor> replyHtmlList = List.empty(growable: true);
   List<SingleReplyFloor> lightedReplyHtmlList = List.empty(growable: true);
