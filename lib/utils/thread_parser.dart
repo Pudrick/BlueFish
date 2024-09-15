@@ -32,7 +32,7 @@ Map getThreadInfoMapFromHttp(Document rawHttp) {
   };
 }
 
-ThreadMain getMainFloor(Map threadInfoMap) {
+ThreadMain getMainFloorFromWholeMap(Map threadInfoMap) {
   return ThreadMain(threadInfoMap["thread"]);
 }
 // SingleFloor getMainFloor(Document threadHTML) {

@@ -22,7 +22,7 @@ class ThreadMain {
   late DateTime lastReplyTime;
   late String postDateTimeReadable; // in fact can be find from timestamp
 
-  // what's this?
+  // what's this? maybe locked/deleted/normal?
   late int status;
 
   // maybe text/video/vote or something like that?

@@ -17,7 +17,7 @@ class ThreadDetail {
   Future<ThreadDetail> fromTid(String tid) async {
     // TODO: change to get json from TID
     var threadInfo = await getThreadInfoMapFromTid(tid);
-    mainFloor = getMainFloor(threadInfo);
+    mainFloor = getMainFloorFromWholeMap(threadInfo);
   }
 
   void likeThread() {}
