@@ -1,6 +1,6 @@
 import 'package:bluefish/models/thread_main.dart';
 
-import 'single_floor.dart';
+import 'single_reply_floor.dart';
 import '../utils/thread_parser.dart';
 
 class ThreadDetail {
@@ -15,8 +15,9 @@ class ThreadDetail {
       this.mainFloor, this.replyHtmlList, this.lightedReplyHtmlList);
 
   Future<ThreadDetail> fromTid(String tid) async {
-    // TODO: change to get tuple from TID
+    // TODO: change to get json from TID
     var threadInfo = await getThreadInfoMapFromTid(tid);
+    mainFloor = getMainFloor(threadInfo);
   }
 
   void likeThread() {}

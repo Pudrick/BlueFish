@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:bluefish/models/single_floor.dart';
+import 'package:bluefish/models/single_reply_floor.dart';
+import '../models/author.dart';
 import 'package:bluefish/models/thread_main.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
@@ -32,7 +33,7 @@ Map getThreadInfoMapFromHttp(Document rawHttp) {
 }
 
 ThreadMain getMainFloor(Map threadInfoMap) {
-  Author OP = Author(threadInfoMap["author"]);
+  return ThreadMain(threadInfoMap["thread"]);
 }
 // SingleFloor getMainFloor(Document threadHTML) {
   // TODO: need to refactor all.
