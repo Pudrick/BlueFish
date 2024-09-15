@@ -1,7 +1,7 @@
 import 'author.dart';
 
 class ThreadMain {
-  late int tid;
+  late String tid;
   late String title;
   late String contentHTML;
 
@@ -10,10 +10,10 @@ class ThreadMain {
   late String video;
 
   late String urlSuffix;
-  late int lights;
-  late int replies;
-  late int recommend;
-  late int read;
+  late int lightsNum;
+  late int repliesNum;
+  late int recommendNum;
+  late int readNum;
   late String client;
   late bool hasVideo;
 
@@ -24,6 +24,8 @@ class ThreadMain {
 
   // what's this?
   late int status;
+
+  // maybe text/video/vote or something like that?
   late int contentType;
 
   late int isLock;
@@ -37,15 +39,15 @@ class ThreadMain {
     videoCover = threadJsonMap["videoCover"];
     video = threadJsonMap["video"];
     urlSuffix = threadJsonMap["url"];
-    lights = threadJsonMap["lights"];
-    replies = threadJsonMap["replies"];
-    recommend = threadJsonMap["recommend"];
-    read = threadJsonMap["read"];
+    lightsNum = threadJsonMap["lights"];
+    repliesNum = threadJsonMap["replies"];
+    recommendNum = threadJsonMap["recommend"];
+    readNum = threadJsonMap["read"];
     client = threadJsonMap["client"];
     postDateTime =
         DateTime.fromMillisecondsSinceEpoch(threadJsonMap["createdAt"]);
     postDateTimeReadable = threadJsonMap["createdAtFormat"];
-    postDateTime =
+    lastReplyTime =
         DateTime.fromMillisecondsSinceEpoch(threadJsonMap["repliedAt"]);
     hasVideo = threadJsonMap["hasVideo"];
     author = Author(threadJsonMap["author"]);
