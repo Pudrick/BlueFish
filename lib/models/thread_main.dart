@@ -1,9 +1,38 @@
 import 'author.dart';
 
+//TODO: add initializer
+class VoteItem {
+  late int sort;
+  late String content;
+  late int optionVoteCount;
+  late Uri attachment;
+}
+
+//TODO: add initializer
+class Vote {
+  late int voteID;
+  late String title;
+  late int userOptionLimit;
+  late int userCount;
+  late int voteCount;
+  late bool canVote;
+  late int puid;
+  late List<VoteItem> voteDetailList;
+  late List<int> userVoteRecordList;
+  late int votingType; //what's this? maybe the status of availability
+  int? deadline; // days remaining
+  late String endTimeStr;
+  late List userVoteRecordMap;
+  late int voteNum; //maybe always 0?
+  String? votingForm; // maybe always null?
+  late bool end;
+}
+
 class ThreadMain {
   late String tid;
   late String title;
   late String contentHTML;
+  Vote? vote;
 
   // TODO: make sure the type of these in video thread
   late String videoCover;
@@ -32,6 +61,7 @@ class ThreadMain {
   late String rawContent;
   late String postLocation;
 
+  // TODO: add vote initilization
   ThreadMain(Map threadJsonMap) {
     tid = threadJsonMap["tid"];
     title = threadJsonMap["title"];
@@ -50,7 +80,7 @@ class ThreadMain {
     lastReplyTime =
         DateTime.fromMillisecondsSinceEpoch(threadJsonMap["repliedAt"]);
     hasVideo = threadJsonMap["hasVideo"];
-    author = Author(threadJsonMap["author"]);
+    author = Author.createThreadAuthor(threadJsonMap["author"]);
     status = threadJsonMap["status"];
     isLock = threadJsonMap["isLock"];
     contentType = threadJsonMap["contentType"];

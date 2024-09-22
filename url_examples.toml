@@ -47,4 +47,6 @@ https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_
 https://bbs.mobileapi.hupu.com/1/8.0.30/topics/getTopicThreads?topic_id=788&tab_type=2&page=1&zoneId=232
 
 
+[getVoteDetail]
+# https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11073905
 
