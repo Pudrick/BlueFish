@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:core';
 
 import 'package:bluefish/models/single_reply_floor.dart';
 import '../models/author.dart';
@@ -9,9 +10,9 @@ import 'package:html/parser.dart';
 
 import './http_with_ua.dart';
 
-Future<Map> getThreadInfoMapFromTid(dynamic tid) async {
+Future<Map> getThreadInfoMapFromTid(dynamic tid, int page) async {
   if (tid is int) tid = tid.toString();
-  Uri threadURL = Uri.parse("https://bbs.hupu.com/$tid.html");
+  Uri threadURL = Uri.parse("https://bbs.hupu.com/$tid-$page.html");
   var response = await HttpwithUA().get(threadURL);
   if (response.statusCode == 200) {
     var threadHTML = parse(response.body);
@@ -32,21 +33,28 @@ Map getThreadInfoMapFromHttp(Document rawHttp) {
   };
 }
 
+List<SingleReplyFloor> getReplyListFromWholeMap(
+    String requireType, Map threadInfoMap) {
+  List<SingleReplyFloor> res = List.empty(growable: true);
+  late List repliesMap;
+  if (requireType == "lights") {
+    repliesMap = threadInfoMap[requireType];
+  } else if (requireType == "replies") {
+    repliesMap = threadInfoMap["replies"]["list"];
+  }
+  for (var lightReplyMap in repliesMap) {
+    var reply = SingleReplyFloor.fromReplyMap(lightReplyMap);
+    res.add(reply);
+  }
+  return res;
+}
+
 ThreadMain getMainFloorFromWholeMap(Map threadInfoMap) {
   return ThreadMain(threadInfoMap["thread"]);
 }
-// SingleFloor getMainFloor(Document threadHTML) {
-  // TODO: need to refactor all.
-  // Author OP = Author();
-  // OP.avatarURL = getOPAvatarUri(threadHTML);
-  // var infoMap = getOPotherInfoMap(threadHTML);
-  // OP.authorName = infoMap["ID"];
-  // OP.isOP = true;
-  // OP.profileURL = Uri.parse(infoMap["userProfileStr"]);
-  // SingleFloor mainFloor = SingleFloor();
-  // mainFloor.author = OP;
-  // mainFloor.postDateTime = infoMap["datetime"];
-  // mainFloor.postLocation = infoMap["location"];
-  // mainFloor.contentHTML = getMainContentHTML(threadHTML);
-  // return mainFloor;
-// }
+
+int getTotalRepliesNumFromWholeMap(Map threadInfoMap) {
+  return threadInfoMap["replies"]["count"];
+}
+
+// List getReplyFloorsFromWholeMap(Map threadInfoMap) {}

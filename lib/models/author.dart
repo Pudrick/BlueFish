@@ -1,20 +1,30 @@
 class Author {
   late Uri avatarURL;
   late String authorName;
-  late bool isOP;
+  bool isOP = false;
   late String puid;
   late String euid;
   late Uri profileURL; // can be formed from euid.
   late bool isBlacked;
   late bool isAdmin;
 
-  Author(Map threadAuthorJsonMap) {
+  factory Author.createThreadAuthor(Map threadAuthorJsonMap) {
+    var simplyAuthor = Author.createReplyAuthor(threadAuthorJsonMap);
+    simplyAuthor.isBlacked = threadAuthorJsonMap["isBlacked"];
+    simplyAuthor.isAdmin = threadAuthorJsonMap["isAdmin"];
+    return simplyAuthor;
+  }
+
+  factory Author.createReplyAuthor(Map threadAuthorJsonMap) {
+    var simplyAuthor = Author.createQuoteAuthor(threadAuthorJsonMap);
+    simplyAuthor.avatarURL = Uri.parse(threadAuthorJsonMap["header"]);
+    return simplyAuthor;
+  }
+
+  Author.createQuoteAuthor(Map threadAuthorJsonMap) {
     puid = threadAuthorJsonMap["puid"];
     authorName = threadAuthorJsonMap["puname"];
     euid = threadAuthorJsonMap["euid"];
-    avatarURL = Uri.parse(threadAuthorJsonMap["header"]);
     profileURL = Uri.parse(threadAuthorJsonMap["url"]);
-    isBlacked = threadAuthorJsonMap["isBlacked"];
-    isAdmin = threadAuthorJsonMap["isAdmin"];
   }
 }
