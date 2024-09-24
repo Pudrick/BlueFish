@@ -33,12 +33,12 @@ class SingleReplyFloor extends Quote {
   String? replyVideo;
   String? replyVideoCover;
 
-  late bool isOP;
+  late bool isOP; // json 'isStarter' means OP.
 
   late bool isDelete;
   late bool idSelfDelete;
   late bool isHidden;
-  late bool isStarter; // and what is this?
+
   late DateTime postTime;
   late String postTimeReadable; // can be infer from postTime
   late Author replyAuthor;
@@ -62,7 +62,7 @@ class SingleReplyFloor extends Quote {
     isAudit = jsonReplyMap["isAudit"];
     isHidden = jsonReplyMap["isHidden"];
     isDelete = jsonReplyMap["isDelete"];
-    isStarter = jsonReplyMap["isStarter"];
+    isOP = jsonReplyMap["isStarter"];
     postTime = DateTime.fromMillisecondsSinceEpoch(jsonReplyMap["createdAt"]);
     postTimeReadable = jsonReplyMap["createdAtFormat"];
     replyAuthor = Author.createReplyAuthor(jsonReplyMap["author"]);
