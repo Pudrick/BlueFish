@@ -26,10 +26,11 @@ Map getThreadInfoMapFromHttp(Document rawHttp) {
   var threadJsonStr = rawHttp.getElementById("__NEXT_DATA__")!.innerHtml;
   var threadObject = jsonDecode(threadJsonStr);
   var detailInfo = threadObject["props"]["pageProps"]["detail"];
+  detailInfo["thread"]["isRecommended"] = detailInfo["isRecommended"];
   return {
     "thread": detailInfo["thread"],
     "lights": detailInfo["lights"],
-    "replies": detailInfo["replies"]
+    "replies": detailInfo["replies"],
   };
 }
 
@@ -47,10 +48,6 @@ List<SingleReplyFloor> getReplyListFromWholeMap(
     res.add(reply);
   }
   return res;
-}
-
-ThreadMain getMainFloorFromWholeMap(Map threadInfoMap) {
-  return ThreadMain(threadInfoMap["thread"]);
 }
 
 int getTotalRepliesNumFromWholeMap(Map threadInfoMap) {

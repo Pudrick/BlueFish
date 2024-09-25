@@ -6,8 +6,6 @@ const String chromeUserAgent =
 class HttpwithUA extends http.BaseClient {
   final http.Client _inner = http.Client();
 
-  HttpwithUA();
-
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     request.headers['user-agent'] = chromeUserAgent;
