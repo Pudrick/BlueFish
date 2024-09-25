@@ -6,6 +6,8 @@ import '../utils/thread_parser.dart';
 class ThreadDetail {
   late String tid;
 
+  late bool hasLiked;
+
   late ThreadMain mainFloor;
   late List<SingleReplyFloor> lightedReplies;
   late List<SingleReplyFloor> replies;
@@ -27,12 +29,11 @@ class ThreadDetail {
   Future<void> refresh() async {
     // TODO: change to get json from TID
     var threadInfo = await getThreadInfoMapFromTid(tid, currentPage);
-    mainFloor = getMainFloorFromWholeMap(threadInfo);
-    totalRepliesNum = getTotalRepliesNumFromWholeMap(threadInfo);
+    mainFloor = ThreadMain(threadInfo["thread"]);
+    totalRepliesNum = threadInfo["replies"]["count"];
     totalPagesNum = (totalRepliesNum / repliesPerPage).ceil();
     lightedReplies = getReplyListFromWholeMap("lights", threadInfo);
-    replies = getReplyListFromWholeMap(
-        "replies", threadInfo); // TODO: check isOP in reply.
+    replies = getReplyListFromWholeMap("replies", threadInfo);
   }
 
   void likeThread() {}

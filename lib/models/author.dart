@@ -7,6 +7,7 @@ class Author {
   late Uri profileURL; // can be formed from euid.
   late bool isBlacked;
   late bool isAdmin;
+  String? adminsInfo;
 
   factory Author.createThreadAuthor(Map threadAuthorJsonMap) {
     var simplyAuthor = Author.createReplyAuthor(threadAuthorJsonMap);
@@ -18,6 +19,9 @@ class Author {
   factory Author.createReplyAuthor(Map threadAuthorJsonMap) {
     var simplyAuthor = Author.createQuoteAuthor(threadAuthorJsonMap);
     simplyAuthor.avatarURL = Uri.parse(threadAuthorJsonMap["header"]);
+    if (threadAuthorJsonMap.containsKey("adminsInfo")) {
+      simplyAuthor.adminsInfo = threadAuthorJsonMap["adminsInfo"];
+    }
     return simplyAuthor;
   }
 

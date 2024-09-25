@@ -45,6 +45,7 @@ class ThreadMain {
   late int readNum;
   late String client;
   late bool hasVideo;
+  late bool isRecommended;
 
   late Author author;
   late DateTime postDateTime;
@@ -72,6 +73,7 @@ class ThreadMain {
     lightsNum = threadJsonMap["lights"];
     repliesNum = threadJsonMap["replies"];
     recommendNum = threadJsonMap["recommend"];
+    isRecommended = threadJsonMap["isRecommended"];
     readNum = threadJsonMap["read"];
     client = threadJsonMap["client"];
     postDateTime =
