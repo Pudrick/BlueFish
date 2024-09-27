@@ -1,3 +1,1 @@
-class UserSettings {
-  int titleListFontSize = 18;
-}
+import "package:shared_preferences/shared_preferences.dart";
