@@ -16,13 +16,13 @@ Future<Map> getThreadInfoMapFromTid(dynamic tid, int page) async {
   var response = await HttpwithUA().get(threadURL);
   if (response.statusCode == 200) {
     var threadHTML = parse(response.body);
-    return getThreadInfoMapFromHttp(threadHTML);
+    return getThreadInfoMapFromDOM(threadHTML);
   } else {
     throw TimeoutException("Failed to get http response.");
   }
 }
 
-Map getThreadInfoMapFromHttp(Document rawHttp) {
+Map getThreadInfoMapFromDOM(Document rawHttp) {
   var threadJsonStr = rawHttp.getElementById("__NEXT_DATA__")!.innerHtml;
   var threadObject = jsonDecode(threadJsonStr);
   var detailInfo = threadObject["props"]["pageProps"]["detail"];
@@ -48,10 +48,6 @@ List<SingleReplyFloor> getReplyListFromWholeMap(
     res.add(reply);
   }
   return res;
-}
-
-int getTotalRepliesNumFromWholeMap(Map threadInfoMap) {
-  return threadInfoMap["replies"]["count"];
 }
 
 // List getReplyFloorsFromWholeMap(Map threadInfoMap) {}
