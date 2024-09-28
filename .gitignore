@@ -57,6 +57,7 @@ Flutter-README.md
 #temporary ignore the platform-based files
 android/
 windows/
+web/
 
 # temp files
 lib/temp/*
