@@ -1,6 +1,6 @@
 class Author {
   late Uri avatarURL;
-  late String authorName;
+  late String name;
   bool isOP = false;
   late String puid;
   late String euid;
@@ -27,7 +27,7 @@ class Author {
 
   Author.createQuoteAuthor(Map threadAuthorJsonMap) {
     puid = threadAuthorJsonMap["puid"];
-    authorName = threadAuthorJsonMap["puname"];
+    name = threadAuthorJsonMap["puname"];
     euid = threadAuthorJsonMap["euid"];
     profileURL = Uri.parse(threadAuthorJsonMap["url"]);
   }
