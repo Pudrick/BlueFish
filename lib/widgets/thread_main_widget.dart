@@ -1,5 +1,8 @@
 import 'package:bluefish/models/thread_main.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 
 import '../models/thread_detail.dart';
 
@@ -37,7 +40,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
           ),
         ),
         Container(
-          height: 60,
+          height: 500,
           child: Card(
             // maybe enablet this will have some performance cost
             // according to the document
@@ -47,8 +50,31 @@ class ThreadMainFloorWidget extends StatelessWidget {
               child: InkWell(
                 onTap: () {},
                 splashFactory: InkRipple.splashFactory,
-                child: Center(
-                  child: Text("notlaji"),
+                child: Container(
+                  margin: const EdgeInsets.all(5),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              mainFloor.author.avatarURL.toString(),
+                              scale: 4,
+                            ),
+                          ),
+                          Column(children: [
+                            Text.rich(TextSpan(
+                                text: mainFloor.author.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold))),
+                            Text(
+                                "${DateFormat("yyyy-MM-dd HH:mm:ss").format(mainFloor.postDateTime)} (${mainFloor.postDateTimeReadable})"),
+                          ])
+                        ],
+                      )
+                    ],
+                  ),
                 ),
                 // maybe default color is enlugh.
                 // splashColor: theme.colorScheme.secondary,
