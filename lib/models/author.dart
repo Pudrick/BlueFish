@@ -6,7 +6,7 @@ class Author {
   late String euid;
   late Uri profileURL; // can be formed from euid.
   late bool isBlacked;
-  late bool isAdmin;
+  late bool isAdmin; // maybe always false for anyone? mods is false either.
   String? adminsInfo;
 
   factory Author.createThreadAuthor(Map threadAuthorJsonMap) {
