@@ -1,4 +1,5 @@
 import 'package:bluefish/models/thread_main.dart';
+import 'package:bluefish/temp/tstwgt.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -40,7 +41,6 @@ class ThreadMainFloorWidget extends StatelessWidget {
           ),
         ),
         Container(
-          height: 500,
           child: Card(
             // maybe enablet this will have some performance cost
             // according to the document
@@ -57,22 +57,55 @@ class ThreadMainFloorWidget extends StatelessWidget {
                       Row(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(7),
                             child: Image.network(
                               mainFloor.author.avatarURL.toString(),
                               scale: 4,
                             ),
                           ),
-                          Column(children: [
-                            Text.rich(TextSpan(
-                                text: mainFloor.author.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold))),
-                            Text(
-                                "${DateFormat("yyyy-MM-dd HH:mm:ss").format(mainFloor.postDateTime)} (${mainFloor.postDateTimeReadable})"),
-                          ])
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(mainFloor.author.name,
+                                        textAlign: TextAlign.start,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    const SizedBox(
+                                      width: 5,
+                                    ),
+                                    if (mainFloor.author.adminsInfo != null)
+                                      Text(
+                                        mainFloor.author.adminsInfo!,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.normal),
+                                        overflow: TextOverflow.visible,
+                                      )
+                                  ],
+                                ),
+                                Text(
+                                    "${DateFormat("yyyy-MM-dd HH:mm:ss").format(mainFloor.postDateTime)} (${mainFloor.postDateTimeReadable})"),
+                              ]),
+                          Expanded(
+                            child: Container(), // just for position holding
+                          ),
+                          Container(
+                              alignment: Alignment.center,
+                              child: switch (mainFloor.client) {
+                                "ANDROID" => const Icon(Icons.android),
+                                "IPHONE" => const Icon(Icons.apple),
+                                "PC" =>
+                                  const Icon(Icons.desktop_windows_outlined),
+                                String() => Container(),
+                              })
                         ],
-                      )
+                      ),
+                      const Divider(),
+                      Text(mainFloor.contentHTML),
                     ],
                   ),
                 ),
