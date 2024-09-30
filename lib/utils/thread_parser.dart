@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'dart:core';
 
 import 'package:bluefish/models/single_reply_floor.dart';
-import '../models/author.dart';
-import 'package:bluefish/models/thread_main.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 
