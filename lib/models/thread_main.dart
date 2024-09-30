@@ -36,7 +36,7 @@ class ThreadMain {
 
   // TODO: make sure the type of these in video thread
   late String videoCover;
-  late String video;
+  String? video;
 
   late String urlSuffix;
   late int lightsNum;

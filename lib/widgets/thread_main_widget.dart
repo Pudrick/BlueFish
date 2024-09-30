@@ -1,11 +1,8 @@
 import 'package:bluefish/models/thread_main.dart';
-import 'package:bluefish/temp/tstwgt.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:bluefish/utils/video_parser.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
-
-import '../models/thread_detail.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 class ThreadMainFloorWidget extends StatelessWidget {
   bool hasVote;
@@ -82,7 +79,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
                                       Text(
                                         mainFloor.author.adminsInfo!,
                                         style: const TextStyle(
-                                            fontWeight: FontWeight.normal),
+                                            fontWeight: FontWeight.w100),
                                         overflow: TextOverflow.visible,
                                       )
                                   ],
@@ -105,7 +102,11 @@ class ThreadMainFloorWidget extends StatelessWidget {
                         ],
                       ),
                       const Divider(),
-                      Text(mainFloor.contentHTML),
+                      HtmlWidget(
+                        // TODO: add html parser and connect it with video parser.
+                        mainFloor.contentHTML,
+                        textStyle: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
