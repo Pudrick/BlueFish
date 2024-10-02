@@ -54,7 +54,7 @@ test/
 Flutter-README.md
 
 
-#temporary ignore the platform-based files
+# temporary ignore the platform-based files
 android/
 windows/
 web/
