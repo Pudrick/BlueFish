@@ -28,7 +28,7 @@ class TitleListPageBody extends StatelessWidget {
               child: (Stack(
             children: [
               Container(
-                color: theme.colorScheme.background,
+                color: theme.colorScheme.surface,
               ),
               RefreshIndicator(
                 onRefresh: () => Future(() {

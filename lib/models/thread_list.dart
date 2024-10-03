@@ -59,8 +59,8 @@ class ThreadTitleList extends ChangeNotifier {
   Uri generateURL() {
     assert(sortType.index != 0);
     String baseurl = baseURL().toString();
-    int tab_type = sortType.index;
-    var res = "$baseurl&topic_id=$topicID&tab_type=$tab_type";
+    int tabType = sortType.index;
+    var res = "$baseurl&topic_id=$topicID&tab_type=$tabType";
     if (zoneID == 0) {
       return Uri.parse(res);
     }
