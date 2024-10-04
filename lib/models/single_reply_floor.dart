@@ -29,7 +29,6 @@ class SingleReplyFloor extends Quote {
   late int lightCount;
   late String client;
 
-  // not sure whether exist, just null it anyway
   String? replyVideo;
   String? replyVideoCover;
 
@@ -77,6 +76,12 @@ class SingleReplyFloor extends Quote {
     }
     if (jsonReplyMap.containsKey("hidePost")) {
       hidePost = jsonReplyMap["hidePost"];
+    }
+    if (jsonReplyMap.containsKey("video")) {
+      replyVideo = jsonReplyMap["video"];
+    }
+    if (jsonReplyMap.containsKey("videoCover")) {
+      replyVideoCover = jsonReplyMap["videoCover"];
     }
     postLocation = jsonReplyMap["location"];
   }

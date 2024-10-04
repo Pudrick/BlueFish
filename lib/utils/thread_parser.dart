@@ -24,6 +24,10 @@ Map getThreadInfoMapFromDOM(Document rawHttp) {
   var threadJsonStr = rawHttp.getElementById("__NEXT_DATA__")!.innerHtml;
   var threadObject = jsonDecode(threadJsonStr);
   var detailInfo = threadObject["props"]["pageProps"]["detail"];
+  // TODO: add collect check
+  // example API: https://bbs.mobileapi.hupu.com/1/8.0.30/threads/getThreadCollectStatus?tid=628217371
+  
+  // TODO: add isrec check instead of this
   detailInfo["thread"]["isRecommended"] = detailInfo["isRecommended"];
   return {
     "thread": detailInfo["thread"],
