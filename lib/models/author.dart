@@ -9,6 +9,8 @@ class Author {
   late bool isAdmin; // maybe always false for anyone? mods is false either.
   String? adminsInfo;
 
+  // TODO: refactor constructor using extends or something.
+
   factory Author.createThreadAuthor(Map threadAuthorJsonMap) {
     var simplyAuthor = Author.createReplyAuthor(threadAuthorJsonMap);
     simplyAuthor.isBlacked = threadAuthorJsonMap["isBlacked"];
