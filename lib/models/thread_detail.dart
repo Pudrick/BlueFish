@@ -17,12 +17,12 @@ class ThreadDetail {
   int repliesPerPage = 20;
   late int totalPagesNum;
 
-  ThreadDetail(dynamic userTid, int page) {
+  ThreadDetail(dynamic tid, int page) {
     currentPage = page;
-    if (userTid is int) {
-      tid = userTid.toString();
+    if (tid is int) {
+      this.tid = tid.toString();
     } else {
-      tid = userTid;
+      this.tid = tid;
     }
   }
 
