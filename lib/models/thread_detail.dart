@@ -12,12 +12,12 @@ class ThreadDetail {
   late List<SingleReplyFloor> lightedReplies;
   late List<SingleReplyFloor> replies;
 
-  int currentPage = 0;
+  int currentPage = 1;
   int totalRepliesNum = 0;
   int repliesPerPage = 20;
   late int totalPagesNum;
 
-  ThreadDetail(dynamic tid, int page) {
+  ThreadDetail(dynamic tid, [int page = 1]) {
     currentPage = page;
     if (tid is int) {
       this.tid = tid.toString();
