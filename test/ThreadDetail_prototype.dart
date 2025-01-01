@@ -14,12 +14,12 @@ Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   var waterbuild = ThreadDetail(626849421);
   await waterbuild.refresh();
-  var co = waterbuild.mainFloor.contentHTML;
-  var doc = parse(co).body;
-  var l1 = 0;
-  for (var nod in doc!.nodes) {
-    if (nod.attributes["class"] == "slate-video") l1++;
-  }
+  // var co = waterbuild.mainFloor.contentHTML;
+  // var doc = parse(co).body;
+  // var l1 = 0;
+  // for (var nod in doc!.nodes) {
+  //   if (nod.attributes["class"] == "slate-video") l1++;
+  // }
   // var a = waterbuild.mainFloor.rawContent;
   // var re = jsonDecode(a);
   // var ht = re["htmlV3"];

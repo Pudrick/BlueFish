@@ -48,3 +48,5 @@ mixin ChewieFactory on WidgetFactory {
     return super.parse(tree);
   }
 }
+
+class VideoWidgetFactory extends WidgetFactory with ChewieFactory {}
