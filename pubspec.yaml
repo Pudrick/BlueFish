@@ -47,13 +47,12 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.8.5
   fvp: ^0.29.0
-  flutter_widget_from_html_core: ^0.15.2
-  fwfh_cached_network_image: ^0.14.3
-  fwfh_just_audio: ^0.15.2
-  fwfh_svg: ^0.8.3
-  fwfh_url_launcher: ^0.9.1
+  flutter_widget_from_html: ^0.15.3
+
+
+dependency_overrides:
   fwfh_chewie:
-    path: ./dependencies/fwfh_chewie-0.14.8
+    path: dependencies/fwfh_chewie-0.14.8
 
 dev_dependencies:
   flutter_test:

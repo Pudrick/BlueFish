@@ -4,12 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // html widget package.
-import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-// import 'package:fwfh_cached_network_image/fwfh_cached_network_image.dart';
-import 'package:fwfh_chewie/fwfh_chewie.dart';
-// import 'package:fwfh_url_launcher/fwfh_url_launcher.dart';
-// import 'package:fwfh_just_audio/fwfh_just_audio.dart';
-// import 'package:bluefish/dependency/flutter_widget_from_html/packages/enhanced/lib/flutter_widget_from_html.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 class ThreadMainFloorWidget extends StatelessWidget {
   bool hasVote;
@@ -113,7 +108,9 @@ class ThreadMainFloorWidget extends StatelessWidget {
                         // TODO: add html parser and connect it with video parser.
                         mainFloor.contentHTML,
                         textStyle: const TextStyle(fontWeight: FontWeight.w500),
-                        factoryBuilder: () => VideoWidgetFactory(),
+
+                        // isolate using fwfh_chewie need this line.
+                        // factoryBuilder: () => VideoWidgetFactory(),
                       ),
                     ],
                   ),
