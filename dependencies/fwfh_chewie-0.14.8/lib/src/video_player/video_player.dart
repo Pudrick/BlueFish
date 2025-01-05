@@ -142,6 +142,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
         placeholder: placeholder,
         showControls: widget.controls,
         videoPlayerController: vpc,
+        customControls: const lib.MaterialDesktopControls(),
       );
     });
   }

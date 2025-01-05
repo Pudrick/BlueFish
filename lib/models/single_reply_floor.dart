@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:bluefish/models/author.dart';
 
 class Quote {

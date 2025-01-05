@@ -1,7 +1,7 @@
 import 'package:bluefish/models/thread_main.dart';
 
-import 'single_reply_floor.dart';
-import '../utils/thread_parser.dart';
+import './single_reply_floor.dart';
+import '../utils/get_thread_info.dart';
 
 class ThreadDetail {
   late String tid;
@@ -14,11 +14,12 @@ class ThreadDetail {
 
   int currentPage = 1;
   int totalRepliesNum = 0;
-  int repliesPerPage = 20;
+  final repliesPerPage = 20;
   late int totalPagesNum;
 
-  ThreadDetail(dynamic tid, [int page = 1]) {
+  ThreadDetail(dynamic tid, {int page = 1, bool hasVote = false}) {
     currentPage = page;
+    mainFloor.hasVote = hasVote;
     if (tid is int) {
       this.tid = tid.toString();
     } else {
@@ -30,11 +31,18 @@ class ThreadDetail {
     // TODO: change to get json from TID
     var threadInfo = await getThreadInfoMapFromTid(tid, currentPage);
     mainFloor = ThreadMain(threadInfo["thread"]);
+
+    if (mainFloor.hasVote) {
+      //TODO: if there's vote, init vote
+    }
+
     totalRepliesNum = threadInfo["replies"]["count"];
     totalPagesNum = (totalRepliesNum / repliesPerPage).ceil();
     lightedReplies = getReplyListFromWholeMap("lights", threadInfo);
     replies = getReplyListFromWholeMap("replies", threadInfo);
   }
+
+  //TODO: Handle reply floor video
 
   void likeThread() {}
 

@@ -61,3 +61,6 @@ web/
 
 # temp files
 lib/temp/*
+
+# test html files
+*.html

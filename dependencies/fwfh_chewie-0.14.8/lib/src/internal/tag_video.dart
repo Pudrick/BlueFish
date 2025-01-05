@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
@@ -70,7 +69,11 @@ class TagVideo {
       tree,
       sourceUrls.first,
       autoplay: attrs.containsKey(kAttributeVideoAutoplay),
-      controls: attrs.containsKey(kAttributeVideoControls),
+
+      // controls: attrs.containsKey(kAttributeVideoControls),
+      // the source didn't with controls, so just make it all true.
+      controls: true,
+
       height: tryParseDoubleFromMap(attrs, kAttributeVideoHeight),
       loop: attrs.containsKey(kAttributeVideoLoop),
       posterUrl: wf.urlFull(attrs[kAttributeVideoPoster] ?? ''),

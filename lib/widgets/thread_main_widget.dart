@@ -1,5 +1,4 @@
 import 'package:bluefish/models/thread_main.dart';
-import 'package:bluefish/utils/video_parser.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

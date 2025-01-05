@@ -45,6 +45,7 @@ class ThreadMain {
   late int readNum;
   late String client;
   late bool hasVideo;
+  late bool hasVote;
   late bool isRecommended;
 
   late Author author;
@@ -62,7 +63,7 @@ class ThreadMain {
   late String rawContent;
   late String postLocation;
 
-  // TODO: add vote initilization
+  // TODO: add vote detect and initilization
   ThreadMain(Map threadJsonMap) {
     tid = threadJsonMap["tid"];
     title = threadJsonMap["title"];
@@ -89,4 +90,6 @@ class ThreadMain {
     rawContent = threadJsonMap["format"];
     postLocation = threadJsonMap["location"];
   }
+
+  //TODO: parse vote link, detected vote is done by main.
 }

@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:bluefish/widgets/thread_main_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
-import 'package:html/parser.dart';
 
 void main() {
   launchApp();
@@ -12,7 +9,7 @@ void main() {
 
 Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
-  var waterbuild = ThreadDetail(626849421);
+  var waterbuild = ThreadDetail(626582908);
   await waterbuild.refresh();
   // var co = waterbuild.mainFloor.contentHTML;
   // var doc = parse(co).body;
