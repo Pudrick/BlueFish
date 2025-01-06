@@ -10,6 +10,7 @@ void main() {
 Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   var waterbuild = ThreadDetail(626582908);
+  waterbuild.mainFloor.hasVote = true;
   await waterbuild.refresh();
   // var co = waterbuild.mainFloor.contentHTML;
   // var doc = parse(co).body;

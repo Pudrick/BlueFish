@@ -1,4 +1,6 @@
 import 'package:bluefish/models/thread_main.dart';
+import 'package:bluefish/models/vote.dart';
+import 'package:html/parser.dart';
 
 import './single_reply_floor.dart';
 import '../utils/get_thread_info.dart';
@@ -34,6 +36,14 @@ class ThreadDetail {
 
     if (mainFloor.hasVote) {
       //TODO: if there's vote, init vote
+      var htmldoc = parse(mainFloor.contentHTML);
+      var voteElement = htmldoc.querySelector('[data-type="vote"]');
+      if (voteElement != null) {
+        var vote = Vote();
+        vote.voteID = voteElement.attributes["data-vote-id"];
+        await vote.refresh();
+        mainFloor.vote = vote;
+      }
     }
 
     totalRepliesNum = threadInfo["replies"]["count"];

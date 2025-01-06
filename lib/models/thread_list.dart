@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'single_thread_title.dart';
+import '../userdata/user_settings.dart';
 import 'package:http/http.dart' as http;
 import 'internal_settings.dart';
 
@@ -24,7 +25,6 @@ class ThreadTitleList extends ChangeNotifier {
   }
 
   int page = 1;
-  String appVersion = appVersionNumber;
 
   bool isRefreshing = false;
 
@@ -48,12 +48,12 @@ class ThreadTitleList extends ChangeNotifier {
 
   Uri baseURL() {
     return Uri.parse(
-        "https://bbs.mobileapi.hupu.com/1/$appVersion/topics/getTopicThreads?");
+        "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/getTopicThreads?");
   }
 
   Uri pinnedURL() {
     return Uri.parse(
-        "https://bbs.mobileapi.hupu.com/1/$appVersion/topics/$topicID");
+        "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/$topicID");
   }
 
   Uri generateURL() {

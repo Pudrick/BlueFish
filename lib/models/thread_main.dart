@@ -1,32 +1,5 @@
 import 'author.dart';
-
-//TODO: add initializer
-class VoteItem {
-  late int sort;
-  late String content;
-  late int optionVoteCount;
-  late Uri attachment;
-}
-
-//TODO: add initializer
-class Vote {
-  late int voteID;
-  late String title;
-  late int userOptionLimit;
-  late int userCount;
-  late int voteCount;
-  late bool canVote;
-  late int puid;
-  late List<VoteItem> voteDetailList;
-  late List<int> userVoteRecordList;
-  late int votingType; //what's this? maybe the status of availability
-  int? deadline; // days remaining
-  late String endTimeStr;
-  late List userVoteRecordMap;
-  late int voteNum; //maybe always 0?
-  String? votingForm; // maybe always null?
-  late bool end;
-}
+import 'vote.dart';
 
 class ThreadMain {
   late String tid;
