@@ -56,6 +56,10 @@ class ThreadDetail {
 
   void likeThread() {}
 
+  void editThread() {}
+
+  void deleteThread() {}
+
   void commentToThread() {}
 
   void collectThread() {}
