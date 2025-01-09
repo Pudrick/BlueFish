@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/thread_list.dart';
 
 import '../widgets/bottom_navigation.dart';
-import '../widgets/titlelist_page_body.dart';
+import '../widgets/thread_list_body.dart';
 import '../widgets/top_bar.dart';
 
 class ThreadListPage extends StatelessWidget {
