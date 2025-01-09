@@ -64,3 +64,6 @@ lib/temp/*
 
 # test html files
 *.html
+
+# executables
+*.exe

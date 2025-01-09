@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/widgets/vote_widget.dart';
+import 'package:bluefish/userdata/theme_settings.dart';
 
 void main() {
   launchApp();
@@ -8,9 +10,8 @@ void main() {
 Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   Vote vote = Vote();
-  vote.voteID = 11124697;
+  vote.voteID = 11124946;
   await vote.refresh();
-  print(vote.title);
   // var co = waterbuild.mainFloor.contentHTML;
   // var doc = parse(co).body;
   // var l1 = 0;
@@ -22,13 +23,11 @@ Future<void> launchApp() async {
   // var ht = re["htmlV3"];
   // var res = parse(ht).body!.nodes;
 
-  // runApp(
-  //   MaterialApp(
-  //     // TODO: theme: userThemeData,
-  //     theme: initUserThemeSettings(),
-
-  //     home: SafeArea(
-  //         child: ThreadMainFloorWidget(mainFloor: waterbuild.mainFloor)),
-  //   ),
-  // );
+  runApp(
+    MaterialApp(
+      // TODO: theme: userThemeData,
+      theme: initUserThemeSettings(),
+      home: SafeArea(child: DualImageCanVoteWidget(vote: vote)),
+    ),
+  );
 }
