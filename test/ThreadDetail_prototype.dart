@@ -27,7 +27,11 @@ Future<void> launchApp() async {
     MaterialApp(
       // TODO: theme: userThemeData,
       theme: initUserThemeSettings(),
-      home: SafeArea(child: DualImageCanVoteWidget(vote: vote)),
+      home: Scaffold(
+        body: SafeArea(
+          child: DualImageVoteWidget(vote: vote),
+        ),
+      ),
     ),
   );
 }
