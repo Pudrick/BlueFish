@@ -22,7 +22,10 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
     vote = widget.vote;
   }
 
+  // TODO: add limitation of max vote count.
   Widget canVoteButtonWidget() {
+    const double buttonHeight = 70;
+    const double buttonTextSize = 27;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -41,11 +44,11 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                   borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(
                           DualImageVoteWidget.borderRoundRadius))),
-              height: 85,
+              height: buttonHeight,
               child: Center(
                   child: Text(widget.vote.voteDetailList[0].content,
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 27))),
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: buttonTextSize))),
             ),
           ),
         ),
@@ -59,7 +62,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                   borderRadius: BorderRadius.only(
                       bottomRight: Radius.circular(
                           DualImageVoteWidget.borderRoundRadius))),
-              height: 85,
+              height: buttonHeight,
               child: InkWell(
                 // stupid, but works.
                 borderRadius: const BorderRadius.only(
@@ -70,7 +73,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 child: Center(
                     child: Text(widget.vote.voteDetailList[1].content,
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 27))),
+                            color: Colors.white, fontSize: buttonTextSize))),
               ),
             ),
           ),
@@ -81,6 +84,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
 
   @override
   Widget build(BuildContext context) {
+    const double titleFontSize = 25;
     return Card(
       elevation: 6,
       margin: const EdgeInsets.all(7),
@@ -91,7 +95,36 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
             Text(
               widget.vote.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: titleFontSize, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: ActionChip(
+                    onPressed: () {},
+                    avatar: const Icon(Icons.group_outlined),
+                    label: Text(vote.userCount.toString()),
+                  ),
+                ),
+                Expanded(
+                  child: ActionChip(
+                    onPressed: () {},
+                    avatar: const Icon(Icons.how_to_vote_outlined),
+                    label: Text("最多选择${vote.userOptionLimit}项"),
+                  ),
+                ),
+                if (vote.endTimeStr != "")
+                  Expanded(
+                    child: ActionChip(
+                      onPressed: () {},
+                      avatar: const Icon(Icons.timer_10_outlined),
+                      label: Text(vote.endTimeStr),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
