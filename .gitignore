@@ -48,7 +48,7 @@ linux/
 macos/
 
 # test folder
-test/widget_test.dart
+test/
 
 # Flutter README
 Flutter-README.md
