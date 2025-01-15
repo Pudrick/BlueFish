@@ -46,7 +46,9 @@ class Vote {
         "https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteID");
 
     // for testing
+    final headers = {"Cookie": ""};
 
+    // var voteJsonStr = await HttpwithUA().get(voteUrl, headers: headers);
     var voteJsonStr = await HttpwithUA().get(voteUrl);
 
     var voteJson = jsonDecode(voteJsonStr.body);

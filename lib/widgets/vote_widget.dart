@@ -7,6 +7,7 @@ class DualImageVoteWidget extends StatefulWidget {
 
   static const double outerBorderRoundRadius = 17;
   static const double innerBorderRoundRadius = 10;
+  static const double buttonVerticalMargin = 24;
 
   const DualImageVoteWidget({super.key, required this.vote});
 
@@ -25,59 +26,89 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
 
   // TODO: add limitation of max vote count.
   Widget canVoteButtonWidget() {
-    const double buttonHeight = 75;
+    // const double buttonHeight = 75;
+    const double buttonVerticalMargin = 25;
     const double buttonTextSize = 27;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(
-          flex: 1,
-          child: InkWell(
-            // TODO: stupid implementation. maybe there's better constraints.
-            borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(
-                    DualImageVoteWidget.outerBorderRoundRadius)),
-            onTap: () {},
-            child: Ink(
-              decoration: const BoxDecoration(
-                  color: Colors.redAccent,
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(
-                          DualImageVoteWidget.outerBorderRoundRadius))),
-              height: buttonHeight,
-              child: Center(
-                  child: Text(widget.vote.voteDetailList[0].content,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: buttonTextSize))),
-            ),
-          ),
+          child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: buttonVerticalMargin),
+                  backgroundColor: Colors.redAccent,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(
+                        DualImageVoteWidget.outerBorderRoundRadius)),
+                  )),
+              child: Text(widget.vote.voteDetailList[0].content,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: buttonTextSize))),
         ),
+        // Expanded(
+        //   flex: 1,
+        //   child: InkWell(
+        //     // TODO: stupid implementation. maybe there's better constraints.
+        //     borderRadius: const BorderRadius.only(
+        //         bottomLeft: Radius.circular(
+        //             DualImageVoteWidget.outerBorderRoundRadius)),
+        //     onTap: () {},
+        //     child: Ink(
+        //       decoration: const BoxDecoration(
+        //           color: Colors.redAccent,
+        //           borderRadius: BorderRadius.only(
+        //               bottomLeft: Radius.circular(
+        //                   DualImageVoteWidget.outerBorderRoundRadius))),
+        //       height: buttonHeight,
+        //       child: Center(
+        //           child: Text(widget.vote.voteDetailList[0].content,
+        //               style: const TextStyle(
+        //                   color: Colors.white, fontSize: buttonTextSize))),
+        //     ),
+        //   ),
+        // ),
         const SizedBox(width: 10),
         Expanded(
-          flex: 1,
-          child: Material(
-            child: Ink(
-              decoration: const BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.only(
-                      bottomRight: Radius.circular(
-                          DualImageVoteWidget.outerBorderRoundRadius))),
-              height: buttonHeight,
-              child: InkWell(
-                // stupid, but works.
-                borderRadius: const BorderRadius.only(
-                    bottomRight: Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius)),
-
-                onTap: () {},
-                child: Center(
-                    child: Text(widget.vote.voteDetailList[1].content,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: buttonTextSize))),
-              ),
-            ),
-          ),
+          child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: buttonVerticalMargin),
+                  backgroundColor: Colors.blue,
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(
+                          DualImageVoteWidget.outerBorderRoundRadius)))),
+              child: Text(widget.vote.voteDetailList[1].content,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: buttonTextSize))),
         ),
+        // Expanded(
+        //   flex: 1,
+        //   child: Material(
+        //     child: Ink(
+        //       decoration: const BoxDecoration(
+        //           color: Colors.blue,
+        //           borderRadius: BorderRadius.only(
+        //               bottomRight: Radius.circular(
+        //                   DualImageVoteWidget.outerBorderRoundRadius))),
+        //       height: buttonHeight,
+        //       child: InkWell(
+        //         // stupid, but works.
+        //         borderRadius: const BorderRadius.only(
+        //             bottomRight: Radius.circular(
+        //                 DualImageVoteWidget.outerBorderRoundRadius)),
+
+        //         onTap: () {},
+        //         child: Center(
+        //             child: Text(widget.vote.voteDetailList[1].content,
+        //                 style: const TextStyle(
+        //                     color: Colors.white, fontSize: buttonTextSize))),
+        //       ),
+        //     ),
+        //   ),
+        // ),
       ],
     );
   }
@@ -97,6 +128,8 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 decoration: const BoxDecoration(
                     color: Colors.redAccent,
                     borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(
+                          DualImageVoteWidget.outerBorderRoundRadius),
                       bottomLeft: Radius.circular(
                           DualImageVoteWidget.innerBorderRoundRadius),
                     )),
@@ -130,23 +163,25 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                   flex: widget.vote.voteDetailList[0].optionVoteCount,
                   child: Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.redAccent, width: 5),
+                      border: Border.all(color: Colors.redAccent, width: 3),
                       color: const Color.fromARGB(255, 253, 190, 184),
                     ),
                   )),
-              const SizedBox(width: 10),
+              const SizedBox(width: 5),
               Expanded(
                   flex: widget.vote.voteDetailList[1].optionVoteCount,
                   child: Container(
                     decoration: BoxDecoration(
                         color: Colors.blue.shade100,
-                        border: Border.all(color: Colors.blue, width: 5)),
+                        border: Border.all(color: Colors.blue, width: 3)),
                   )),
               const SizedBox(width: 5),
               Container(
                 decoration: const BoxDecoration(
                   color: Colors.blue,
                   borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(
+                        DualImageVoteWidget.outerBorderRoundRadius),
                     bottomRight: Radius.circular(
                         DualImageVoteWidget.innerBorderRoundRadius),
                   ),
@@ -182,17 +217,15 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Expanded(
-              child: Container(
-                  decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(
-                              DualImageVoteWidget.outerBorderRoundRadius),
-                          bottomRight: Radius.circular(
-                              DualImageVoteWidget.innerBorderRoundRadius),
-                          topRight: Radius.circular(
-                              DualImageVoteWidget.innerBorderRoundRadius))),
-                  height: buttonHeight,
+              child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: DualImageVoteWidget.buttonVerticalMargin),
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(
+                              DualImageVoteWidget.outerBorderRoundRadius)))),
+                  // height: buttonHeight,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -219,17 +252,14 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
           ),
           const SizedBox(width: 7),
           Expanded(
-              child: Container(
-                  decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: const BorderRadius.only(
-                          bottomRight: Radius.circular(
-                              DualImageVoteWidget.outerBorderRoundRadius),
-                          bottomLeft: Radius.circular(
-                              DualImageVoteWidget.innerBorderRoundRadius),
-                          topLeft: Radius.circular(
-                              DualImageVoteWidget.innerBorderRoundRadius))),
-                  height: buttonHeight,
+              child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: DualImageVoteWidget.buttonVerticalMargin),
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(
+                              DualImageVoteWidget.outerBorderRoundRadius)))),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -298,9 +328,8 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 Expanded(
                   flex: 1,
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(
-                            DualImageVoteWidget.outerBorderRoundRadius)),
+                    borderRadius: const BorderRadius.all(Radius.circular(
+                        DualImageVoteWidget.outerBorderRoundRadius)),
                     child: Image.network(
                         widget.vote.voteDetailList[0].attachment.toString(),
                         fit: BoxFit.fill),
@@ -310,9 +339,8 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 Expanded(
                   flex: 1,
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(
-                            DualImageVoteWidget.outerBorderRoundRadius)),
+                    borderRadius: const BorderRadius.all(Radius.circular(
+                        DualImageVoteWidget.outerBorderRoundRadius)),
                     child: Image.network(
                         widget.vote.voteDetailList[1].attachment.toString(),
                         fit: BoxFit.fill),
@@ -320,7 +348,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 10),
             if (vote.canVote == true)
               canVoteButtonWidget()
             else
