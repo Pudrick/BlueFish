@@ -29,7 +29,7 @@ class Vote {
   late bool canVote;
   late int puid;
   late List<VoteItem> voteDetailList;
-  late List<int> userVoteRecordList;
+  late List<int>? userVoteRecordList;
   late int?
       votingType; //current known usage: 1 for image vote, 0 or null for text vote
   int? deadline; // days remaining
@@ -37,7 +37,7 @@ class Vote {
   late List<UserVoteRecord> userVoteRecordMap;
   late int voteNum; //maybe always 0?
   String? votingForm; // maybe always null?
-  late bool end;
+  late bool end; // if the vote expired
   late VoteType voteType;
 
   // req example: https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11124697
@@ -88,11 +88,13 @@ class Vote {
       }
       voteDetailList.add(voteItem);
     }
-    if (voteData["userVoteRecordList"] != null) {
-      for (var item in voteData["userVoteRecordList"]) {
-        userVoteRecordList.add(item);
-      }
-    }
+    // if (voteData["userVoteRecordList"] != null) {
+    //   userVoteRecordList = [];
+    //   for (var item in voteData["userVoteRecordList"]) {
+    //     userVoteRecordList.add(item);
+    //   }
+    // }
+    userVoteRecordList = voteData["userVoteRecordList"];
     deadline = voteData["deadline"];
     endTimeStr = voteData["endTimeStr"];
 

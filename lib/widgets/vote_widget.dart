@@ -113,6 +113,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
     );
   }
 
+  // TODO: handle end == true, that is vote expired.
   Widget cannotVoteButtonWidget() {
     const double buttonTextSize = 27;
     const double buttonHeight = 70;
@@ -144,8 +145,9 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                               color: Colors.white, fontSize: 20)),
                       Column(
                         children: [
-                          if (widget.vote.userVoteRecordList[0] == 1)
-                            const Icon(Icons.check, color: Colors.white),
+                          if (widget.vote.userVoteRecordList != null)
+                            if (widget.vote.userVoteRecordList![0] == 1)
+                              const Icon(Icons.check, color: Colors.white),
                           const SizedBox(width: 5),
                           Text(
                               widget.vote.voteDetailList[0].optionVoteCount
@@ -197,8 +199,10 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                               color: Colors.white, fontSize: 20)),
                       Row(
                         children: [
-                          if (widget.vote.userVoteRecordList[0] == 2)
-                            const Icon(Icons.check_circle, color: Colors.white),
+                          if (widget.vote.userVoteRecordList != null)
+                            if (widget.vote.userVoteRecordList![0] == 2)
+                              const Icon(Icons.check_circle,
+                                  color: Colors.white),
                           const SizedBox(width: 5),
                           Text(
                               widget.vote.voteDetailList[1].optionVoteCount
@@ -229,27 +233,30 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (widget.vote.userVoteRecordList[0] == 1)
-                        const Icon(Icons.check, color: Colors.white),
+                      if (widget.vote.userVoteRecordList != null)
+                        if (widget.vote.userVoteRecordList![0] == 1)
+                          const Icon(Icons.check, color: Colors.white),
                       Text(widget.vote.voteDetailList[0].content,
                           style: const TextStyle(
                               color: Colors.white, fontSize: buttonTextSize)),
                     ],
                   ))),
           const SizedBox(width: 7),
-          SizedBox(
-            height: buttonHeight,
-            child: OutlinedButton(
-              // TODO: cancel vote.
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(
-                        DualImageVoteWidget.innerBorderRoundRadius))),
+          if (widget.vote.userVoteRecordList != null &&
+              widget.vote.end == false)
+            SizedBox(
+              height: buttonHeight,
+              child: OutlinedButton(
+                // TODO: cancel vote.
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(
+                          DualImageVoteWidget.innerBorderRoundRadius))),
+                ),
+                child: const Text("取消投票", style: TextStyle(fontSize: 22)),
               ),
-              child: const Text("取消投票", style: TextStyle(fontSize: 22)),
             ),
-          ),
           const SizedBox(width: 7),
           Expanded(
               child: ElevatedButton(
@@ -263,9 +270,10 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (widget.vote.userVoteRecordList[0] == 2)
-                        const Icon(Icons.check_circle,
-                            color: Colors.white, size: 30),
+                      if (widget.vote.userVoteRecordList != null)
+                        if (widget.vote.userVoteRecordList![0] == 2)
+                          const Icon(Icons.check_circle,
+                              color: Colors.white, size: 30),
                       const SizedBox(width: 10),
                       Text(widget.vote.voteDetailList[1].content,
                           style: const TextStyle(
@@ -319,6 +327,13 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       label: Text(vote.endTimeStr),
                     ),
                   ),
+                if (vote.end == true)
+                  Expanded(
+                      child: ActionChip(
+                    onPressed: () {},
+                    avatar: const Icon(Icons.timer_off_outlined),
+                    label: const Text("投票已结束"),
+                  ))
               ],
             ),
             const SizedBox(height: 10),
