@@ -38,7 +38,15 @@ class Vote {
   late int voteNum; //maybe always 0?
   String? votingForm; // maybe always null?
   late bool end; // if the vote expired
-  late VoteType voteType;
+  late VoteType type;
+
+  Vote(dynamic voteID) {
+    if (voteID is String) {
+      this.voteID = int.parse(voteID);
+    } else {
+      this.voteID = voteID;
+    }
+  }
 
   // req example: https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11124697
   Future<void> refresh() async {
@@ -46,7 +54,7 @@ class Vote {
         "https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteID");
 
     // for testing
-    final headers = {"Cookie": ""};
+    final headers = {};
 
     // var voteJsonStr = await HttpwithUA().get(voteUrl, headers: headers);
     var voteJsonStr = await HttpwithUA().get(voteUrl);
@@ -66,9 +74,9 @@ class Vote {
 
     votingType = voteData["votingType"];
     if (votingType == 1) {
-      voteType = VoteType.dualImage;
+      type = VoteType.dualImage;
     } else {
-      voteType = VoteType.noImage;
+      type = VoteType.noImage;
     }
 
     voteDetailList = [];
@@ -83,7 +91,7 @@ class Vote {
 
       // abandon check in every option, using voteType check instead.
       // if (item["attachment"] != null && item["attachment"] != "null")
-      if (voteType == VoteType.dualImage) {
+      if (type == VoteType.dualImage) {
         voteItem.attachment = Uri.parse(item["attachment"]);
       }
       voteDetailList.add(voteItem);
@@ -94,7 +102,11 @@ class Vote {
     //     userVoteRecordList.add(item);
     //   }
     // }
-    userVoteRecordList = voteData["userVoteRecordList"];
+    if (voteData["userVoteRecordList"] != null) {
+      userVoteRecordList = voteData["userVoteRecordList"].cast<int>();
+    } else {
+      userVoteRecordList = null;
+    }
     deadline = voteData["deadline"];
     endTimeStr = voteData["endTimeStr"];
 

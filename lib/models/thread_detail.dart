@@ -39,8 +39,7 @@ class ThreadDetail {
       var htmldoc = parse(mainFloor.contentHTML);
       var voteElement = htmldoc.querySelector('[data-type="vote"]');
       if (voteElement != null) {
-        var vote = Vote();
-        vote.voteID = voteElement.attributes["data-vote-id"];
+        var vote = Vote(voteElement.attributes["data-vote-id"]);
         await vote.refresh();
         mainFloor.vote = vote;
       }
