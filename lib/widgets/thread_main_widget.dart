@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // html widget package.
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+// import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import "htmlWidget_with_vote.dart";
 
 class ThreadMainFloorWidget extends StatelessWidget {
   bool hasVote;
@@ -85,8 +86,14 @@ class ThreadMainFloorWidget extends StatelessWidget {
                                       )
                                   ],
                                 ),
-                                Text(
-                                    "${DateFormat("yyyy-MM-dd HH:mm:ss").format(mainFloor.postDateTime)} (${mainFloor.postDateTimeReadable})"),
+                                Row(
+                                  children: [
+                                    Text(
+                                        "${DateFormat("yyyy-MM-dd HH:mm:ss").format(mainFloor.postDateTime)} (${mainFloor.postDateTimeReadable})"),
+                                    if (mainFloor.postLocation != "")
+                                      Text("    IP:${mainFloor.postLocation}"),
+                                  ],
+                                ),
                               ]),
                           Expanded(
                             child: Container(), // just for position holding
@@ -103,13 +110,10 @@ class ThreadMainFloorWidget extends StatelessWidget {
                         ],
                       ),
                       const Divider(),
-                      HtmlWidget(
+                      HtmlWidgetWithVote(
                         // TODO: add html parser and connect it with video parser.
                         mainFloor.contentHTML,
                         textStyle: const TextStyle(fontWeight: FontWeight.w500),
-
-                        // isolate using fwfh_chewie need this line.
-                        // factoryBuilder: () => VideoWidgetFactory(),
                       ),
                     ],
                   ),

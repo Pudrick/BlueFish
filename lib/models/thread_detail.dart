@@ -19,9 +19,9 @@ class ThreadDetail {
   final repliesPerPage = 20;
   late int totalPagesNum;
 
-  ThreadDetail(dynamic tid, {int page = 1, bool hasVote = false}) {
+  ThreadDetail(dynamic tid, {int page = 1}) {
     currentPage = page;
-    mainFloor.hasVote = hasVote;
+    // mainFloor.hasVote = hasVote;
     if (tid is int) {
       this.tid = tid.toString();
     } else {

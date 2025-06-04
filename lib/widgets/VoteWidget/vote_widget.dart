@@ -15,20 +15,33 @@ class VoteWidget extends StatefulWidget {
 
 class _VoteWidgetState extends State<VoteWidget> {
   late Vote vote;
+  bool isLoading = true;
 
   @override
-  Future<void> initState() async {
+  void initState() {
     // TODO: implement initState
     super.initState();
+    vote = Vote(widget.voteID);
+    _initVote();
+  }
+
+  Future<void> _initVote() async {
     await vote.refresh();
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (vote.type == VoteType.dualImage) {
-      return DualImageVoteWidget(vote: vote);
+    if (isLoading) {
+      return const CircularProgressIndicator();
     } else {
-      return NoImageVoteWidget(vote: vote);
+      if (vote.type == VoteType.dualImage) {
+        return DualImageVoteWidget(vote: vote);
+      } else {
+        return NoImageVoteWidget(vote: vote);
+      }
     }
   }
 }

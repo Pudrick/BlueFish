@@ -66,14 +66,21 @@ class NoImageVoteWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      VoteInfoWidget(vote: vote),
-      const SizedBox(height: 10),
-      NoImageVoteButton(vote: vote),
-      const SizedBox(height: 10),
-      if (vote.userVoteRecordList != null && vote.end == false)
-        ElevatedButton(child: const Text("取消投票"), onPressed: () {})
-      // TODO: add a pie chart to show the percentage of each option
-    ]);
+    return Card(
+      elevation: 6,
+      margin: const EdgeInsets.all(7),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(children: [
+          VoteInfoWidget(vote: vote),
+          const SizedBox(height: 10),
+          NoImageVoteButton(vote: vote),
+          const SizedBox(height: 10),
+          if (vote.userVoteRecordList != null && vote.end == false)
+            ElevatedButton(child: const Text("取消投票"), onPressed: () {})
+          // TODO: add a pie chart to show the percentage of each option
+        ]),
+      ),
+    );
   }
 }

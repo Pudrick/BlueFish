@@ -1,5 +1,6 @@
 import 'author.dart';
 import 'vote.dart';
+import 'package:html/parser.dart';
 
 class ThreadMain {
   late String tid;
@@ -62,7 +63,29 @@ class ThreadMain {
     contentType = threadJsonMap["contentType"];
     rawContent = threadJsonMap["format"];
     postLocation = threadJsonMap["location"];
+    _checkVoteExist();
   }
+
+  void _checkVoteExist() {
+    var htmldoc = parse(contentHTML);
+    var voteElement = htmldoc.querySelector('[data-type="vote"]');
+    if (voteElement != null) {
+      hasVote = true;
+    } else {
+      hasVote = false;
+    }
+  }
+
+  // TODO: check Video exist
+  // void _checkVideoExist() {
+  //   var htmldoc = parse(contentHTML);
+  //   var voteElement = htmldoc.querySelector('[data-type="vote"]');
+  //   if (voteElement != null) {
+  //     hasVote = true;
+  //   } else {
+  //     hasVote = false;
+  //   }
+  // }
 
   //TODO: parse vote link, detected vote is done by main.
 }

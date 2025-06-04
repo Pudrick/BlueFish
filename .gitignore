@@ -50,6 +50,9 @@ macos/
 # test folder
 test/
 
+lib/utils/http_with_ua_coke.dart
+playground/
+
 # Flutter README
 Flutter-README.md
 
