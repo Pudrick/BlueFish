@@ -1,8 +1,8 @@
 import 'package:bluefish/models/vote.dart';
 import 'package:flutter/material.dart';
 
-import 'no_image_vote_widget.dart';
-import 'dual_image_vote_widget.dart';
+import 'package:bluefish/widgets/VoteWidget/no_image_vote_widget.dart';
+import 'package:bluefish/widgets/VoteWidget/dual_image_vote_widget.dart';
 
 class VoteWidget extends StatefulWidget {
   final int voteID;

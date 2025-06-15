@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'single_thread_title.dart';
-import '../userdata/user_settings.dart';
+import 'package:bluefish/models/single_thread_title.dart';
+import 'package:bluefish/userdata/user_settings.dart';
 import 'package:http/http.dart' as http;
-import 'internal_settings.dart';
+import 'package:bluefish/models/internal_settings.dart';
 
 /// position 0 just for index offset.
 /// as tab_type, 2 for newest reply, 1 for newest publish, 4 for 24h rank, 3 for essences

@@ -1,11 +1,11 @@
-import 'author.dart';
-import 'vote.dart';
+import 'package:bluefish/models/author.dart';
+import 'package:bluefish/models/abstract_floor_content.dart';
+import 'package:bluefish/models/vote.dart';
 import 'package:html/parser.dart';
 
-class ThreadMain {
+class ThreadMain extends FloorContent {
   late String tid;
   late String title;
-  late String contentHTML;
   Vote? vote;
 
   // TODO: make sure the type of these in video thread
@@ -17,15 +17,12 @@ class ThreadMain {
   late int repliesNum;
   late int recommendNum;
   late int readNum;
-  late String client;
+  // late String client;
   late bool hasVideo;
   late bool hasVote;
   late bool isRecommended;
 
-  late Author author;
-  late DateTime postDateTime;
   late DateTime lastReplyTime;
-  late String postDateTimeReadable; // in fact can be find from timestamp
 
   // what's this? maybe locked/deleted/normal?
   late int status;
@@ -35,7 +32,7 @@ class ThreadMain {
 
   late int isLock;
   late String rawContent;
-  late String postLocation;
+  // late String postLocation;
 
   // TODO: add vote detect and initilization
   ThreadMain(Map threadJsonMap) {
@@ -51,9 +48,8 @@ class ThreadMain {
     isRecommended = threadJsonMap["isRecommended"];
     readNum = threadJsonMap["read"];
     client = threadJsonMap["client"];
-    postDateTime =
-        DateTime.fromMillisecondsSinceEpoch(threadJsonMap["createdAt"]);
-    postDateTimeReadable = threadJsonMap["createdAtFormat"];
+    postTime = DateTime.fromMillisecondsSinceEpoch(threadJsonMap["createdAt"]);
+    postTimeReadable = threadJsonMap["createdAtFormat"];
     lastReplyTime =
         DateTime.fromMillisecondsSinceEpoch(threadJsonMap["repliedAt"]);
     hasVideo = threadJsonMap["hasVideo"];

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'VoteWidget/vote_widget.dart';
+import 'package:bluefish/widgets/VoteWidget/vote_widget.dart';
 
 Widget HtmlWidgetWithVote(String htmlStr, {TextStyle? textStyle}) {
   return HtmlWidget(

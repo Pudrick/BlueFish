@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'vote_info_widget.dart';
+import 'package:bluefish/widgets/VoteWidget/vote_info_widget.dart';
 
-import '../../models/vote.dart';
+import 'package:bluefish/models/vote.dart';
 
 class DualImageVoteWidget extends StatefulWidget {
   final Vote vote;

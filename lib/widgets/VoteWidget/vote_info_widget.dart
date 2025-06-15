@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/vote.dart';
+import 'package:bluefish/models/vote.dart';
 
 class VoteInfoWidget extends StatelessWidget {
   final Vote vote;

@@ -2,8 +2,8 @@ import 'package:bluefish/models/thread_main.dart';
 import 'package:bluefish/models/vote.dart';
 import 'package:html/parser.dart';
 
-import './single_reply_floor.dart';
-import '../utils/get_thread_info.dart';
+import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/utils/get_thread_info.dart';
 
 class ThreadDetail {
   late String tid;
@@ -13,6 +13,7 @@ class ThreadDetail {
   late ThreadMain mainFloor;
   late List<SingleReplyFloor> lightedReplies;
   late List<SingleReplyFloor> replies;
+  bool mainFloorInited = false;
 
   int currentPage = 1;
   int totalRepliesNum = 0;
@@ -32,17 +33,9 @@ class ThreadDetail {
   Future<void> refresh() async {
     // TODO: change to get json from TID
     var threadInfo = await getThreadInfoMapFromTid(tid, currentPage);
-    mainFloor = ThreadMain(threadInfo["thread"]);
-
-    if (mainFloor.hasVote) {
-      //TODO: if there's vote, init vote
-      var htmldoc = parse(mainFloor.contentHTML);
-      var voteElement = htmldoc.querySelector('[data-type="vote"]');
-      if (voteElement != null) {
-        var vote = Vote(voteElement.attributes["data-vote-id"]);
-        await vote.refresh();
-        mainFloor.vote = vote;
-      }
+    if (mainFloorInited == false) {
+      mainFloor = ThreadMain(threadInfo["thread"]);
+      mainFloorInited = true;
     }
 
     totalRepliesNum = threadInfo["replies"]["count"];

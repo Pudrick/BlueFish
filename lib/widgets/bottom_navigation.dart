@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bluefish/models/thread_list.dart';
 import 'package:provider/provider.dart';
-import '../models/internal_settings.dart';
+import 'package:bluefish/models/internal_settings.dart';
 
 class BottomNavigation extends StatefulWidget {
   const BottomNavigation({super.key});

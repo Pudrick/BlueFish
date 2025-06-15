@@ -1,31 +1,14 @@
 import 'package:bluefish/models/author.dart';
+import 'package:bluefish/models/abstract_floor_content.dart';
 
-class Quote {
+import "quote.dart";
+
+class SingleReplyFloor extends FloorContent {
   late String pid;
   late String authorId;
-  late String content;
-  String? quoteVideo;
-  String? quoteVideoCover;
-  late bool isAudit; // what's this?
 
-  late Author quoteAuthor;
-
-  Quote.fromMap(Map quoteMap) {
-    pid = quoteMap["pid"];
-    authorId = quoteMap["authorId"];
-    content = quoteMap["content"];
-    quoteVideo = quoteMap["video"];
-    quoteVideoCover = quoteMap["videoCover"];
-    isAudit = quoteMap["isAudit"];
-    quoteAuthor = Author.createQuoteAuthor(quoteMap["author"]);
-  }
-
-  Quote(); // just for the reply floor constructor
-}
-
-class SingleReplyFloor extends Quote {
   late int lightCount;
-  late String client;
+  // late String client;
 
   String? replyVideo;
   String? replyVideoCover;
@@ -33,12 +16,13 @@ class SingleReplyFloor extends Quote {
   late bool isOP; // json 'isStarter' means OP.
 
   late bool isDelete;
-  late bool idSelfDelete;
+  late bool isSelfDelete;
   late bool isHidden;
+  late bool isAudit;
 
-  late DateTime postTime;
-  late String postTimeReadable; // can be infer from postTime
-  late Author replyAuthor;
+  // late DateTime postTime;
+  // late String postTimeReadable; // can be infer from postTime
+  // late Author replyAuthor;
 
   Quote? quote;
 
@@ -48,21 +32,22 @@ class SingleReplyFloor extends Quote {
   late int? userBanned; // what's this?
 
   late int hidePost;
-  String? postLocation;
+  // String? postLocation;
 
   SingleReplyFloor.fromReplyMap(Map jsonReplyMap) {
     pid = jsonReplyMap["pid"];
     authorId = jsonReplyMap["authorId"];
-    content = jsonReplyMap["content"];
+    contentHTML = jsonReplyMap["content"];
     lightCount = jsonReplyMap["count"];
     client = jsonReplyMap["client"];
     isAudit = jsonReplyMap["isAudit"];
     isHidden = jsonReplyMap["isHidden"];
     isDelete = jsonReplyMap["isDelete"];
+    isSelfDelete = jsonReplyMap["isSelfDelete"];
     isOP = jsonReplyMap["isStarter"];
     postTime = DateTime.fromMillisecondsSinceEpoch(jsonReplyMap["createdAt"]);
     postTimeReadable = jsonReplyMap["createdAtFormat"];
-    replyAuthor = Author.createReplyAuthor(jsonReplyMap["author"]);
+    author = Author.createReplyAuthor(jsonReplyMap["author"]);
     if (jsonReplyMap["quote"].containsKey("pid")) {
       quote = Quote.fromMap(jsonReplyMap["quote"]);
     } else {

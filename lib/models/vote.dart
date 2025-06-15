@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import '../utils/http_with_ua.dart';
-import '../userdata/user_settings.dart';
+import 'package:bluefish/utils/http_with_ua.dart';
+import 'package:bluefish/userdata/user_settings.dart';
 
 enum VoteType { dualImage, noImage }
 
