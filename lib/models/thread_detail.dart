@@ -1,6 +1,4 @@
 import 'package:bluefish/models/thread_main.dart';
-import 'package:bluefish/models/vote.dart';
-import 'package:html/parser.dart';
 
 import 'package:bluefish/models/single_reply_floor.dart';
 import 'package:bluefish/utils/get_thread_info.dart';

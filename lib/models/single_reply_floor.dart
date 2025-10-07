@@ -48,7 +48,8 @@ class SingleReplyFloor extends FloorContent {
     postTime = DateTime.fromMillisecondsSinceEpoch(jsonReplyMap["createdAt"]);
     postTimeReadable = jsonReplyMap["createdAtFormat"];
     author = Author.createReplyAuthor(jsonReplyMap["author"]);
-    if (jsonReplyMap["quote"].containsKey("pid")) {
+    if (jsonReplyMap.containsKey("quote") &&
+        jsonReplyMap["quote"].containsKey("pid")) {
       quote = Quote.fromMap(jsonReplyMap["quote"]);
     } else {
       quote = null;

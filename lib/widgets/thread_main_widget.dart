@@ -6,6 +6,37 @@ import 'package:flutter/material.dart';
 // import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:bluefish/widgets/htmlWidget_with_vote.dart';
 
+class ThreadTitleWidget extends StatelessWidget {
+  final String title;
+
+  const ThreadTitleWidget({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 40),
+      child: Card(
+        // maybe enablet this will have some performance cost
+        // according to the document
+        clipBehavior: Clip.hardEdge,
+        child: InkWell(
+          onTap: () {},
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+            alignment: Alignment.centerLeft,
+            child: Text.rich(TextSpan(
+                text: title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 18))),
+          ),
+          // maybe default color is enlugh.
+          // splashColor: theme.colorScheme.secondary,
+        ),
+      ),
+    );
+  }
+}
+
 class ThreadMainFloorWidget extends StatelessWidget {
   final bool hasVote;
   final ThreadMain mainFloor;
@@ -16,28 +47,9 @@ class ThreadMainFloorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     return SafeArea(
-      child: ListView(children: [
-        Container(
-          constraints: const BoxConstraints(minHeight: 40),
-          child: Card(
-            // maybe enablet this will have some performance cost
-            // according to the document
-            clipBehavior: Clip.hardEdge,
-            child: InkWell(
-              onTap: () {},
-              child: Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-                alignment: Alignment.centerLeft,
-                child: Text.rich(TextSpan(
-                    text: mainFloor.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18))),
-              ),
-              // maybe default color is enlugh.
-              // splashColor: theme.colorScheme.secondary,
-            ),
-          ),
+      child: Column(children: [
+        ThreadTitleWidget(
+          title: mainFloor.title,
         ),
         Card(
           // maybe enablet this will have some performance cost

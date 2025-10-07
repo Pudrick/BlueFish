@@ -24,7 +24,7 @@ void launchApp() {
       // TODO: theme: userThemeData,
       theme: initUserThemeSettings(),
 
-      home: ThreadListPage(),
+      home: const ThreadListPage(),
     ),
   );
 }
