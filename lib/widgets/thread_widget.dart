@@ -52,11 +52,11 @@ class _ThreadWidgetState extends State<ThreadWidget> {
       child: CustomScrollView(
         slivers: [
           // TODO: make title widget independent so that can be sticked on the top.
-          SliverAppBar(
-              title: Text(threadDetail.mainFloor.title + "SLIVERAPPBAR"),
-              pinned: true,
-              floating: false,
-              snap: false),
+          SliverPersistentHeader(
+              delegate: StickyHeaderDelegate(
+                  child:
+                      ThreadTitleWidget(title: threadDetail.mainFloor.title)),
+              pinned: true),
 
           SliverToBoxAdapter(
             child: ThreadMainFloorWidget(mainFloor: threadDetail.mainFloor),

@@ -46,41 +46,60 @@ class ThreadMainFloorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    return SafeArea(
-      child: Column(children: [
-        ThreadTitleWidget(
-          title: mainFloor.title,
-        ),
-        Card(
-          // maybe enablet this will have some performance cost
-          // according to the document
-          clipBehavior: Clip.hardEdge,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {},
-              splashFactory: InkRipple.splashFactory,
-              child: Container(
-                margin: const EdgeInsets.all(5),
-                child: Column(
-                  children: [
-                    AuthorInfoWidget(content: mainFloor),
-                    const Divider(),
-                    HtmlWidgetWithVote(
-                      // TODO: add html parser and connect it with video parser.
-                      mainFloor.contentHTML,
-                      textStyle: const TextStyle(fontWeight: FontWeight.w500),
-                      // TODO: add recommend and its number
-                    ),
-                  ],
-                ),
+    return Column(children: [
+      Card(
+        // maybe enablet this will have some performance cost
+        // according to the document
+        clipBehavior: Clip.hardEdge,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {},
+            splashFactory: InkRipple.splashFactory,
+            child: Container(
+              margin: const EdgeInsets.all(5),
+              child: Column(
+                children: [
+                  AuthorInfoWidget(content: mainFloor),
+                  const Divider(),
+                  HtmlWidgetWithVote(
+                    // TODO: add html parser and connect it with video parser.
+                    mainFloor.contentHTML,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w500),
+                    // TODO: add recommend and its number
+                  ),
+                ],
               ),
-              // maybe default color is enlugh.
-              // splashColor: theme.colorScheme.secondary,
             ),
+            // maybe default color is enlugh.
+            // splashColor: theme.colorScheme.secondary,
           ),
         ),
-      ]),
-    );
+      ),
+    ]);
+  }
+}
+
+class StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  StickyHeaderDelegate({required this.child, this.height = 60.0});
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  bool shouldRebuild(StickyHeaderDelegate oldDelegate) {
+    return oldDelegate.height != height || oldDelegate.child != child;
   }
 }
