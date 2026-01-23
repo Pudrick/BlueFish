@@ -46,7 +46,7 @@ dependencies:
   shared_preferences: ^2.2.3
   video_player: ^2.9.2
   chewie: ^1.8.5
-  fvp: ^0.29.0
+  fvp: ^0.35.2
   flutter_widget_from_html: ^0.15.3
 
 

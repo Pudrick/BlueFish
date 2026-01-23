@@ -19,6 +19,7 @@ class ReplyFloor extends StatelessWidget {
       const double adjacentCornerRadius = 4.0;
 
       return Card(
+        color: Theme.of(context).colorScheme.surface,
         clipBehavior: Clip.hardEdge,
         child: InkWell(
           onTap: () {},

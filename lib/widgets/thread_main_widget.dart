@@ -16,6 +16,7 @@ class ThreadTitleWidget extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minHeight: 40),
       child: Card(
+        // color: Theme.of(context).colorScheme.surfaceContainerHighest,
         // maybe enablet this will have some performance cost
         // according to the document
         clipBehavior: Clip.hardEdge,
@@ -52,7 +53,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
         // according to the document
         clipBehavior: Clip.hardEdge,
         child: Material(
-          color: Colors.transparent,
+          color: Theme.of(context).colorScheme.secondaryContainer,
           child: InkWell(
             onTap: () {},
             splashFactory: InkRipple.splashFactory,
