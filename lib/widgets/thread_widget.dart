@@ -39,6 +39,14 @@ class _ThreadWidgetState extends State<ThreadWidget> {
     }
   }
 
+  void _jumpToPage(int page) {
+    setState(() {
+      threadDetail.currentPage = page;
+      isLoading = true;
+    });
+    _loadData();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +79,7 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                     (BuildContext context, int index) {
               return ReplyFloor(replyFloor: threadDetail.replies[index]);
             },
+            // FIXME：in the last page, the reply count may less than 20.
                     childCount: (threadDetail.totalRepliesNum <= 20)
                         ? threadDetail.totalRepliesNum
                         : 20)),
@@ -138,8 +147,15 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                 setState(() {
                   reversed = !reversed;
                 });
-
                 // TODO: refresh the replied in reverse order.
+              },
+              onPageTap: (){
+                showPageMenu(
+                  context: context,
+                 currentPage: threadDetail.currentPage,
+                  totalPages: threadDetail.totalPagesNum,
+                   onPageSelected: (int selectedPage) {_jumpToPage(selectedPage);}
+                   );
               },
             ),
           )),

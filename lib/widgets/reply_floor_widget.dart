@@ -18,6 +18,7 @@ class ReplyFloor extends StatelessWidget {
       const double capsuleRadius = buttonHeight / 2;
       const double adjacentCornerRadius = 4.0;
 
+      // TODO: implement quotes in reply.
       return Card(
         color: Theme.of(context).colorScheme.surface,
         clipBehavior: Clip.hardEdge,
