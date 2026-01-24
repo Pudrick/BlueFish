@@ -28,8 +28,6 @@ class _ThreadWidgetState extends State<ThreadWidget> {
   late ThreadDetail threadDetail;
   bool isLoading = true;
 
-  bool reversed = false;
-
   Future<void> _loadData() async {
     await threadDetail.refresh();
     if (mounted) {
@@ -45,6 +43,16 @@ class _ThreadWidgetState extends State<ThreadWidget> {
       isLoading = true;
     });
     _loadData();
+  }
+
+  int _repliesInPage(int page) {
+    if (threadDetail.totalRepliesNum <= 20) {
+      return threadDetail.totalPagesNum;
+    } else if (threadDetail.currentPage != threadDetail.totalPagesNum) {
+      return 20;
+    } else {
+      return threadDetail.totalRepliesNum % 20;
+    }
   }
 
   @override
@@ -70,19 +78,16 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                         ThreadTitleWidget(title: threadDetail.mainFloor.title)),
                 pinned: true),
 
-            SliverToBoxAdapter(
-              child: ThreadMainFloorWidget(mainFloor: threadDetail.mainFloor),
-            ),
+            if(threadDetail.currentPage == 1)
+              SliverToBoxAdapter(
+                child: ThreadMainFloorWidget(mainFloor: threadDetail.mainFloor),
+              ),
 
             SliverList(
                 delegate: SliverChildBuilderDelegate(
                     (BuildContext context, int index) {
-              return ReplyFloor(replyFloor: threadDetail.replies[index]);
-            },
-            // FIXME：in the last page, the reply count may less than 20.
-                    childCount: (threadDetail.totalRepliesNum <= 20)
-                        ? threadDetail.totalRepliesNum
-                        : 20)),
+              return ReplyFloor(replyFloor: threadDetail.replies[index], isQuote: false,);
+            }, childCount: _repliesInPage(threadDetail.currentPage))),
 
             // next page buttons.
             SliverToBoxAdapter(
@@ -92,8 +97,7 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                   children: [
                     Expanded(
                         child: FilledButton.tonal(
-                      // TODO: implement onpressed function.
-                      onPressed: () {},
+                      onPressed: threadDetail.currentPage > 1 ? () => _jumpToPage(threadDetail.currentPage - 1) : null,
 
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
@@ -102,16 +106,14 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                       ),
                       child: const Text("上一页"),
                     )),
-
                     const SizedBox(
                       width: 16,
                     ),
-
                     Expanded(
                       child: FilledButton.tonal(
-                          // TODO: implement onpressed function.
-                          onPressed: () {},
-
+                          onPressed: threadDetail.currentPage < threadDetail.totalPagesNum
+                          ? () => _jumpToPage(threadDetail.currentPage + 1)
+                          : null,
                           style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
@@ -142,20 +144,14 @@ class _ThreadWidgetState extends State<ThreadWidget> {
             child: PagePill(
               currentPage: threadDetail.currentPage,
               totalPages: threadDetail.totalPagesNum,
-              isReversed: reversed,
-              onToggleSort: () {
-                setState(() {
-                  reversed = !reversed;
-                });
-                // TODO: refresh the replied in reverse order.
-              },
-              onPageTap: (){
+              onPageTap: () {
                 showPageMenu(
-                  context: context,
-                 currentPage: threadDetail.currentPage,
-                  totalPages: threadDetail.totalPagesNum,
-                   onPageSelected: (int selectedPage) {_jumpToPage(selectedPage);}
-                   );
+                    context: context,
+                    currentPage: threadDetail.currentPage,
+                    totalPages: threadDetail.totalPagesNum,
+                    onPageSelected: (int selectedPage) {
+                      _jumpToPage(selectedPage);
+                    });
               },
             ),
           )),

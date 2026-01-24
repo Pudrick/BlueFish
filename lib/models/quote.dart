@@ -8,6 +8,12 @@ class Quote {
   String? quoteVideoCover;
   late bool isAudit; // what's this?
 
+  late bool isHidden;
+  late bool isDelete;
+  late bool isSelfDelete;
+  late bool isStarter;// Starter here means OP.
+  
+
   late Author quoteAuthor;
 
   Quote.fromMap(Map quoteMap) {

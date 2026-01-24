@@ -4,17 +4,13 @@ import 'package:flutter/services.dart';
 class PagePill extends StatelessWidget {
   final int currentPage;
   final int totalPages;
-  final bool isReversed;
-
-  final VoidCallback onToggleSort;
+  
   final VoidCallback onPageTap;
 
   const PagePill(
       {super.key,
       required this.currentPage,
       required this.totalPages,
-      required this.isReversed,
-      required this.onToggleSort,
       required this.onPageTap});
 
   @override
@@ -38,29 +34,6 @@ class PagePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Tooltip(
-              message: isReversed ? "当前为倒序查看" : "当前为正序查看",
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onToggleSort();
-                },
-                child: Container(
-                  width: height,
-                  alignment: Alignment.center,
-                  child: AnimatedRotation(
-                    turns: isReversed ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOutBack,
-                    child: Icon(
-                      Icons.sort,
-                      size: 22,
-                      color: isReversed ? activeColor : defaultContentColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
             VerticalDivider(
                 width: 1,
                 thickness: 1,
@@ -80,7 +53,7 @@ class PagePill extends StatelessWidget {
                             color: defaultContentColor,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
-                            fontFeatures: [FontFeature.tabularFigures()],
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           )),
                     )))
           ],

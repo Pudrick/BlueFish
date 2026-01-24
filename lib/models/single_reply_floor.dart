@@ -24,7 +24,9 @@ class SingleReplyFloor extends FloorContent {
   // late String postTimeReadable; // can be infer from postTime
   // late Author replyAuthor;
 
-  Quote? quote;
+  // Quote? quote;
+  SingleReplyFloor? quote;
+  bool hasQuote = false;
 
   late int replyNum;
 
@@ -50,7 +52,8 @@ class SingleReplyFloor extends FloorContent {
     author = Author.createReplyAuthor(jsonReplyMap["author"]);
     if (jsonReplyMap.containsKey("quote") &&
         jsonReplyMap["quote"].containsKey("pid")) {
-      quote = Quote.fromMap(jsonReplyMap["quote"]);
+      quote = SingleReplyFloor.fromReplyMap(jsonReplyMap["quote"]);
+      hasQuote = true;
     } else {
       quote = null;
     }
