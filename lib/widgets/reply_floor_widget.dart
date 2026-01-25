@@ -33,6 +33,8 @@ class ReplyFloor extends StatelessWidget {
                 AuthorInfoWidget(content: replyFloor),
                 const Divider(),
                 if(!isQuote && replyFloor.hasQuote) ...[
+
+                  // TODO: check if the quote is hidden/deleted/audited.
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: _QuoteWidget(

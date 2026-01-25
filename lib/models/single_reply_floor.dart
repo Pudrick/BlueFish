@@ -1,8 +1,6 @@
 import 'package:bluefish/models/author.dart';
 import 'package:bluefish/models/abstract_floor_content.dart';
 
-import "quote.dart";
-
 class SingleReplyFloor extends FloorContent {
   late String pid;
   late String authorId;
