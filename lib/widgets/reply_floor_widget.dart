@@ -11,24 +11,6 @@ class ReplyFloor extends StatelessWidget {
   const ReplyFloor(
       {super.key, required this.replyFloor, required this.isQuote});
 
-  Widget _buildQuoteSection(BuildContext context) {
-    final quote = replyFloor.quote!;
-    final bool isQuoteNotDisplay =
-        quote.isAudit || quote.isDelete || quote.isHidden || quote.isSelfDelete;
-    final quoteContent = ReplyFloor(
-      replyFloor: quote,
-      isQuote: true,
-    );
-
-    if (isQuoteNotDisplay) {
-      return quoteContent;
-    } else {
-      return _QuoteWidget(
-        quoteWidget: quoteContent,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     const double buttonHeight = 36.0;
@@ -83,7 +65,12 @@ class ReplyFloor extends StatelessWidget {
                   ),
                 )
               else if (!isQuote && replyFloor.hasQuote)
-                _buildQuoteSection(context),
+                _QuoteWidget(
+                  quoteWidget: ReplyFloor(
+                    replyFloor: replyFloor.quote!,
+                    isQuote: true,
+                  ),
+                ),
               if (!notDisplay) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -160,7 +147,6 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
     });
   }
 
-  // TODO: check how this works.
   void _checkHeight() {
     final renderBox =
         _contentKey.currentContext?.findRenderObject() as RenderBox?;
