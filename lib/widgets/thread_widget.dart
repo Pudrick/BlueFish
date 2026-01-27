@@ -7,13 +7,15 @@ import 'package:flutter/material.dart';
 class ThreadWidget extends StatefulWidget {
   final String tid;
 
-  const ThreadWidget._({super.key, required this.tid});
+  late int page;
 
-  factory ThreadWidget({Key? key, required dynamic tid}) {
+  ThreadWidget._({super.key, required this.tid, required this.page});
+
+  factory ThreadWidget({Key? key, required dynamic tid, int page = 1}) {
     if (tid is String) {
-      return ThreadWidget._(tid: tid);
+      return ThreadWidget._(tid: tid, page: page,);
     } else if (tid is int) {
-      return ThreadWidget._(tid: tid.toString());
+      return ThreadWidget._(tid: tid.toString(), page: page,);
     } else {
       throw ArgumentError(
           "tid only can be String or int, but get ${tid.runtimeType}");
@@ -58,7 +60,7 @@ class _ThreadWidgetState extends State<ThreadWidget> {
   @override
   void initState() {
     super.initState();
-    threadDetail = ThreadDetail(widget.tid);
+    threadDetail = ThreadDetail(widget.tid, page: widget.page);
     _loadData();
   }
 

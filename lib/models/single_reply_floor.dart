@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bluefish/models/author.dart';
 import 'package:bluefish/models/abstract_floor_content.dart';
 
@@ -18,6 +20,11 @@ class SingleReplyFloor extends FloorContent {
   late bool isHidden;
   late bool isAudit;
 
+  // TODO: make use of this arg.
+  // only appear in Quote part.
+  late bool? isBlacked;
+  late bool? isAdmin;
+
   // late DateTime postTime;
   // late String postTimeReadable; // can be infer from postTime
   // late Author replyAuthor;
@@ -31,7 +38,7 @@ class SingleReplyFloor extends FloorContent {
   // null in lights list
   late int? userBanned; // what's this?
 
-  late int hidePost;
+  late int? hidePost;
   // String? postLocation;
 
   SingleReplyFloor.fromReplyMap(Map jsonReplyMap) {
@@ -56,18 +63,15 @@ class SingleReplyFloor extends FloorContent {
       quote = null;
     }
     replyNum = jsonReplyMap["replyNum"];
-    if (jsonReplyMap.containsKey("userBanned")) {
+
+    // these field may be null: jsonReplyMap may not contains these keys.
       userBanned = jsonReplyMap["userBanned"];
-    }
-    if (jsonReplyMap.containsKey("hidePost")) {
       hidePost = jsonReplyMap["hidePost"];
-    }
-    if (jsonReplyMap.containsKey("video")) {
       replyVideo = jsonReplyMap["video"];
-    }
-    if (jsonReplyMap.containsKey("videoCover")) {
       replyVideoCover = jsonReplyMap["videoCover"];
-    }
+      isBlacked = jsonReplyMap["isBlacked"];
+      isAdmin = jsonReplyMap["isAdmin"];
+
     postLocation = jsonReplyMap["location"];
   }
 

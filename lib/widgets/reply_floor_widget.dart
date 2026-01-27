@@ -8,46 +8,88 @@ class ReplyFloor extends StatelessWidget {
   final SingleReplyFloor replyFloor;
   final bool isQuote;
 
-  const ReplyFloor({super.key, required this.replyFloor, required this.isQuote});
+  const ReplyFloor(
+      {super.key, required this.replyFloor, required this.isQuote});
+
+  Widget _buildQuoteSection(BuildContext context) {
+    final quote = replyFloor.quote!;
+    final bool isQuoteNotDisplay =
+        quote.isAudit || quote.isDelete || quote.isHidden || quote.isSelfDelete;
+    final quoteContent = ReplyFloor(
+      replyFloor: quote,
+      isQuote: true,
+    );
+
+    if (isQuoteNotDisplay) {
+      return quoteContent;
+    } else {
+      return _QuoteWidget(
+        quoteWidget: quoteContent,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (replyFloor.isDelete || replyFloor.isSelfDelete || replyFloor.isHidden) {
-      return const SizedBox.shrink();
-    } else {
-      const double buttonHeight = 36.0;
-      const double capsuleRadius = buttonHeight / 2;
-      const double adjacentCornerRadius = 4.0;
+    const double buttonHeight = 36.0;
+    const double capsuleRadius = buttonHeight / 2;
+    const double adjacentCornerRadius = 4.0;
 
-      // TODO: implement quotes in reply.
-      return Card(
-        color: isQuote ? Theme.of(context).colorScheme.surfaceContainerHighest : Theme.of(context).colorScheme.surface,
-        clipBehavior: Clip.hardEdge,
-        child: InkWell(
-          onTap: () {},
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AuthorInfoWidget(content: replyFloor),
-                const Divider(),
-                if(!isQuote && replyFloor.hasQuote) ...[
+    var notDisplay = replyFloor.isAudit ||
+        replyFloor.isDelete ||
+        replyFloor.isHidden ||
+        replyFloor.isSelfDelete;
 
-                  // TODO: check if the quote is hidden/deleted/audited.
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: _QuoteWidget(
-                      quoteWidget: ReplyFloor(replyFloor: replyFloor.quote!, isQuote: true)),
+    final String? notDisplayText = notDisplay
+        ? switch ((
+            replyFloor.isDelete,
+            replyFloor.isSelfDelete,
+            replyFloor.isAudit,
+            replyFloor.isHidden,
+          )) {
+            (true, false, _, _) => '内容已被删除',
+            (true, true, _, _) => '内容已被作者删除',
+            (_, _, true, _) => '内容正在审核中',
+            (_, _, _, true) => '内容已被隐藏',
+            _ => '内容不知道为什么不可显示',
+          }
+        : null;
+
+    return Card(
+      color: isQuote
+          ? Theme.of(context).colorScheme.surfaceContainerHighest
+          : Theme.of(context).colorScheme.surface,
+      clipBehavior: Clip.hardEdge,
+      child: InkWell(
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AuthorInfoWidget(content: replyFloor),
+              const Divider(),
+              if (notDisplay)
+                Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    notDisplayText!,
+                    style: TextStyle(
+                      color: Theme.of(context).disabledColor,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
                     ),
-                ],
+                  ),
+                )
+              else if (!isQuote && replyFloor.hasQuote)
+                _buildQuoteSection(context),
+              if (!notDisplay) ...[
                 Padding(
-
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: HtmlWidgetWithVote(replyFloor.contentHTML),
-
                 ),
-                if(!isQuote) ...[
+                if (!isQuote) ...[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
@@ -57,19 +99,8 @@ class ReplyFloor extends StatelessWidget {
                             shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.horizontal(
                                     left: Radius.circular(capsuleRadius),
-                                    right:
-                                        Radius.circular(adjacentCornerRadius)))),
-
-                        // the effect is same.
-
-                        //  ButtonStyle(
-                        // shape:
-                        //     WidgetStateProperty.all<RoundedRectangleBorder>(
-                        //         const RoundedRectangleBorder(
-                        //             borderRadius: BorderRadius.horizontal(
-                        //                 left: Radius.circular(capsuleRadius),
-                        //                 right: Radius.circular(
-                        //                     adjacentCornerRadius))))),
+                                    right: Radius.circular(
+                                        adjacentCornerRadius)))),
                         child: Row(
                           children: [
                             const Icon(Icons.wb_incandescent_outlined),
@@ -84,19 +115,20 @@ class ReplyFloor extends StatelessWidget {
                             shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.horizontal(
                                     right: Radius.circular(capsuleRadius),
-                                    left:
-                                        Radius.circular(adjacentCornerRadius)))),
+                                    left: Radius.circular(
+                                        adjacentCornerRadius)))),
                         child: const Icon(Icons.thumb_down_alt_outlined),
                       ),
                     ],
                   )
                 ]
-              ],
-            ),
+              ]
+            ],
           ),
         ),
-      );
-    }
+      ),
+    );
+    // }
   }
 }
 
@@ -104,7 +136,10 @@ class _QuoteWidget extends StatefulWidget {
   final Widget quoteWidget;
   final double maxHeight;
 
-  const _QuoteWidget({required this.quoteWidget, this.maxHeight = 180, });
+  const _QuoteWidget({
+    required this.quoteWidget,
+    this.maxHeight = 180,
+  });
 
   @override
   State<_QuoteWidget> createState() => _QuoteWidgetState();
@@ -113,30 +148,70 @@ class _QuoteWidget extends StatefulWidget {
 class _QuoteWidgetState extends State<_QuoteWidget> {
   bool _isExpanded = false;
 
+  bool _needsExpansion = true;
+
+  final GlobalKey _contentKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkHeight();
+    });
+  }
+
+  // TODO: check how this works.
+  void _checkHeight() {
+    final renderBox =
+        _contentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final height = renderBox.size.height;
+      if (height <= widget.maxHeight) {
+        if (mounted) {
+          setState(() {
+            _needsExpansion = false;
+          });
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    if (!_needsExpansion) {
+      return Container(
+        key: _contentKey,
+        child: widget.quoteWidget,
+      );
+    }
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),
       curve: Curves.fastOutSlowIn,
       alignment: Alignment.topCenter,
-      child: _isExpanded ? _buildExpandedView(colorScheme) : _buildCollapsedView(colorScheme),
-      );
+      child: _isExpanded
+          ? _buildExpandedView(colorScheme)
+          : _buildCollapsedView(colorScheme),
+    );
   }
 
   Widget _buildExpandedView(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        widget.quoteWidget,
-
+        Container(key: _contentKey, child: widget.quoteWidget),
         InkWell(
-          onTap: () => setState(() => _isExpanded = false,),
+          onTap: () => setState(
+            () => _isExpanded = false,
+          ),
           child: SizedBox(
             height: 30,
             child: Icon(
-              Icons.keyboard_arrow_up, size: 20, color: colorScheme.primary,
+              Icons.keyboard_arrow_up,
+              size: 20,
+              color: colorScheme.primary,
             ),
           ),
         )
@@ -146,7 +221,9 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
 
   Widget _buildCollapsedView(ColorScheme colorScheme) {
     return GestureDetector(
-      onTap: () => setState(() => _isExpanded = true,),
+      onTap: () => setState(
+        () => _isExpanded = true,
+      ),
       behavior: HitTestBehavior.opaque,
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -156,25 +233,29 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
             child: ClipRect(
               child: SingleChildScrollView(
                 physics: const NeverScrollableScrollPhysics(),
-                child: AbsorbPointer(child: widget.quoteWidget),
+                child: AbsorbPointer(
+                  child: Container(
+                    key: _contentKey,
+                    child: widget.quoteWidget,
+                  ),
+                ),
               ),
             ),
-            ),
-            Positioned(
+          ),
+          Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: Container(
                 height: 60,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
                       colorScheme.surfaceContainerHighest.withValues(alpha: 0),
                       colorScheme.surfaceContainerHighest.withValues(alpha: 1)
-                    ])
-                ),
+                    ])),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -183,7 +264,9 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
                       color: colorScheme.primary,
                       size: 24,
                     ),
-                    const SizedBox(height: 2,),
+                    const SizedBox(
+                      height: 2,
+                    ),
                     Divider(
                       height: 1,
                       thickness: 1,

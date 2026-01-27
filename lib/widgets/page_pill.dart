@@ -1,10 +1,11 @@
 import "package:flutter/material.dart";
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 class PagePill extends StatelessWidget {
   final int currentPage;
   final int totalPages;
-  
+
   final VoidCallback onPageTap;
 
   const PagePill(
@@ -63,27 +64,27 @@ class PagePill extends StatelessWidget {
   }
 }
 
-
-void showPageMenu({
-  required BuildContext context, 
-  required int currentPage, 
-  required int totalPages, 
-  required Function(int) onPageSelected, 
-  double bottomSpaceHeight = 80}) {
-    showModalBottomSheet(
-      context: context, 
+void showPageMenu(
+    {required BuildContext context,
+    required int currentPage,
+    required int totalPages,
+    required Function(int) onPageSelected,
+    double bottomSpaceHeight = 80}) {
+  showModalBottomSheet(
+      context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black54,
       useSafeArea: true,
-      builder: (context){
+      builder: (context) {
         return _PageSheet(
-          currentPage: currentPage,
-          totalpages: totalPages, 
-          onPageSelected: onPageSelected, 
-          bottomSpaceHeight: bottomSpaceHeight);
+            currentPage: currentPage,
+            totalpages: totalPages,
+            onPageSelected: onPageSelected,
+            bottomSpaceHeight: bottomSpaceHeight);
       });
 }
+
 class _PageSheet extends StatefulWidget {
   final int currentPage;
   final int totalpages;
@@ -103,6 +104,9 @@ class _PageSheet extends StatefulWidget {
 class _PageSheetState extends State<_PageSheet> {
   late double _sliderValue;
 
+  ScrollController? _scrollController;
+  double? _gridWidth;
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +117,46 @@ class _PageSheetState extends State<_PageSheet> {
     if (page < 1 || page > widget.totalpages) return;
     Navigator.pop(context);
     widget.onPageSelected(page);
+  }
+
+  double _calculateScrollOffset(int page, double gridWidth) {
+    const int crossAxisCount = 5;
+    const double crossAxisSpacing = 10.0;
+    const double mainAxisSpacing = 10.0;
+    const double childAspectRatio = 1.1;
+    const double containerHeight = 180.0;
+
+    final double itemWidth =
+        (gridWidth - ((crossAxisCount - 1) * crossAxisSpacing)) /
+            crossAxisCount;
+    final double itemHeight = itemWidth / childAspectRatio;
+
+    final int targetIndex = page - 1;
+    final int targetRow = targetIndex ~/ crossAxisCount;
+
+    final double rowTopOffset = targetRow * (itemHeight + mainAxisSpacing);
+
+    double targetOffset =
+        rowTopOffset - (containerHeight / 2) + (itemHeight / 2);
+
+    return max(0, targetOffset);
+  }
+
+  void _onSliderChanged(double value) {
+    setState(() => _sliderValue = value);
+  }
+
+  void _onSliderChangeEnd(double value) {
+    if (_gridWidth != null &&
+        _scrollController != null &&
+        _scrollController!.hasClients) {
+      final offset = _calculateScrollOffset(value.toInt(), _gridWidth!);
+      _scrollController!.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
@@ -137,123 +181,141 @@ class _PageSheetState extends State<_PageSheet> {
                 )
               ]),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  "共${widget.totalpages}页",
-                  style: textTheme.bodyMedium
-                      ?.copyWith(color: colorScheme.outline),
-                ),
-                const SizedBox(
-                  height: 24,
-                ),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      "共${widget.totalpages}页",
+                      style: textTheme.bodyMedium
+                          ?.copyWith(color: colorScheme.outline),
+                    ),
+                    const SizedBox(
+                      height: 24,
+                    ),
 
-                // Slider bar
-                if (widget.totalpages > 1) ...[
-                  Row(
-                    children: [
-                      Text(
-                        "1",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary),
+                    // Slider bar
+                    if (widget.totalpages > 1) ...[
+                      Row(
+                        children: [
+                          Text(
+                            "1",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary),
+                          ),
+                          Expanded(
+                              child: Slider(
+                            value: _sliderValue,
+                            min: 1,
+                            max: widget.totalpages.toDouble(),
+                            divisions: widget.totalpages > 1
+                                ? widget.totalpages - 1
+                                : 1,
+                            label: _sliderValue.toInt().toString(),
+                            onChanged: _onSliderChanged,
+                            onChangeEnd: _onSliderChangeEnd,
+                          )),
+                          Text(
+                            "${widget.totalpages}",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary),
+                          )
+                        ],
                       ),
-                      Expanded(
-                          child: Slider(
-                        value: _sliderValue,
-                        min: 1,
-                        max: widget.totalpages.toDouble(),
-                        divisions:
-                            widget.totalpages > 1 ? widget.totalpages - 1 : 1,
-                        label: _sliderValue.toInt().toString(),
-                        onChanged: (val) {
-                          setState(() => _sliderValue = val);
-                          HapticFeedback.selectionClick();
-                        },
-                        onChangeEnd: (value) => _jumpTo(value.toInt()),
-                      )),
-                      Text(
-                        "${widget.totalpages}",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary),
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: colorScheme.onSecondaryContainer,
+                              borderRadius: BorderRadius.circular(12)),
+                          child: const Text("woo"),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(
+                        height: 10,
                       )
                     ],
-                  ),
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: colorScheme.onSecondaryContainer,
-                          borderRadius: BorderRadius.circular(12)),
-                      child: const Text("woo"),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Divider(),
-                  const SizedBox(
-                    height: 10,
-                  )
-                ],
-                Flexible(
-                    child: SizedBox(
-                  height: 180,
-                  child: GridView.builder(
-                      padding: EdgeInsets.zero,
-                      physics: const BouncingScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 5,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: 1.1),
-                      itemCount: widget.totalpages,
-                      itemBuilder: (ctx, index) {
-                        final page = index + 1;
-                        final isCurrent = page == widget.currentPage;
+                    Flexible(
+                        child: SizedBox(
+                      height: 180,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          _gridWidth = constraints.maxWidth;
 
-                        return Material(
-                          color: isCurrent ? colorScheme.primary: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
+                          if (_scrollController == null) {
+                            final initialOffset = _calculateScrollOffset(
+                                widget.currentPage, constraints.maxWidth);
+                            _scrollController = ScrollController(
+                                initialScrollOffset: initialOffset);
+                          }
 
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () async { 
-                              await Future.delayed(const Duration(milliseconds: 150));
-                              _jumpTo(page);},
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              alignment: Alignment.center,
-                              child: Text(
-                                "$page",
-                                style: TextStyle(
+                          return GridView.builder(
+                              controller: _scrollController,
+                              padding: EdgeInsets.zero,
+                              physics: const BouncingScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 5,
+                                      mainAxisSpacing: 10,
+                                      crossAxisSpacing: 10,
+                                      childAspectRatio: 1.1),
+                              itemCount: widget.totalpages,
+                              itemBuilder: (ctx, index) {
+                                final page = index + 1;
+                                final isCurrent = page == _sliderValue.toInt();
+
+                                return Material(
                                   color: isCurrent
-                                      ? colorScheme.onPrimary
-                                      : colorScheme.onSurface,
-                                  fontWeight: isCurrent
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                ))
-              ],
-            ),
-          ),
+                                      ? colorScheme.primary
+                                      : colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(12),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    onTap: () async {
+                                      setState(() {
+                                        _sliderValue = page.toDouble();
+                                      });
+                                      await Future.delayed(
+                                          const Duration(milliseconds: 150));
+                                      _jumpTo(page);
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        "$page",
+                                        style: TextStyle(
+                                          color: isCurrent
+                                              ? colorScheme.onPrimary
+                                              : colorScheme.onSurface,
+                                          fontWeight: isCurrent
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              });
+                        },
+                      ),
+                    )),
+                  ])),
         ),
         GestureDetector(
           onTap: () => Navigator.pop(context),
           behavior: HitTestBehavior.translucent,
-          child: SizedBox(height: widget.bottomSpaceHeight,),
+          child: SizedBox(
+            height: widget.bottomSpaceHeight,
+          ),
         )
       ],
     );
