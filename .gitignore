@@ -42,10 +42,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# iOS, Linux and macOS related
+# iOS, Linux and macOS related, and web
 ios/
 linux/
 macos/
+web/
 
 # test folder
 test/
