@@ -46,7 +46,6 @@ app.*.map.json
 ios/
 linux/
 macos/
-web/
 
 # test folder
 test/
