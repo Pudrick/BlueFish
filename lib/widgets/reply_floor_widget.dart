@@ -22,20 +22,24 @@ class ReplyFloor extends StatelessWidget {
         replyFloor.isHidden ||
         replyFloor.isSelfDelete;
 
-    final String? notDisplayText = notDisplay
+    final String? notDisplayReasonText = notDisplay
         ? switch ((
             replyFloor.isDelete,
             replyFloor.isSelfDelete,
             replyFloor.isAudit,
             replyFloor.isHidden,
           )) {
-            (true, false, _, _) => '内容已被删除',
-            (true, true, _, _) => '内容已被作者删除',
-            (_, _, true, _) => '内容正在审核中',
-            (_, _, _, true) => '内容已被隐藏',
-            _ => '内容不知道为什么不可显示',
+            (true, false, _, _) => '该内容已被删除',
+            (true, true, _, _) => '该内容已被作者删除',
+            (_, _, true, _) => '该内容正在卡审核',
+            (_, _, _, true) => '该内容已被隐藏',
+            _ => '该内容不知道为什么不可显示',
           }
         : null;
+
+    final String? notDisplayText = notDisplayReasonText == null
+        ? null
+        : "其他用户当前无法显示该内容。原因：$notDisplayReasonText";
 
     return Card(
       color: isQuote
@@ -51,64 +55,81 @@ class ReplyFloor extends StatelessWidget {
             children: [
               AuthorInfoWidget(content: replyFloor),
               const Divider(),
-              if (notDisplay)
-                Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    notDisplayText!,
-                    style: TextStyle(
-                      color: Theme.of(context).disabledColor,
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-              else if (!isQuote && replyFloor.hasQuote)
+              if (!isQuote && replyFloor.hasQuote)
                 _QuoteWidget(
                   quoteWidget: ReplyFloor(
                     replyFloor: replyFloor.quote!,
                     isQuote: true,
                   ),
                 ),
-              if (!notDisplay) ...[
+              if (notDisplay)
+                Container(
+                  alignment: Alignment.centerLeft,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .errorContainer
+                          .withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.3),
+                      )),
+                  child: Text(
+                    isQuote ? notDisplayReasonText! : notDisplayText!,
+                    style: TextStyle(
+                      color: Theme.of(context).disabledColor,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              if (!isQuote || (isQuote && !notDisplay))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: HtmlWidgetWithVote(replyFloor.contentHTML),
                 ),
-                if (!isQuote) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.horizontal(
-                                    left: Radius.circular(capsuleRadius),
-                                    right: Radius.circular(
-                                        adjacentCornerRadius)))),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wb_incandescent_outlined),
-                            Text(" ${replyFloor.lightCount}"),
-                          ],
-                        ),
+              if (!isQuote) ...[
+                const SizedBox(
+                  height: 4,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.horizontal(
+                                  left: Radius.circular(capsuleRadius),
+                                  right:
+                                      Radius.circular(adjacentCornerRadius)))),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wb_incandescent_outlined),
+                          Text(" ${replyFloor.lightCount}"),
+                        ],
                       ),
-                      const SizedBox(width: 3),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.horizontal(
-                                    right: Radius.circular(capsuleRadius),
-                                    left: Radius.circular(
-                                        adjacentCornerRadius)))),
-                        child: const Icon(Icons.thumb_down_alt_outlined),
-                      ),
-                    ],
-                  )
-                ]
+                    ),
+                    const SizedBox(width: 3),
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.horizontal(
+                                  right: Radius.circular(capsuleRadius),
+                                  left:
+                                      Radius.circular(adjacentCornerRadius)))),
+                      child: const Icon(Icons.thumb_down_alt_outlined),
+                    ),
+                    // TODO：add check replies to this reply.
+                  ],
+                )
               ]
             ],
           ),

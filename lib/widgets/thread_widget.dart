@@ -13,9 +13,15 @@ class ThreadWidget extends StatefulWidget {
 
   factory ThreadWidget({Key? key, required dynamic tid, int page = 1}) {
     if (tid is String) {
-      return ThreadWidget._(tid: tid, page: page,);
+      return ThreadWidget._(
+        tid: tid,
+        page: page,
+      );
     } else if (tid is int) {
-      return ThreadWidget._(tid: tid.toString(), page: page,);
+      return ThreadWidget._(
+        tid: tid.toString(),
+        page: page,
+      );
     } else {
       throw ArgumentError(
           "tid only can be String or int, but get ${tid.runtimeType}");
@@ -64,6 +70,46 @@ class _ThreadWidgetState extends State<ThreadWidget> {
     _loadData();
   }
 
+  Widget _prevNextButtons() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(5),
+        child: Row(
+          children: [
+            Expanded(
+                child: FilledButton.tonal(
+              onPressed: threadDetail.currentPage > 1
+                  ? () => _jumpToPage(threadDetail.currentPage - 1)
+                  : null,
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text("上一页"),
+            )),
+            const SizedBox(
+              width: 16,
+            ),
+            Expanded(
+              child: FilledButton.tonal(
+                  onPressed:
+                      threadDetail.currentPage < threadDetail.totalPagesNum
+                          ? () => _jumpToPage(threadDetail.currentPage + 1)
+                          : null,
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text("下一页")),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -80,7 +126,9 @@ class _ThreadWidgetState extends State<ThreadWidget> {
                         ThreadTitleWidget(title: threadDetail.mainFloor.title)),
                 pinned: true),
 
-            if(threadDetail.currentPage == 1)
+            if (threadDetail.totalPagesNum >= 1) _prevNextButtons(),
+
+            if (threadDetail.currentPage == 1)
               SliverToBoxAdapter(
                 child: ThreadMainFloorWidget(mainFloor: threadDetail.mainFloor),
               ),
@@ -88,45 +136,14 @@ class _ThreadWidgetState extends State<ThreadWidget> {
             SliverList(
                 delegate: SliverChildBuilderDelegate(
                     (BuildContext context, int index) {
-              return ReplyFloor(replyFloor: threadDetail.replies[index], isQuote: false,);
+              return ReplyFloor(
+                replyFloor: threadDetail.replies[index],
+                isQuote: false,
+              );
             }, childCount: _repliesInPage(threadDetail.currentPage))),
 
             // next page buttons.
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(5),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: FilledButton.tonal(
-                      onPressed: threadDetail.currentPage > 1 ? () => _jumpToPage(threadDetail.currentPage - 1) : null,
-
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text("上一页"),
-                    )),
-                    const SizedBox(
-                      width: 16,
-                    ),
-                    Expanded(
-                      child: FilledButton.tonal(
-                          onPressed: threadDetail.currentPage < threadDetail.totalPagesNum
-                          ? () => _jumpToPage(threadDetail.currentPage + 1)
-                          : null,
-                          style: FilledButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text("下一页")),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            if (threadDetail.totalPagesNum >= 1) _prevNextButtons(),
 
             // preserve space for page select pill button, avoid the pill lap over the next/prev page button.
             const SliverToBoxAdapter(
