@@ -8,23 +8,24 @@ part of 'single_thread_title.dart';
 
 SingleThreadTitle _$SingleThreadTitleFromJson(Map<String, dynamic> json) =>
     SingleThreadTitle()
-      ..fid = json['fid'] as int
-      ..is_gif = json['is_gif'] as int
-      ..replys = json['replys'] as int
+      ..fid = (json['fid'] as num).toInt()
+      ..is_gif = (json['is_gif'] as num).toInt()
+      ..replys = (json['replys'] as num).toInt()
       ..user_name = json['user_name'] as String
-      ..cover_height = json['cover_height'] as int
+      ..cover_height = (json['cover_height'] as num).toInt()
       ..title = json['title'] as String
-      ..type = json['type'] as int
-      ..tid = json['tid'] as int
-      ..light_replys = json['light_replys'] as int
-      ..puid = json['puid'] as int
-      ..cover_width = json['cover_width'] as int
-      ..image_count = json['image_count'] as int
-      ..zoneId = json['zoneId'] as int?
-      ..recommends = json['recommends'] as int
+      ..type = (json['type'] as num).toInt()
+      ..tid = (json['tid'] as num).toInt()
+      ..light_replys = (json['light_replys'] as num).toInt()
+      ..puid = (json['puid'] as num).toInt()
+      ..cover_width = (json['cover_width'] as num).toInt()
+      ..image_count = (json['image_count'] as num).toInt()
+      ..zoneId = (json['zoneId'] as num?)?.toInt()
+      ..recommends = (json['recommends'] as num).toInt()
       ..time = json['time'] as String
       ..threadType = json['threadType'] as String?
-      ..contentType = json['contentType'] as int?;
+      ..contentType = (json['contentType'] as num?)?.toInt()
+      ..isPinned = json['isPinned'] as bool;
 
 Map<String, dynamic> _$SingleThreadTitleToJson(SingleThreadTitle instance) =>
     <String, dynamic>{
@@ -45,4 +46,5 @@ Map<String, dynamic> _$SingleThreadTitleToJson(SingleThreadTitle instance) =>
       'time': instance.time,
       'threadType': instance.threadType,
       'contentType': instance.contentType,
+      'isPinned': instance.isPinned,
     };
