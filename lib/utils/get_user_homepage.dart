@@ -5,6 +5,8 @@ import 'package:bluefish/models/author_homepage/author_home.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 
+
+// TODO: change the import to cookie-free version temporarily.
 import './http_with_ua_coke.dart';
 
 String getAuthorDataFromScripts(List<Element> scripts) {

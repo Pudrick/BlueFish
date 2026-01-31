@@ -147,7 +147,7 @@ class AuthorHome {
     follow_count: (json['cardInfoData']['follow_count'] as num).toInt(),
     avatarUrl: json['cardInfoData']['header'] as String,
 
-    // TODO: make sure how the number indicate, convert it to bool
+    // FIXME: make sure how the number indicate, convert it to bool
     be_follow_status: json['cardInfoData']['be_follow_status'] as bool,
     mainThreadsRecommendsCount: (json['cardInfoData']['mainThreadsRecommendsCount'] as num)
         .toInt(),
@@ -165,7 +165,7 @@ class AuthorHome {
     env: json['cardInfoData']['env'] as String,
     tabKey: json['cardInfoData']['tabKey'] as String,
 
-    // TODO: use api to get threads here.
+    // FIXME: use api to get threads here.
     threads: (json['threads'] as List<dynamic>)
         .map((e) => AuthorHomeThreadTitle.fromJson(e as Map<String, dynamic>))
         .toList(),
