@@ -30,7 +30,7 @@ class AuthorHomeThreadTitle {
   @JsonKey(name: 'topic_logo')
   final String forumIconUrl;
 
-  final String topic_id;
+  final int topic_id;
 
   @JsonKey(name: 'attr')
   final String PHPattr;

@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_homepage/author_home_thread_list.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'author_home_thread_title.dart';
@@ -6,14 +7,14 @@ import 'author_home_thread_title.dart';
 
 enum FollowStatus { following, notFollowed, self }
 
-enum Gender { female, male, notSet }
+enum Gender { female, male, unknown }
 
 @JsonSerializable()
 class AuthorHome {
   // TODO: what is this used for?
   late bool isLogin;
 
-  final String bbs_follow_url;
+  final Uri bbs_follow_url;
 
   // -1 for not followed(include self), 2 for followed
   @JsonKey(
@@ -51,9 +52,11 @@ class AuthorHome {
   final int follow_count;
 
   @JsonKey(name: 'header')
-  final String avatarUrl;
+  final Uri avatarUrl;
   final bool be_follow_status;
-  final int mainThreadsRecommendsCount;
+
+  @JsonKey(name: 'be_recommend_count')
+  final int beRecommendCount;
 
   @JsonKey(fromJson: _intToGender, toJson: _genderToInt)
   final Gender gender;
@@ -63,7 +66,7 @@ class AuthorHome {
   final int puid;
 
   @JsonKey(name: 'header_back')
-  final String gaussAvatarUrl;
+  final Uri gaussAvatarUrl;
 
   final String nickname;
 
@@ -74,7 +77,8 @@ class AuthorHome {
   final String registerTimeStr;
 
   // what's this?
-  final int bbs_favorite_count;
+  // only appear in self page.
+  final int? bbs_favorite_count;
 
   @JsonKey(name: 'bbs_post_count')
   final int replyCount;
@@ -84,7 +88,7 @@ class AuthorHome {
   final bool nextPage;
   final String env;
   final String tabKey;
-  final List<AuthorHomeThreadTitle> threads;
+  AuthorHomeThreadList threads;
 
   final String euid;
 
@@ -104,7 +108,7 @@ class AuthorHome {
     required this.follow_count,
     required this.avatarUrl,
     required this.be_follow_status,
-    required this.mainThreadsRecommendsCount,
+    required this.beRecommendCount,
     required this.gender,
     this.banStatus,
     required this.puid,
@@ -112,12 +116,14 @@ class AuthorHome {
     required this.nickname,
     required this.isSelf,
     required this.registerTimeStr,
-    required this.bbs_favorite_count,
+    this.bbs_favorite_count,
     required this.replyCount,
     required this.location,
     required this.nextPage,
     required this.env,
     required this.tabKey,
+
+    // only for 1st page.
     required this.threads,
     required this.euid,
   });
@@ -129,49 +135,55 @@ class AuthorHome {
   // factory AuthorHome.fromJson(Map<String, dynamic> json) =>
   //     AuthorHomeFromJson(json);
 
-  static AuthorHome authorHomeFromJson(Map<String, dynamic> json) => AuthorHome(
-    bbs_follow_url: json['cardInfoData']['bbs_follow_url'] as String,
-    followStatus: AuthorHome._intToFollowStatus(json['cardInfoData']['follow_status']),
+static AuthorHome authorHomeFromJson(Map<String, dynamic> json) {
+  final card = json['cardInfoData'] as Map<String, dynamic>;
+
+  return AuthorHome(
+    bbs_follow_url: Uri.parse(card['bbs_follow_url'] as String),
+    followStatus: AuthorHome._intToFollowStatus(card['follow_status']),
     reputation: AuthorHome._getReputationNum(
-      json['cardInfoData']['reputation'] as Map<String, dynamic>,
+      card['reputation'] as Map<String, dynamic>,
     ),
-    mainThreadsCount: (json['cardInfoData']['bbs_msg_count'] as num).toInt(),
-    be_light_count: (json['cardInfoData']['be_light_count'] as num).toInt(),
-    bbsUserLevelPercent: (json['cardInfoData']['bbsUserLevelPercent'] as num).toDouble(),
-    level: (json['cardInfoData']['level'] as num).toInt(),
-    birth: json['cardInfoData']['birth'] as String?,
-    fansCount: (json['cardInfoData']['be_follow_count'] as num).toInt(),
-    bbsUserLevel: json['cardInfoData']['bbsUserLevel'] as String,
-    bbsUserLevelFormatedStr: json['cardInfoData']['bbsUserLevelDesc'] as String,
-    recommendCount: (json['cardInfoData']['bbs_recommend_count'] as num).toInt(),
-    follow_count: (json['cardInfoData']['follow_count'] as num).toInt(),
-    avatarUrl: json['cardInfoData']['header'] as String,
+    mainThreadsCount: (card['bbs_msg_count'] as num).toInt(),
+    be_light_count: (card['be_light_count'] as num).toInt(),
+    bbsUserLevelPercent: (card['bbsUserLevelPercent'] as num).toDouble(),
+    level: (card['level'] as num).toInt(),
+    birth: card['birth'] as String?,
+    fansCount: (card['be_follow_count'] as num).toInt(),
+    bbsUserLevel: card['bbsUserLevel'] as String,
+    bbsUserLevelFormatedStr: card['bbsUserLevelDesc'] as String,
+    recommendCount: (card['bbs_recommend_count'] as num).toInt(),
+    follow_count: (card['follow_count'] as num).toInt(),
+    avatarUrl: Uri.parse(card['header'] as String),
 
-    // FIXME: make sure how the number indicate, convert it to bool
-    be_follow_status: json['cardInfoData']['be_follow_status'] as bool,
-    mainThreadsRecommendsCount: (json['cardInfoData']['mainThreadsRecommendsCount'] as num)
-        .toInt(),
-    gender: AuthorHome._intToGender(json['cardInfoData']['gender']),
-    banStatus: json['cardInfoData']['banStatus'] as String?,
-    puid: (json['cardInfoData']['puid'] as num).toInt(),
-    gaussAvatarUrl: json['cardInfoData']['header_back'] as String,
-    nickname: json['cardInfoData']['nickname'] as String,
-    isSelf: AuthorHome._intToBool(json['cardInfoData']['is_self']),
-    registerTimeStr: json['cardInfoData']['reg_time_str'] as String,
-    bbs_favorite_count: (json['cardInfoData']['bbs_favorite_count'] as num).toInt(),
-    replyCount: (json['cardInfoData']['bbs_post_count'] as num).toInt(),
-    location: json['cardInfoData']['location'] as String,
-    nextPage: json['cardInfoData']['nextPage'] as bool,
-    env: json['cardInfoData']['env'] as String,
-    tabKey: json['cardInfoData']['tabKey'] as String,
+    be_follow_status:
+        (card['be_follow_status'] as int) == -1 ? false : true,
+    beRecommendCount:
+        (card['be_recommend_count'] as num).toInt(),
+    gender: AuthorHome._intToGender(card['gender']),
+    banStatus: card['banStatus'] as String?,
+    puid: (card['puid'] as num).toInt(),
+    gaussAvatarUrl: Uri.parse(card['header_back'] as String),
+    nickname: card['nickname'] as String,
+    isSelf: AuthorHome._intToBool(card['is_self']),
+    registerTimeStr: card['reg_time_str'] as String,
 
-    // FIXME: use api to get threads here.
-    threads: (json['threads'] as List<dynamic>)
-        .map((e) => AuthorHomeThreadTitle.fromJson(e as Map<String, dynamic>))
-        .toList(),
+    bbs_favorite_count:
+        (card['bbs_favorite_count'] as num?)?.toInt(),
+
+    replyCount: (card['bbs_post_count'] as num).toInt(),
+    location: card['location'] as String,
+    nextPage: json['nextPage'] as bool,
+    env: json['env'] as String,
+    tabKey: json['tabKey'] as String,
+
     euid: json['euid'] as String,
     
+    // keep empty here, fill it later via API.
+    threads: AuthorHomeThreadList(authorEuid: json['euid'] as String),
   )..isLogin = json['isLogin'] as bool;
+}
+
 
   // Map<String, dynamic> toJson() => _$AuthorHomeToJson(this);
 
@@ -186,7 +198,7 @@ class AuthorHome {
         return Gender.male;
       case 2:
       default:
-        return Gender.notSet;
+        return Gender.unknown;
     }
   }
 
@@ -196,7 +208,7 @@ class AuthorHome {
         return 0;
       case Gender.male:
         return 1;
-      case Gender.notSet:
+      case Gender.unknown:
         return 2;
     }
   }

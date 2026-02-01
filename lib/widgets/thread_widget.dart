@@ -112,6 +112,7 @@ class _ThreadWidgetState extends State<ThreadWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: add reply FAB.
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }

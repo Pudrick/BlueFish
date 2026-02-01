@@ -20,7 +20,7 @@ AuthorHomeThreadTitle _$AuthorHomeThreadTitleFromJson(
   repliesNum: (json['replies'] as num).toInt(),
   authorName: json['nickname'] as String,
   forumIconUrl: json['topic_logo'] as String,
-  topic_id: json['topic_id'] as String,
+  topic_id: (json['topic_id'] as num).toInt(),
   PHPattr: json['attr'] as String,
   picUrls: (json['pics'] as List<dynamic>?)
       ?.map((e) => ThreadPicPeek.fromJson(e as Map<String, dynamic>))
