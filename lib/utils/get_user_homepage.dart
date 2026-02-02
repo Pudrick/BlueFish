@@ -2,10 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/models/author.dart';
 import 'package:bluefish/models/author_homepage/author_home.dart';
-import 'package:bluefish/models/author_homepage/author_home_thread_list.dart';
-import 'package:bluefish/models/author_homepage/author_home_thread_title.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 
@@ -45,6 +42,8 @@ Future<AuthorHome> getAuthorHomeByEuid(dynamic euid) async {
 
   // now the threads in authorHome is empty, need implement later.
   final authorHome = AuthorHome.authorHomeFromJson(jsonDecode(authorInfoStr));
-  await authorHome.threads.loadNextPageThreads();
+
+  // init page is 1.
+  await authorHome.refreshThreads();
   return authorHome;
 }

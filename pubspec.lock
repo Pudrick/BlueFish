@@ -732,6 +732,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
+  php_serializer:
+    dependency: "direct main"
+    description:
+      name: php_serializer
+      sha256: "4b4b65ba5a5cb3c14a0a021d8af5d70d04ab274a4f6d73580024d9ebb17e447a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   platform:
     dependency: transitive
     description:

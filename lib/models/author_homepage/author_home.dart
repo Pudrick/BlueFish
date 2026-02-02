@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:bluefish/models/author_homepage/author_home_reply_list.dart';
 import 'package:bluefish/models/author_homepage/author_home_thread_list.dart';
+import 'package:bluefish/utils/http_with_ua.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'author_home_thread_title.dart';
@@ -9,7 +14,7 @@ enum FollowStatus { following, notFollowed, self }
 
 enum Gender { female, male, unknown }
 
-@JsonSerializable()
+// @JsonSerializable()
 class AuthorHome {
   // TODO: what is this used for?
   late bool isLogin;
@@ -89,6 +94,8 @@ class AuthorHome {
   final String env;
   final String tabKey;
   AuthorHomeThreadList threads;
+  AuthorHomeReplyList replies;
+  AuthorHomeThreadList recommendThreads;
 
   final String euid;
 
@@ -126,6 +133,8 @@ class AuthorHome {
     // only for 1st page.
     required this.threads,
     required this.euid,
+    required this.replies,
+    required this.recommendThreads,
   });
 
   static int _getReputationNum(Map<String, dynamic> json) {
@@ -135,55 +144,53 @@ class AuthorHome {
   // factory AuthorHome.fromJson(Map<String, dynamic> json) =>
   //     AuthorHomeFromJson(json);
 
-static AuthorHome authorHomeFromJson(Map<String, dynamic> json) {
-  final card = json['cardInfoData'] as Map<String, dynamic>;
+  static AuthorHome authorHomeFromJson(Map<String, dynamic> json) {
+    final card = json['cardInfoData'] as Map<String, dynamic>;
 
-  return AuthorHome(
-    bbs_follow_url: Uri.parse(card['bbs_follow_url'] as String),
-    followStatus: AuthorHome._intToFollowStatus(card['follow_status']),
-    reputation: AuthorHome._getReputationNum(
-      card['reputation'] as Map<String, dynamic>,
-    ),
-    mainThreadsCount: (card['bbs_msg_count'] as num).toInt(),
-    be_light_count: (card['be_light_count'] as num).toInt(),
-    bbsUserLevelPercent: (card['bbsUserLevelPercent'] as num).toDouble(),
-    level: (card['level'] as num).toInt(),
-    birth: card['birth'] as String?,
-    fansCount: (card['be_follow_count'] as num).toInt(),
-    bbsUserLevel: card['bbsUserLevel'] as String,
-    bbsUserLevelFormatedStr: card['bbsUserLevelDesc'] as String,
-    recommendCount: (card['bbs_recommend_count'] as num).toInt(),
-    follow_count: (card['follow_count'] as num).toInt(),
-    avatarUrl: Uri.parse(card['header'] as String),
+    return AuthorHome(
+      bbs_follow_url: Uri.parse(card['bbs_follow_url'] as String),
+      followStatus: AuthorHome._intToFollowStatus(card['follow_status']),
+      reputation: AuthorHome._getReputationNum(
+        card['reputation'] as Map<String, dynamic>,
+      ),
+      mainThreadsCount: (card['bbs_msg_count'] as num).toInt(),
+      be_light_count: (card['be_light_count'] as num).toInt(),
+      bbsUserLevelPercent: (card['bbsUserLevelPercent'] as num).toDouble(),
+      level: (card['level'] as num).toInt(),
+      birth: card['birth'] as String?,
+      fansCount: (card['be_follow_count'] as num).toInt(),
+      bbsUserLevel: card['bbsUserLevel'] as String,
+      bbsUserLevelFormatedStr: card['bbsUserLevelDesc'] as String,
+      recommendCount: (card['bbs_recommend_count'] as num).toInt(),
+      follow_count: (card['follow_count'] as num).toInt(),
+      avatarUrl: Uri.parse(card['header'] as String),
 
-    be_follow_status:
-        (card['be_follow_status'] as int) == -1 ? false : true,
-    beRecommendCount:
-        (card['be_recommend_count'] as num).toInt(),
-    gender: AuthorHome._intToGender(card['gender']),
-    banStatus: card['banStatus'] as String?,
-    puid: (card['puid'] as num).toInt(),
-    gaussAvatarUrl: Uri.parse(card['header_back'] as String),
-    nickname: card['nickname'] as String,
-    isSelf: AuthorHome._intToBool(card['is_self']),
-    registerTimeStr: card['reg_time_str'] as String,
+      be_follow_status: (card['be_follow_status'] as int) == -1 ? false : true,
+      beRecommendCount: (card['be_recommend_count'] as num).toInt(),
+      gender: AuthorHome._intToGender(card['gender']),
+      banStatus: card['banStatus'] as String?,
+      puid: (card['puid'] as num).toInt(),
+      gaussAvatarUrl: Uri.parse(card['header_back'] as String),
+      nickname: card['nickname'] as String,
+      isSelf: AuthorHome._intToBool(card['is_self']),
+      registerTimeStr: card['reg_time_str'] as String,
 
-    bbs_favorite_count:
-        (card['bbs_favorite_count'] as num?)?.toInt(),
+      bbs_favorite_count: (card['bbs_favorite_count'] as num?)?.toInt(),
 
-    replyCount: (card['bbs_post_count'] as num).toInt(),
-    location: card['location'] as String,
-    nextPage: json['nextPage'] as bool,
-    env: json['env'] as String,
-    tabKey: json['tabKey'] as String,
+      replyCount: (card['bbs_post_count'] as num).toInt(),
+      location: card['location'] as String,
+      nextPage: json['nextPage'] as bool,
+      env: json['env'] as String,
+      tabKey: json['tabKey'] as String,
 
-    euid: json['euid'] as String,
-    
-    // keep empty here, fill it later via API.
-    threads: AuthorHomeThreadList(authorEuid: json['euid'] as String),
-  )..isLogin = json['isLogin'] as bool;
-}
+      euid: json['euid'] as String,
 
+      // keep empty here, fill it later via API.
+      threads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.post),
+      replies: AuthorHomeReplyList(authorEuid: json['euid'] as String),
+      recommendThreads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.recommend)
+    )..isLogin = json['isLogin'] as bool;
+  }
 
   // Map<String, dynamic> toJson() => _$AuthorHomeToJson(this);
 
@@ -233,5 +240,17 @@ static AuthorHome authorHomeFromJson(Map<String, dynamic> json) {
       case FollowStatus.self:
         return -1;
     }
+  }
+
+  Future<void> refreshThreads() async {
+    await threads.loadNextPageThreads();
+  }
+
+  Future<void> refreshRecommendThreads() async {
+    await recommendThreads.loadNextPageThreads();
+  }
+
+  Future<void> refreshReplies() async {
+    await replies.loadNextPageReplies();
   }
 }
