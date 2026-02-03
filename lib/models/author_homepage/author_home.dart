@@ -1,9 +1,5 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:bluefish/models/author_homepage/author_home_reply_list.dart';
-import 'package:bluefish/models/author_homepage/author_home_thread_list.dart';
-import 'package:bluefish/utils/http_with_ua.dart';
+import 'package:bluefish/models/author_homepage/author_home_reply.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'author_home_thread_title.dart';
@@ -14,10 +10,20 @@ enum FollowStatus { following, notFollowed, self }
 
 enum Gender { female, male, unknown }
 
+enum ThreadListType {
+  post,
+  recommend;
+
+  String get apiType => switch (this) {
+    ThreadListType.post => 'getThreadList',
+    ThreadListType.recommend => 'getRecommendList',
+  };
+}
+
 // @JsonSerializable()
 class AuthorHome {
   // TODO: what is this used for?
-  late bool isLogin;
+  final bool isLogin;
 
   final Uri bbs_follow_url;
 
@@ -93,9 +99,17 @@ class AuthorHome {
   final bool nextPage;
   final String env;
   final String tabKey;
-  AuthorHomeThreadList threads;
-  AuthorHomeReplyList replies;
-  AuthorHomeThreadList recommendThreads;
+
+  static const threadPageSize = 30;
+  // AuthorHomeThreadList threads;
+  final List<AuthorHomeThreadTitle> threads;
+  // AuthorHomeThreadList recommendThreads;
+  final List<AuthorHomeThreadTitle> recommendThreads;  
+
+    static const int replyPageSize = 20;
+  // AuthorHomeReplyList replies;
+  final List<AuthorHomeReply> replies;
+
 
   final String euid;
 
@@ -131,54 +145,50 @@ class AuthorHome {
     required this.tabKey,
 
     // only for 1st page.
-    required this.threads,
+    this.threads = const [],
     required this.euid,
-    required this.replies,
-    required this.recommendThreads,
+    this.replies = const [],
+    this.recommendThreads = const [],
+    required this.isLogin,
   });
 
   static int _getReputationNum(Map<String, dynamic> json) {
     return json['value'] as int;
   }
 
-  // factory AuthorHome.fromJson(Map<String, dynamic> json) =>
-  //     AuthorHomeFromJson(json);
-
-  static AuthorHome authorHomeFromJson(Map<String, dynamic> json) {
-    final card = json['cardInfoData'] as Map<String, dynamic>;
-
+  factory AuthorHome.fromJson(Map<String, dynamic> json) {
     return AuthorHome(
-      bbs_follow_url: Uri.parse(card['bbs_follow_url'] as String),
-      followStatus: AuthorHome._intToFollowStatus(card['follow_status']),
+      bbs_follow_url: Uri.parse(json['bbs_follow_url'] as String),
+      followStatus: AuthorHome._intToFollowStatus(json['follow_status']),
       reputation: AuthorHome._getReputationNum(
-        card['reputation'] as Map<String, dynamic>,
+        json['reputation'] as Map<String, dynamic>,
       ),
-      mainThreadsCount: (card['bbs_msg_count'] as num).toInt(),
-      be_light_count: (card['be_light_count'] as num).toInt(),
-      bbsUserLevelPercent: (card['bbsUserLevelPercent'] as num).toDouble(),
-      level: (card['level'] as num).toInt(),
-      birth: card['birth'] as String?,
-      fansCount: (card['be_follow_count'] as num).toInt(),
-      bbsUserLevel: card['bbsUserLevel'] as String,
-      bbsUserLevelFormatedStr: card['bbsUserLevelDesc'] as String,
-      recommendCount: (card['bbs_recommend_count'] as num).toInt(),
-      follow_count: (card['follow_count'] as num).toInt(),
-      avatarUrl: Uri.parse(card['header'] as String),
+      mainThreadsCount: (json['bbs_msg_count'] as num).toInt(),
+      be_light_count: (json['be_light_count'] as num).toInt(),
+      bbsUserLevelPercent: (json['bbsUserLevelPercent'] as num).toDouble(),
+      level: (json['level'] as num).toInt(),
+      birth: json['birth'] as String?,
+      fansCount: (json['be_follow_count'] as num).toInt(),
+      bbsUserLevel: json['bbsUserLevel'] as String,
+      bbsUserLevelFormatedStr: json['bbsUserLevelDesc'] as String,
+      recommendCount: (json['bbs_recommend_count'] as num).toInt(),
+      follow_count: (json['follow_count'] as num).toInt(),
+      avatarUrl: Uri.parse(json['header'] as String),
 
-      be_follow_status: (card['be_follow_status'] as int) == -1 ? false : true,
-      beRecommendCount: (card['be_recommend_count'] as num).toInt(),
-      gender: AuthorHome._intToGender(card['gender']),
-      banStatus: card['banStatus'] as String?,
-      puid: (card['puid'] as num).toInt(),
-      gaussAvatarUrl: Uri.parse(card['header_back'] as String),
-      nickname: card['nickname'] as String,
-      isSelf: AuthorHome._intToBool(card['is_self']),
-      registerTimeStr: card['reg_time_str'] as String,
+      be_follow_status: (json['be_follow_status'] as int) == -1 ? false : true,
+      beRecommendCount: (json['be_recommend_count'] as num).toInt(),
+      gender: AuthorHome._intToGender(json['gender']),
+      banStatus: json['banStatus'] as String?,
+      puid: (json['puid'] as num).toInt(),
+      gaussAvatarUrl: Uri.parse(json['header_back'] as String),
+      nickname: json['nickname'] as String,
+      isSelf: AuthorHome._intToBool(json['is_self']),
+      registerTimeStr: json['reg_time_str'] as String,
 
-      bbs_favorite_count: (card['bbs_favorite_count'] as num?)?.toInt(),
+      bbs_favorite_count: (json['bbs_favorite_count'] as num?)?.toInt(),
 
-      replyCount: (card['bbs_post_count'] as num).toInt(),
-      location: card['location'] as String,
+      replyCount: (json['bbs_post_count'] as num).toInt(),
+      location: json['location'] as String,
       nextPage: json['nextPage'] as bool,
       env: json['env'] as String,
       tabKey: json['tabKey'] as String,
@@ -186,10 +196,58 @@ class AuthorHome {
       euid: json['euid'] as String,
 
       // keep empty here, fill it later via API.
-      threads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.post),
-      replies: AuthorHomeReplyList(authorEuid: json['euid'] as String),
-      recommendThreads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.recommend)
-    )..isLogin = json['isLogin'] as bool;
+      // threads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.post),
+      // replies: AuthorHomeReplyList(authorEuid: json['euid'] as String),
+      // recommendThreads: AuthorHomeThreadList(authorEuid: json['euid'] as String, type: ThreadListType.recommend)
+      isLogin: json['isLogin'] as bool,
+    );
+  }
+
+    AuthorHome copyWith({
+    List<AuthorHomeThreadTitle>? threads,
+    List<AuthorHomeReply>? replies,
+    List<AuthorHomeThreadTitle>? recommendThreads,
+    FollowStatus? followStatus, 
+  }) {
+    return AuthorHome(
+      // changed field
+      threads: threads ?? this.threads,
+      replies: replies ?? this.replies,
+      recommendThreads: recommendThreads ?? this.recommendThreads,
+      followStatus: followStatus ?? this.followStatus,
+      
+      // fields that didn't change
+      isLogin: isLogin,
+      euid: euid,
+      nickname: nickname,
+      puid: puid,
+      isSelf: isSelf,
+      be_follow_status: be_follow_status,
+      banStatus: banStatus,
+      reputation: reputation,
+      mainThreadsCount: mainThreadsCount,
+      be_light_count: be_light_count,
+      fansCount: fansCount,
+      recommendCount: recommendCount,
+      follow_count: follow_count,
+      beRecommendCount: beRecommendCount,
+      bbs_favorite_count: bbs_favorite_count,
+      replyCount: replyCount,
+      bbsUserLevelPercent: bbsUserLevelPercent,
+      level: level,
+      bbsUserLevel: bbsUserLevel,
+      bbsUserLevelFormatedStr: bbsUserLevelFormatedStr,
+      birth: birth,
+      gender: gender,
+      location: location,
+      registerTimeStr: registerTimeStr,
+      bbs_follow_url: bbs_follow_url,
+      avatarUrl: avatarUrl,
+      gaussAvatarUrl: gaussAvatarUrl,
+      nextPage: nextPage,
+      env: env,
+      tabKey: tabKey,
+    );
   }
 
   // Map<String, dynamic> toJson() => _$AuthorHomeToJson(this);
@@ -240,17 +298,5 @@ class AuthorHome {
       case FollowStatus.self:
         return -1;
     }
-  }
-
-  Future<void> refreshThreads() async {
-    await threads.loadNextPageThreads();
-  }
-
-  Future<void> refreshRecommendThreads() async {
-    await recommendThreads.loadNextPageThreads();
-  }
-
-  Future<void> refreshReplies() async {
-    await replies.loadNextPageReplies();
   }
 }

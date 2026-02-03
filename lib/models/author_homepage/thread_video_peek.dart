@@ -31,6 +31,9 @@ class ThreadVideoPeek {
   required this.height,
   required this.totalPlays,
   required this.videoUrl,
+
+  // maybe means "danmaku"?
+  @JsonKey(name: 'bullet_comment_num')
   required this.bulletCommentNum,
   });
 

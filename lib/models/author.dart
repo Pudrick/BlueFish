@@ -1,36 +1,47 @@
 class Author {
-  late Uri avatarURL;
-  late String name;
-  bool isOP = false;
-  late String puid;
-  late String euid;
-  late Uri profileURL; // can be formed from euid.
-  late bool isBlacked;
-  late bool isAdmin; // maybe always false for anyone? mods is false either.
-  String? adminsInfo;
+  final String name;
+  final String puid;
+  final String euid; 
+  final Uri avatarURL;
+  final Uri profileURL;
 
-  // TODO: refactor constructor using extends or something.
+  final bool isBlacked;
+  final bool isAdmin;
+  final String? adminsInfo;
 
-  factory Author.createThreadAuthor(Map threadAuthorJsonMap) {
-    var simplyAuthor = Author.createReplyAuthor(threadAuthorJsonMap);
-    simplyAuthor.isBlacked = threadAuthorJsonMap["isBlacked"];
-    simplyAuthor.isAdmin = threadAuthorJsonMap["isAdmin"];
-    return simplyAuthor;
+  Author._({
+    required this.name,
+    required this.puid,
+    required this.euid,
+    required this.avatarURL,
+    required this.profileURL,
+    this.isBlacked = false,
+    this.isAdmin = false,
+    this.adminsInfo,
+  });
+
+  factory Author.forReply(Map<String, dynamic> json) {
+    return Author._(
+      puid: json['puid'].toString(),
+      name: json['puname'].toString(),
+      euid: json['euid'].toString(),
+      profileURL: Uri.parse(json['url']),
+      avatarURL: Uri.parse(json['header']),
+      adminsInfo: json['adminsInfo'],
+    );
   }
 
-  factory Author.createReplyAuthor(Map threadAuthorJsonMap) {
-    var simplyAuthor = Author.createQuoteAuthor(threadAuthorJsonMap);
-    simplyAuthor.avatarURL = Uri.parse(threadAuthorJsonMap["header"]);
-    if (threadAuthorJsonMap.containsKey("adminsInfo")) {
-      simplyAuthor.adminsInfo = threadAuthorJsonMap["adminsInfo"];
-    }
-    return simplyAuthor;
-  }
 
-  Author.createQuoteAuthor(Map threadAuthorJsonMap) {
-    puid = threadAuthorJsonMap["puid"];
-    name = threadAuthorJsonMap["puname"];
-    euid = threadAuthorJsonMap["euid"];
-    profileURL = Uri.parse(threadAuthorJsonMap["url"]);
+  factory Author.forThread(Map<String, dynamic> json) {
+    return Author._(
+      puid: json['puid'].toString(),
+      name: json['puname'].toString(),
+      euid: json['euid'].toString(),
+      profileURL: Uri.parse(json['url']),
+      avatarURL: Uri.parse(json['header']),
+      adminsInfo: json['adminsInfo'],
+      isBlacked: json['isBlacked'] == true, 
+      isAdmin: json['isAdmin'] == true,
+    );
   }
 }

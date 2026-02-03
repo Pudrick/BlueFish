@@ -53,7 +53,7 @@ class ThreadMain extends FloorContent {
     lastReplyTime =
         DateTime.fromMillisecondsSinceEpoch(threadJsonMap["repliedAt"]);
     hasVideo = threadJsonMap["hasVideo"];
-    author = Author.createThreadAuthor(threadJsonMap["author"]);
+    author = Author.forThread(threadJsonMap["author"]);
     status = threadJsonMap["status"];
     isLock = threadJsonMap["isLock"];
     contentType = threadJsonMap["contentType"];

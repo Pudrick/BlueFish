@@ -16,7 +16,7 @@ ThreadVideoPeek _$ThreadVideoPeekFromJson(Map<String, dynamic> json) =>
       height: (json['height'] as num).toInt(),
       totalPlays: (json['play_num'] as num).toInt(),
       videoUrl: json['url'] as String,
-      bulletCommentNum: (json['bulletCommentNum'] as num).toInt(),
+      bulletCommentNum: (json['bullet_comment_num'] as num).toInt(),
     );
 
 Map<String, dynamic> _$ThreadVideoPeekToJson(ThreadVideoPeek instance) =>
@@ -29,5 +29,5 @@ Map<String, dynamic> _$ThreadVideoPeekToJson(ThreadVideoPeek instance) =>
       'height': instance.height,
       'play_num': instance.totalPlays,
       'url': instance.videoUrl,
-      'bulletCommentNum': instance.bulletCommentNum,
+      'bullet_comment_num': instance.bulletCommentNum,
     };
