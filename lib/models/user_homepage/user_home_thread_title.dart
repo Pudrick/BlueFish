@@ -1,11 +1,11 @@
-import 'package:bluefish/models/author_homepage/thread_pic_peek.dart';
-import 'package:bluefish/models/author_homepage/thread_video_peek.dart';
+import 'package:bluefish/models/user_homepage/thread_pic_peek.dart';
+import 'package:bluefish/models/user_homepage/thread_video_peek.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-part 'author_home_thread_title.g.dart';
+part 'user_home_thread_title.g.dart';
 
 @JsonSerializable()
-class AuthorHomeThreadTitle {
+class UserHomeThreadTitle {
   final int fid;
 
   @JsonKey(name: 'create_time')
@@ -61,7 +61,7 @@ class AuthorHomeThreadTitle {
   final int contentType;
   final String visibleRange;
 
-  const AuthorHomeThreadTitle({
+  const UserHomeThreadTitle.UserHomeThreadTitle({
     required this.fid,
     required this.postTimeStamp,
     required this.lastReplyStamp,
@@ -87,10 +87,10 @@ class AuthorHomeThreadTitle {
     required this.visibleRange,
   });
 
-  factory AuthorHomeThreadTitle.fromJson(Map<String, dynamic> json) =>
-      _$AuthorHomeThreadTitleFromJson(json);
+  factory UserHomeThreadTitle.fromJson(Map<String, dynamic> json) =>
+      _$UserHomeThreadTitleFromJson(json);
 
-  Map<String, dynamic> toJson() => _$AuthorHomeThreadTitleToJson(this);
+  Map<String, dynamic> toJson() => _$UserHomeThreadTitleToJson(this);
 
   static bool _intToBool(dynamic value) => value == 1;
   static int _boolToInt(bool value) => value ? 1 : 0;

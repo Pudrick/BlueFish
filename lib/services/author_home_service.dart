@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/models/author_homepage/author_home.dart';
-import 'package:bluefish/models/author_homepage/author_home_reply.dart';
-import 'package:bluefish/models/author_homepage/author_home_thread_title.dart';
+import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/models/user_homepage/user_home_reply.dart';
+import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
 import 'package:html/dom.dart';
 
 // TODO: change it to w/o coke.
@@ -30,7 +30,7 @@ class AuthorHomeService {
     throw const FormatException('window.\$\$data not found in <script>');
   }
 
-  Future<AuthorHome> getAuthorHomeByEuid(dynamic euid) async {
+  Future<UserHome> getAuthorHomeByEuid(dynamic euid) async {
     if (euid is int) euid = euid.toString();
     Uri homepageUrl = Uri.parse("https://my.hupu.com/$euid");
     var response = await HttpwithUA().get(homepageUrl);
@@ -58,17 +58,17 @@ class AuthorHomeService {
     userData['tabKey'] = rawJson['tabKey'] as String;
 
     userData['euid'] = rawJson['euid'] as String;
-    final authorHome = AuthorHome.fromJson(userData);
+    final authorHome = UserHome.fromJson(userData);
     return authorHome;
   }
 
-  Future<List<AuthorHomeThreadTitle>> loadThreadsPage({
+  Future<List<UserHomeThreadTitle>> loadThreadsPage({
     required String authorEuid,
     required ThreadListType type,
     required int page,
   }) async {
     final Uri threadAPI = Uri.parse(
-      "https://bbs.hupu.com/pcmapi/pc/space/v1/${type.apiType}?euid=$authorEuid&page=$page&pageSize=${AuthorHome.threadPageSize}",
+      "https://bbs.hupu.com/pcmapi/pc/space/v1/${type.apiType}?euid=$authorEuid&page=$page&pageSize=${UserHome.threadPageSize}",
     );
 
     final response = await HttpwithUA().get(threadAPI);
@@ -85,16 +85,16 @@ class AuthorHomeService {
         (json['data']['content'] as List<dynamic>? ?? []),
     };
     return threadsData
-        .map((e) => AuthorHomeThreadTitle.fromJson(e as Map<String, dynamic>))
+        .map((e) => UserHomeThreadTitle.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  Future<List<AuthorHomeReply>> loadRepliesPage({
+  Future<List<UserHomeReply>> loadRepliesPage({
     required String authorEuid,
     required int page,
   }) async {
     final Uri threadAPI = Uri.parse(
-      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList?euid=$authorEuid&maxTime=0&page=$page&pageSize=${AuthorHome.replyPageSize}",
+      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList?euid=$authorEuid&maxTime=0&page=$page&pageSize=${UserHome.replyPageSize}",
     );
 
     final response = await HttpwithUA().get(threadAPI);
@@ -108,7 +108,7 @@ class AuthorHomeService {
     final List<dynamic> repliesData =
         json['data']['replyWithQuoteDtoList'] as List<dynamic>? ?? [];
     return repliesData
-        .map((e) => AuthorHomeReply.fromJson(e as Map<String, dynamic>))
+        .map((e) => UserHomeReply.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 }

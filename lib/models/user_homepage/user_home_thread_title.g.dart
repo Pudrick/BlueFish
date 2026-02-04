@@ -1,14 +1,14 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'author_home_thread_title.dart';
+part of 'user_home_thread_title.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-AuthorHomeThreadTitle _$AuthorHomeThreadTitleFromJson(
+UserHomeThreadTitle _$UserHomeThreadTitleFromJson(
   Map<String, dynamic> json,
-) => AuthorHomeThreadTitle(
+) => UserHomeThreadTitle.UserHomeThreadTitle(
   fid: (json['fid'] as num).toInt(),
   postTimeStamp: (json['create_time'] as num).toInt(),
   lastReplyStamp: (json['lastpost_time'] as num).toInt(),
@@ -28,8 +28,8 @@ AuthorHomeThreadTitle _$AuthorHomeThreadTitleFromJson(
   lights: (json['lights'] as num).toInt(),
   sharedNum: (json['share_num'] as num).toInt(),
   mainFloorPeek: json['summary'] as String?,
-  isHot: AuthorHomeThreadTitle._intToBool(json['is_hot']),
-  isLock: AuthorHomeThreadTitle._intToBool(json['is_lock']),
+  isHot: UserHomeThreadTitle._intToBool(json['is_hot']),
+  isLock: UserHomeThreadTitle._intToBool(json['is_lock']),
   status: (json['status'] as num).toInt(),
   videoInfo: json['video'] == null
       ? null
@@ -38,8 +38,8 @@ AuthorHomeThreadTitle _$AuthorHomeThreadTitleFromJson(
   visibleRange: json['visibleRange'] as String,
 );
 
-Map<String, dynamic> _$AuthorHomeThreadTitleToJson(
-  AuthorHomeThreadTitle instance,
+Map<String, dynamic> _$UserHomeThreadTitleToJson(
+  UserHomeThreadTitle instance,
 ) => <String, dynamic>{
   'fid': instance.fid,
   'create_time': instance.postTimeStamp,
@@ -58,8 +58,8 @@ Map<String, dynamic> _$AuthorHomeThreadTitleToJson(
   'lights': instance.lights,
   'share_num': instance.sharedNum,
   'summary': instance.mainFloorPeek,
-  'is_hot': AuthorHomeThreadTitle._boolToInt(instance.isHot),
-  'is_lock': AuthorHomeThreadTitle._boolToInt(instance.isLock),
+  'is_hot': UserHomeThreadTitle._boolToInt(instance.isHot),
+  'is_lock': UserHomeThreadTitle._boolToInt(instance.isLock),
   'status': instance.status,
   'video': instance.videoInfo,
   'contentType': instance.contentType,

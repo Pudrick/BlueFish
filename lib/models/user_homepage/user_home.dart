@@ -1,8 +1,7 @@
-import 'package:bluefish/models/author_homepage/author_home_reply.dart';
-import 'package:flutter/foundation.dart';
+import 'package:bluefish/models/user_homepage/user_home_reply.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-import 'author_home_thread_title.dart';
+import 'user_home_thread_title.dart';
 
 // part 'author_home.g.dart';
 
@@ -21,7 +20,7 @@ enum ThreadListType {
 }
 
 // @JsonSerializable()
-class AuthorHome {
+class UserHome {
   // TODO: what is this used for?
   final bool isLogin;
 
@@ -42,7 +41,7 @@ class AuthorHome {
   final int mainThreadsCount;
 
   @JsonKey(name: 'be_light_count')
-  final int be_light_count;
+  final int beLightCount;
   final double bbsUserLevelPercent;
 
   // not the level number that in mainpage. do not use this.
@@ -60,7 +59,7 @@ class AuthorHome {
 
   @JsonKey(name: 'bbs_recommend_count')
   final int recommendCount;
-  final int follow_count;
+  final int followCount;
 
   @JsonKey(name: 'header')
   final Uri avatarUrl;
@@ -102,23 +101,23 @@ class AuthorHome {
 
   static const threadPageSize = 30;
   // AuthorHomeThreadList threads;
-  final List<AuthorHomeThreadTitle> threads;
+  final List<UserHomeThreadTitle> threads;
   // AuthorHomeThreadList recommendThreads;
-  final List<AuthorHomeThreadTitle> recommendThreads;  
+  final List<UserHomeThreadTitle> recommendThreads;  
 
     static const int replyPageSize = 20;
   // AuthorHomeReplyList replies;
-  final List<AuthorHomeReply> replies;
+  final List<UserHomeReply> replies;
 
 
   final String euid;
 
-  AuthorHome({
+  UserHome({
     required this.bbs_follow_url,
     required this.followStatus,
     required this.reputation,
     required this.mainThreadsCount,
-    required this.be_light_count,
+    required this.beLightCount,
     required this.bbsUserLevelPercent,
     required this.level,
     this.birth,
@@ -126,7 +125,7 @@ class AuthorHome {
     required this.bbsUserLevel,
     required this.bbsUserLevelFormatedStr,
     required this.recommendCount,
-    required this.follow_count,
+    required this.followCount,
     required this.avatarUrl,
     required this.be_follow_status,
     required this.beRecommendCount,
@@ -156,15 +155,15 @@ class AuthorHome {
     return json['value'] as int;
   }
 
-  factory AuthorHome.fromJson(Map<String, dynamic> json) {
-    return AuthorHome(
+  factory UserHome.fromJson(Map<String, dynamic> json) {
+    return UserHome(
       bbs_follow_url: Uri.parse(json['bbs_follow_url'] as String),
-      followStatus: AuthorHome._intToFollowStatus(json['follow_status']),
-      reputation: AuthorHome._getReputationNum(
+      followStatus: UserHome._intToFollowStatus(json['follow_status']),
+      reputation: UserHome._getReputationNum(
         json['reputation'] as Map<String, dynamic>,
       ),
       mainThreadsCount: (json['bbs_msg_count'] as num).toInt(),
-      be_light_count: (json['be_light_count'] as num).toInt(),
+      beLightCount: (json['be_light_count'] as num).toInt(),
       bbsUserLevelPercent: (json['bbsUserLevelPercent'] as num).toDouble(),
       level: (json['level'] as num).toInt(),
       birth: json['birth'] as String?,
@@ -172,17 +171,17 @@ class AuthorHome {
       bbsUserLevel: json['bbsUserLevel'] as String,
       bbsUserLevelFormatedStr: json['bbsUserLevelDesc'] as String,
       recommendCount: (json['bbs_recommend_count'] as num).toInt(),
-      follow_count: (json['follow_count'] as num).toInt(),
+      followCount: (json['follow_count'] as num).toInt(),
       avatarUrl: Uri.parse(json['header'] as String),
 
       be_follow_status: (json['be_follow_status'] as int) == -1 ? false : true,
       beRecommendCount: (json['be_recommend_count'] as num).toInt(),
-      gender: AuthorHome._intToGender(json['gender']),
+      gender: UserHome._intToGender(json['gender']),
       banStatus: json['banStatus'] as String?,
       puid: (json['puid'] as num).toInt(),
       gaussAvatarUrl: Uri.parse(json['header_back'] as String),
       nickname: json['nickname'] as String,
-      isSelf: AuthorHome._intToBool(json['is_self']),
+      isSelf: UserHome._intToBool(json['is_self']),
       registerTimeStr: json['reg_time_str'] as String,
 
       bbs_favorite_count: (json['bbs_favorite_count'] as num?)?.toInt(),
@@ -203,13 +202,13 @@ class AuthorHome {
     );
   }
 
-    AuthorHome copyWith({
-    List<AuthorHomeThreadTitle>? threads,
-    List<AuthorHomeReply>? replies,
-    List<AuthorHomeThreadTitle>? recommendThreads,
+    UserHome copyWith({
+    List<UserHomeThreadTitle>? threads,
+    List<UserHomeReply>? replies,
+    List<UserHomeThreadTitle>? recommendThreads,
     FollowStatus? followStatus, 
   }) {
-    return AuthorHome(
+    return UserHome(
       // changed field
       threads: threads ?? this.threads,
       replies: replies ?? this.replies,
@@ -226,10 +225,10 @@ class AuthorHome {
       banStatus: banStatus,
       reputation: reputation,
       mainThreadsCount: mainThreadsCount,
-      be_light_count: be_light_count,
+      beLightCount: beLightCount,
       fansCount: fansCount,
       recommendCount: recommendCount,
-      follow_count: follow_count,
+      followCount: followCount,
       beRecommendCount: beRecommendCount,
       bbs_favorite_count: bbs_favorite_count,
       replyCount: replyCount,

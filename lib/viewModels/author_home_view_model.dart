@@ -1,13 +1,15 @@
-import 'package:bluefish/models/author_homepage/author_home.dart';
+import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/services/author_home_service.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthorHomeViewModel extends ChangeNotifier {
-  AuthorHome? _data;
+  UserHome? _data;
   final AuthorHomeService _service = AuthorHomeService();
   final int euid;
 
   AuthorHomeViewModel({required this.euid});
+
+  UserHome? get data => _data;
 
   int _currentThreadPage = 1;
   bool _isLoadingThreads = false;
@@ -27,9 +29,6 @@ class AuthorHomeViewModel extends ChangeNotifier {
   Future<void> init() async {
     _data = await _service.getAuthorHomeByEuid(euid);
     await loadMoreThreads();
-
-    await loadMoreRecommends();
-    await loadMoreReplies();
     notifyListeners();
   }
 
@@ -48,7 +47,7 @@ class AuthorHomeViewModel extends ChangeNotifier {
 
       _data = _data!.copyWith(threads: [..._data!.threads, ...newThreads]);
 
-      if (newThreads.length < AuthorHome.threadPageSize) {
+      if (newThreads.length < UserHome.threadPageSize) {
         _isLastThreadPage = true;
       } else {
         _currentThreadPage++;
@@ -76,7 +75,7 @@ class AuthorHomeViewModel extends ChangeNotifier {
         recommendThreads: [..._data!.recommendThreads, ...newRecommends],
       );
 
-      if (newRecommends.length < AuthorHome.threadPageSize) {
+      if (newRecommends.length < UserHome.threadPageSize) {
         _isLastRecommendPage = true;
       } else {
         _currentRecommendPage++;
@@ -101,7 +100,7 @@ class AuthorHomeViewModel extends ChangeNotifier {
 
       _data = _data!.copyWith(replies: [..._data!.replies, ...newReplies]);
 
-      if (newReplies.length < AuthorHome.replyPageSize) {
+      if (newReplies.length < UserHome.replyPageSize) {
         _isLastReplyPage = true;
       } else {
         _currentReplyPage++;

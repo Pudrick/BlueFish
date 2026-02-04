@@ -37,7 +37,7 @@ class ReplyPicInfo {
 }
 
 @JsonSerializable()
-class AuthorHomeReply {
+class UserHomeReply {
   final int pid;
   final int tid;
   final int? aid;
@@ -58,7 +58,7 @@ class AuthorHomeReply {
   @JsonKey(name: 'quote')
   final int quotePid;
   @JsonKey(name: 'quoteInfo')
-  final AuthorHomeReply? quote;
+  final UserHomeReply? quote;
 
   @JsonKey(name: 'createTime')
   final int createTimeStamp;
@@ -92,7 +92,7 @@ class AuthorHomeReply {
   final String topicName = "崩坏3";
 
 
-  AuthorHomeReply({
+  UserHomeReply({
     required this.pid,
     required this.tid,
     this.aid,
@@ -118,13 +118,13 @@ class AuthorHomeReply {
   }) : parsedPHPAttr = Map<String, dynamic>.from(
          phpDeserialize(rawPHPAttr) as Map,
        );
-  factory AuthorHomeReply.fromJson(Map<String, dynamic> json) =>
+  factory UserHomeReply.fromJson(Map<String, dynamic> json) =>
       authorHomeReplyFromJson(json);
 
   // Map<String, dynamic> toJson() => _$AuthorHomeReplyToJson(this);
 
-  static AuthorHomeReply authorHomeReplyFromJson(Map<String, dynamic> json) =>
-      AuthorHomeReply(
+  static UserHomeReply authorHomeReplyFromJson(Map<String, dynamic> json) =>
+      UserHomeReply(
         pid: (json['pid'] as num).toInt(),
         tid: (json['tid'] as num).toInt(),
         aid: (json['aid'] as num?)?.toInt(),
@@ -137,7 +137,7 @@ class AuthorHomeReply {
         quotePid: (json['quote'] as num).toInt(),
         quote: json['quoteInfo'] == null
             ? null
-            : AuthorHomeReply.fromJson(
+            : UserHomeReply.fromJson(
                 json['quoteInfo'] as Map<String, dynamic>,
               ),
         createTimeStamp: (json['createTime'] as num).toInt(),
