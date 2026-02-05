@@ -16,20 +16,20 @@ class UserHomeInfoWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // 紧凑布局
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              count.toString(), // 建议封装一个数字格式化（如 1.2k）
+              count.toString(), 
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 4), // 增加一点间距
+            const SizedBox(height: 4), 
             Text(
               name,
               style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.outline, // 使用更淡的颜色
+                color: colorScheme.outline, 
                 fontSize: 11,
               ),
             ),
@@ -42,8 +42,8 @@ class UserHomeInfoWidget extends StatelessWidget {
   Widget _infoStrContainer(ColorScheme colorScheme, String info) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5), // 降低不透明度，更清爽
-        borderRadius: BorderRadius.circular(8), // 圆角
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5), 
+        borderRadius: BorderRadius.circular(8), 
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5), width: 0.5),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
