@@ -8,43 +8,66 @@ class UserHomeInfoWidget extends StatelessWidget {
 
   Widget _statusCard(BuildContext context, String name, int count) {
     final colorScheme = Theme.of(context).colorScheme;
-  final textTheme = Theme.of(context).textTheme;
+    final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {},
-        child: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-          child: Column(
-            children: [
-              Text(
-                count.toString(),
-       style: textTheme.labelLarge?.copyWith( 
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSecondaryContainer,
-                height: 1.0, 
+    return InkWell(
+      onTap: () {},
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // 紧凑布局
+          children: [
+            Text(
+              count.toString(), // 建议封装一个数字格式化（如 1.2k）
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurface,
               ),
+            ),
+            const SizedBox(height: 4), // 增加一点间距
+            Text(
+              name,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.outline, // 使用更淡的颜色
+                fontSize: 11,
               ),
-              const SizedBox(height: 2,),
-              Text(
-                name,
-                style: textTheme.labelSmall?.copyWith( // 【压缩 4】：改用 labelSmall (约11px)
-                fontSize: 10, // 强制指定更小字号
-                color: colorScheme.onSecondaryContainer.withOpacity(0.8),
-                height: 1.2,
-              ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _infoStrContainer(ColorScheme colorScheme, String info) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5), // 降低不透明度，更清爽
+        borderRadius: BorderRadius.circular(8), // 圆角
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5), width: 0.5),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        info,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  Widget _verticalDivider(BuildContext context) {
+  return VerticalDivider(
+    width: 1, 
+    thickness: 1, 
+    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5), 
+    indent: 10, 
+    endIndent: 10,
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +84,7 @@ class UserHomeInfoWidget extends StatelessWidget {
                 padding: const EdgeInsets.all(12.0),
                 child: Container(
                   padding: const EdgeInsets.all(8.0),
+                  
 
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
@@ -80,108 +104,181 @@ class UserHomeInfoWidget extends StatelessWidget {
                     child: Image.network(
                       userHome.avatarUrl.toString(),
                       fit: BoxFit.cover,
+                      height: 180,
                     ),
                   ),
                 ),
               ),
+
+              const SizedBox(width: 16,),
+
+              // Expanded is used for provide a width value for Row.
               Expanded(
-                child: Column(
-                  children: [
-                 Text(
-                    userHome.nickname,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // const SizedBox(height: 6,),
-                  //   Row(
-                  //     mainAxisAlignment: MainAxisAlignment.center,
-                  //     children: [
-                  //       Text(userHome.bbsUserLevelFormatedStr),
-                  //       Text("IP属地：${userHome.location}"),
-                  //       Text("${userHome.reputation}声望"),
-                  //     ],
-                  //   ),
-                    // a "stupid" way to do it...
-                    Column(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: SizedBox(
+                    height: 180,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            userHome.nickname,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: _statusCard(
-                                context,
-                                "回复被点亮",
-                                userHome.beLightCount,
-                              ),
+                            _infoStrContainer(
+                              colorScheme,
+                              userHome.bbsUserLevelFormatedStr,
                             ),
-                            Expanded(
-                              child: _statusCard(
-                                context,
-                                "主贴被推荐",
-                                userHome.beRecommendCount,
-                              ),
+                            _infoStrContainer(
+                              colorScheme,
+                              "IP属地：${userHome.location}",
+                            ),
+                            _infoStrContainer(
+                              colorScheme,
+                              "${userHome.reputation}声望",
                             ),
                           ],
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _statusCard(
-                                context,
-                                "关注",
-                                userHome.followCount,
+                        // a "stupid" way to do it...
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          child: Column(
+                            children: [
+                              // IntrinsicHeight is for visualize the vertical divider.
+                              IntrinsicHeight(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _statusCard(
+                                        context,
+                                        "回复被点亮",
+                                        userHome.beLightCount,
+                                      ),
+                                    ),
+                                    _verticalDivider(context),
+                                    Expanded(
+                                      child: _statusCard(
+                                        context,
+                                        "主贴被推荐",
+                                        userHome.beRecommendCount,
+                                      ),
+                                    ),
+                                    _verticalDivider(context),
+                                       Expanded(
+                                      child: _statusCard(
+                                        context,
+                                        "关注",
+                                        userHome.followCount,
+                                      ),
+                                    ),
+                                    _verticalDivider(context),
+                                    Expanded(
+                                      child: _statusCard(
+                                        context,
+                                        "粉丝",
+                                        userHome.fansCount,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              child: _statusCard(
-                                context,
-                                "粉丝",
-                                userHome.fansCount,
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 36, 
+                                      child: 
+                                      (userHome.followStatus == FollowStatus.notFollowed) ? 
+                                      FilledButton(
+                                        onPressed: () {},
+                                        style: 
+                                        FilledButton.styleFrom(
+                                          padding: EdgeInsets.zero, 
+                                          visualDensity:
+                                              VisualDensity.compact, 
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.person_add_outlined),
+                                            SizedBox(width: 4,),
+                                            Text(
+                                              "关注",
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ) :
+                                                FilledButton.tonal(
+                                        onPressed: (){},
+                                        style: 
+                                        FilledButton.styleFrom(
+                                          padding: EdgeInsets.zero, 
+                                          visualDensity:
+                                              VisualDensity.compact, 
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.check),
+                                            SizedBox(width: 4,),
+                                            Text(
+                                              "已关注",
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 36,
+                                      child: OutlinedButton(
+                                        onPressed: () {},
+                                        style: FilledButton.styleFrom(
+                                          padding: EdgeInsets.zero,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.mail_outline_outlined),
+                                            SizedBox(width: 4,),
+                                            Text(
+                                              "私信",
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                  children: [
-                    // 关注按钮 (主要操作 - FilledButton)
-                    Expanded(
-                      child: SizedBox(
-                        height: 36, // 强制压低按钮高度
-                        child: FilledButton(
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            padding: EdgeInsets.zero, // 减少内边距
-                            visualDensity: VisualDensity.compact, // 紧凑模式
+                            ],
                           ),
-                          child: const Text("关注", style: TextStyle(fontSize: 13)),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 私信按钮 (次要操作 - Tonal 或 Outlined)
-                    Expanded(
-                      child: SizedBox(
-                        height: 36,
-                        child: FilledButton.tonal( // Tonal 颜色更柔和，不抢主视觉
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Text("私信", style: TextStyle(fontSize: 13)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
+              // ),
             ],
           ),
         ],
