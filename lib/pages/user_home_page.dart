@@ -1,5 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home.dart';
-import 'package:bluefish/viewModels/author_home_view_model.dart';
+import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/user_home_info_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +10,8 @@ class UserHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AuthorHomeViewModel>(
-      create: (_) => AuthorHomeViewModel(euid: euid)..init(),
+    return ChangeNotifierProvider<UserHomeViewModel>(
+      create: (_) => UserHomeViewModel(euid: euid)..init(),
       child: const UserHomePageView(),);
   }
 }
@@ -21,7 +21,7 @@ class UserHomePageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<AuthorHomeViewModel>();
+    final viewModel = context.watch<UserHomeViewModel>();
 
     if(viewModel.data == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));

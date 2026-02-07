@@ -11,7 +11,7 @@ UserHomeThreadTitle _$UserHomeThreadTitleFromJson(
 ) => UserHomeThreadTitle.UserHomeThreadTitle(
   fid: (json['fid'] as num).toInt(),
   postTimeStamp: (json['create_time'] as num).toInt(),
-  lastReplyStamp: (json['lastpost_time'] as num).toInt(),
+  lastReplyTimeStamp: (json['lastpost_time'] as num).toInt(),
   type: json['type'] as String,
   title: json['title'] as String,
   tid: (json['tid'] as num).toInt(),
@@ -43,7 +43,7 @@ Map<String, dynamic> _$UserHomeThreadTitleToJson(
 ) => <String, dynamic>{
   'fid': instance.fid,
   'create_time': instance.postTimeStamp,
-  'lastpost_time': instance.lastReplyStamp,
+  'lastpost_time': instance.lastReplyTimeStamp,
   'type': instance.type,
   'title': instance.title,
   'tid': instance.tid,

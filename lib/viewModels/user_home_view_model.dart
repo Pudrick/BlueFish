@@ -1,13 +1,13 @@
 import 'package:bluefish/models/user_homepage/user_home.dart';
-import 'package:bluefish/services/author_home_service.dart';
+import 'package:bluefish/services/user_home_service.dart';
 import 'package:flutter/foundation.dart';
 
-class AuthorHomeViewModel extends ChangeNotifier {
+class UserHomeViewModel extends ChangeNotifier {
   UserHome? _data;
-  final AuthorHomeService _service = AuthorHomeService();
+  final UserHomeService _service = UserHomeService();
   final int euid;
 
-  AuthorHomeViewModel({required this.euid});
+  UserHomeViewModel({required this.euid});
 
   UserHome? get data => _data;
 

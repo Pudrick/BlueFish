@@ -11,8 +11,12 @@ class UserHomeThreadTitle {
   @JsonKey(name: 'create_time')
   final int postTimeStamp;
 
+  // the timeStamp here is in seconds, so 1000x.
+  DateTime get postTime => DateTime.fromMillisecondsSinceEpoch(postTimeStamp * 1000);
+
   @JsonKey(name: 'lastpost_time')
-  final int lastReplyStamp;
+  final int lastReplyTimeStamp;
+  DateTime get lastReplyTime => DateTime.fromMillisecondsSinceEpoch(lastReplyTimeStamp * 1000);
 
   // maybe always be "mt"?
   final String type;
@@ -64,7 +68,7 @@ class UserHomeThreadTitle {
   const UserHomeThreadTitle.UserHomeThreadTitle({
     required this.fid,
     required this.postTimeStamp,
-    required this.lastReplyStamp,
+    required this.lastReplyTimeStamp,
     required this.type,
     required this.title,
     required this.tid,

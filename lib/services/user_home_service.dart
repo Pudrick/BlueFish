@@ -10,7 +10,7 @@ import 'package:html/dom.dart';
 import 'package:bluefish/utils/http_with_ua_coke.dart';
 import 'package:html/parser.dart';
 
-class AuthorHomeService {
+class UserHomeService {
   String getAuthorDataFromScripts(List<Element> scripts) {
     for (final script in scripts) {
       final text = script.text.trim();
