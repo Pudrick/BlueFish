@@ -29,6 +29,7 @@ class UserHomeViewModel extends ChangeNotifier {
   Future<void> init() async {
     _data = await _service.getAuthorHomeByEuid(euid);
     await loadMoreThreads();
+    await loadMoreReplies();
     notifyListeners();
   }
 

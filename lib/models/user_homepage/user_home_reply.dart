@@ -63,7 +63,7 @@ class UserHomeReply {
   @JsonKey(name: 'createTime')
   final int createTimeStamp;
 
-  DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(createTimeStamp);
+  DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(createTimeStamp * 1000);
 
   // ... and what's this?
   final String updateInfo;

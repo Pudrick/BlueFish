@@ -7,6 +7,25 @@ class UserHomeThreadListWidget extends StatelessWidget {
 
   const UserHomeThreadListWidget({super.key, required this.threadsList});
 
+  Widget _buildStatItem(BuildContext context, IconData icon, String text) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(width: 12),
+      ],
+    );
+  }
+
   Widget _threadCard(BuildContext context, UserHomeThreadTitle threadTitle) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -17,23 +36,6 @@ class UserHomeThreadListWidget extends StatelessWidget {
       indent: 10,
       endIndent: 10,
     );
-
-    Widget _buildStatItem(IconData icon, String text) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-      );
-    }
 
     return Card(
       color: colorScheme.surfaceContainerHighest,
@@ -124,14 +126,17 @@ class UserHomeThreadListWidget extends StatelessWidget {
                   const SizedBox(width: 2),
                   const Spacer(),
                   _buildStatItem(
+                    context,
                     Icons.remove_red_eye_outlined,
                     "${threadTitle.visits}",
                   ),
                   _buildStatItem(
+                    context,
                     Icons.thumb_up_outlined,
                     "${threadTitle.lights}",
                   ),
                   _buildStatItem(
+                    context,
                     Icons.chat_bubble_outline_rounded,
                     "${threadTitle.repliesNum}",
                   ),
