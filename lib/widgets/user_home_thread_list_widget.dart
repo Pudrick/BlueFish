@@ -5,7 +5,15 @@ import 'package:intl/intl.dart';
 class UserHomeThreadListWidget extends StatelessWidget {
   final List<UserHomeThreadTitle> threadsList;
 
-  const UserHomeThreadListWidget({super.key, required this.threadsList});
+  final bool isLoading;
+  final bool isLastPage;
+
+  const UserHomeThreadListWidget({
+    super.key,
+    required this.threadsList,
+    required this.isLoading,
+    required this.isLastPage,
+  });
 
   Widget _buildStatItem(BuildContext context, IconData icon, String text) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -149,13 +157,33 @@ class UserHomeThreadListWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      alignment: Alignment.center,
+      child: isLastPage
+          ? Text(
+              "—— 后面没有了 ——",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            )
+          : const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SliverList(
       delegate: SliverChildBuilderDelegate((BuildContext context, int index) {
+        if (index == threadsList.length) return _buildFooter(context);
         final item = threadsList[index];
         return _threadCard(context, item);
-      }, childCount: threadsList.length),
+      }, childCount: threadsList.length + 1),
     );
   }
 }

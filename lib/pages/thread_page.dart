@@ -167,6 +167,8 @@ class _ThreadPageState extends State<ThreadPage> {
             ),
           ),
         ),
+
+        //TODO: add a bottombar for like/favo/share.
       ],
     );
   }

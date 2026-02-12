@@ -8,7 +8,16 @@ import 'package:video_player/video_player.dart';
 class UserHomeReplyWidget extends StatelessWidget {
   final UserHomeReply reply;
   final bool isQuote;
-  UserHomeReplyWidget({super.key, required this.reply, required this.isQuote});
+
+  // final bool isLoading;
+  // final bool isLastPage;
+  const UserHomeReplyWidget({
+    super.key,
+    required this.reply,
+    required this.isQuote,
+    // required this.isLoading,
+    // required this.isLastPage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,22 +120,32 @@ class UserHomeReplyWidget extends StatelessWidget {
 
                       return GestureDetector(
                         onTap: () {
-                          Navigator.push(context, MaterialPageRoute(
-                            builder: (context) => PhotoGalleryPage(
-                              imageUrls: reply.replyPics.map((e) => e.url.toString()).toList()
-                                      , initialIndex: index)));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PhotoGalleryPage(
+                                imageUrls: reply.replyPics
+                                    .map((e) => e.url.toString())
+                                    .toList(),
+                                initialIndex: index,
+                              ),
+                            ),
+                          );
                         },
-                        child: Hero(tag: imageUrl, child: 
-                        ClipRRect(
-                          borderRadius: BorderRadiusGeometry.circular(8),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey[300],child: const Icon(Icons.broken_image),
+                        child: Hero(
+                          tag: imageUrl,
+                          child: ClipRRect(
+                            borderRadius: BorderRadiusGeometry.circular(8),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.broken_image),
+                                  ),
                             ),
                           ),
-                        )
                         ),
                       );
                       // return ClipRRect(
@@ -138,7 +157,6 @@ class UserHomeReplyWidget extends StatelessWidget {
                       // );
                     },
 
-                    
                     separatorBuilder: (context, index) =>
                         const SizedBox(width: 6),
                     itemCount: reply.replyPics.length,
@@ -147,9 +165,7 @@ class UserHomeReplyWidget extends StatelessWidget {
               ],
 
               // TODO: get a video format and support video in reply.
-              if (reply.videoInfo != null) ...[
-                const SizedBox(height: 8,),
-              ],
+              if (reply.videoInfo != null) ...[const SizedBox(height: 8)],
 
               const SizedBox(height: 12),
               if (reply.quote != null && !isQuote) ...[
@@ -243,15 +259,43 @@ class UserHomeReplyWidget extends StatelessWidget {
 class UserHomeReplyListWidget extends StatelessWidget {
   final List<UserHomeReply> replyList;
 
-  UserHomeReplyListWidget({super.key, required this.replyList});
+  final bool isLoading;
+  final bool isLastPage;
+
+  const UserHomeReplyListWidget({
+    super.key,
+    required this.replyList,
+    required this.isLoading,
+    required this.isLastPage,
+  });
+
+    Widget _buildFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      alignment: Alignment.center,
+      child: isLastPage
+          ? Text(
+              "—— 后面没有了 ——",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            )
+          : const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return SliverList(
       delegate: SliverChildBuilderDelegate((BuildContext context, int index) {
+        if(index == replyList.length) return _buildFooter(context);
         final item = replyList[index];
         return UserHomeReplyWidget(reply: item, isQuote: false);
-      }, childCount: replyList.length),
+      }, childCount: replyList.length + 1),
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/services/user_home_service.dart';
 import 'package:flutter/foundation.dart';
 
+enum DisplayStatus { threads, replies, recommends }
+
 class UserHomeViewModel extends ChangeNotifier {
   UserHome? _data;
   final UserHomeService _service = UserHomeService();
@@ -9,27 +11,43 @@ class UserHomeViewModel extends ChangeNotifier {
 
   UserHomeViewModel({required this.euid});
 
+  DisplayStatus _displayStatus = DisplayStatus.threads;
+  DisplayStatus get displayStatus => _displayStatus;
+
+  void changeDisplayTo(DisplayStatus target) {
+    if (target != displayStatus) {
+      _displayStatus = target;
+      notifyListeners();
+    }
+  }
+
   UserHome? get data => _data;
 
   int _currentThreadPage = 1;
   bool _isLoadingThreads = false;
   bool _isLastThreadPage = false;
+  bool get isLastThreadPage => _isLastThreadPage;
 
   int _currentRecommendPage = 1;
   bool _isLoadingRecommends = false;
   bool _isLastRecommendPage = false;
+  bool get isLastRecommendPage => _isLastRecommendPage;
 
   int _currentReplyPage = 1;
   bool _isLoadingReplies = false;
   bool _isLastReplyPage = false;
+  bool get isLastReplyPage => _isLastReplyPage;
 
   bool get isLoadingThreads => _isLoadingThreads;
   bool get isLoadingRecommends => _isLoadingRecommends;
+  bool get isLoadingReplies => _isLoadingReplies;
 
   Future<void> init() async {
     _data = await _service.getAuthorHomeByEuid(euid);
     await loadMoreThreads();
-    await loadMoreReplies();
+
+    // TODO: load this is just for test. move these logic to correspoding position.
+    // await loadMoreReplies();
     notifyListeners();
   }
 
