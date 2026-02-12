@@ -3,20 +3,15 @@ import 'package:bluefish/pages/phoeo_gallery_page.dart';
 import 'package:bluefish/utils/remove_string_tag_suffix.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:video_player/video_player.dart';
 
 class UserHomeReplyWidget extends StatelessWidget {
   final UserHomeReply reply;
   final bool isQuote;
 
-  // final bool isLoading;
-  // final bool isLastPage;
   const UserHomeReplyWidget({
     super.key,
     required this.reply,
     required this.isQuote,
-    // required this.isLoading,
-    // required this.isLastPage,
   });
 
   @override
@@ -36,7 +31,6 @@ class UserHomeReplyWidget extends StatelessWidget {
         ? const EdgeInsets.only(top: 8)
         : const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
 
-    final borderRadius = BorderRadius.circular(isQuote ? 8 : 12);
 
     return Card(
       // margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -148,13 +142,6 @@ class UserHomeReplyWidget extends StatelessWidget {
                           ),
                         ),
                       );
-                      // return ClipRRect(
-                      //   borderRadius: BorderRadiusGeometry.circular(8),
-                      //   clipBehavior: Clip.antiAlias,
-                      //   child: Image.network(
-                      //     reply.replyPics[index].url.toString(),
-                      //   ),
-                      // );
                     },
 
                     separatorBuilder: (context, index) =>
@@ -187,9 +174,6 @@ class UserHomeReplyWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
 
-                  // TODO: add video info here. (if exists.)
-
-                  // TODO: add reply quote here.
                   child: Row(
                     children: [
                       Icon(

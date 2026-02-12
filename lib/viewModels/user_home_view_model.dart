@@ -18,6 +18,24 @@ class UserHomeViewModel extends ChangeNotifier {
     if (target != displayStatus) {
       _displayStatus = target;
       notifyListeners();
+
+      switch (target) {
+        case DisplayStatus.threads:
+          if (_data?.threads.isEmpty ?? true) {
+            loadMoreThreads();
+          }
+          break;
+        case DisplayStatus.replies:
+          if (_data?.replies.isEmpty ?? true) {
+            loadMoreReplies();
+          }
+          break;
+        case DisplayStatus.recommends:
+          if (_data?.recommendThreads.isEmpty ?? true) {
+            loadMoreRecommends();
+          }
+          break;
+      }
     }
   }
 
@@ -45,9 +63,6 @@ class UserHomeViewModel extends ChangeNotifier {
   Future<void> init() async {
     _data = await _service.getAuthorHomeByEuid(euid);
     await loadMoreThreads();
-
-    // TODO: load this is just for test. move these logic to correspoding position.
-    // await loadMoreReplies();
     notifyListeners();
   }
 

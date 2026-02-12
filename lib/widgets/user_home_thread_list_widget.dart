@@ -37,13 +37,6 @@ class UserHomeThreadListWidget extends StatelessWidget {
   Widget _threadCard(BuildContext context, UserHomeThreadTitle threadTitle) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final horizontalDivider = Divider(
-      height: 1,
-      thickness: 1,
-      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-      indent: 10,
-      endIndent: 10,
-    );
 
     return Card(
       color: colorScheme.surfaceContainerHighest,
