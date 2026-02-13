@@ -66,6 +66,11 @@ class UserHomeThreadListWidget extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  
+                ],
+              ),
+              Row(
+                children: [
                   Icon(
                     Icons.timer_outlined,
                     color: colorScheme.primary,

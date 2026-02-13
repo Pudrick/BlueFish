@@ -31,7 +31,6 @@ class UserHomeReplyWidget extends StatelessWidget {
         ? const EdgeInsets.only(top: 8)
         : const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
 
-
     return Card(
       // margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       margin: margin,
@@ -93,25 +92,91 @@ class UserHomeReplyWidget extends StatelessWidget {
                   ),
                 ],
               ),
+              if (reply.parsedPHPAttr["audit_status"] != 1) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: colorScheme.errorContainer,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.visibility_off,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "该回复当前可能无法查看",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 16),
               Text(
                 textAlign: TextAlign.start,
-                reply.replyContent.removeImageSuffixTag(),
+                reply.replyContent.removeSuffixTag(),
                 style: textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurface,
                   height: 1.5,
                 ),
               ),
 
-              if (reply.replyPics.isNotEmpty) ...[
+              if (reply.replyPics.isNotEmpty || reply.videoInfo != null) ...[
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 160,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) {
-                      final imageUrl = reply.replyPics[index].url.toString();
+                      final bool hasVideo = reply.videoInfo != null;
+                      
+                      if(index == 0 && hasVideo) {
+                        return GestureDetector(
+                          onTap: () {
+                            //TODO: add the video play logic.
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadiusGeometry.circular(8),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Image.network(
+                                  reply.videoInfo!.coverImgUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stack) => Container(
+                      width: 160,
+                      color: Colors.black12,
+                      child: const Center(child: Icon(Icons.videocam, size: 40)),
+                    ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle
+                                  ),
+                                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 30,),
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      }
 
+                      final int imageIndex = hasVideo ? index - 1 : index;
+                      final imageUrl = reply.replyPics[imageIndex].url.toString();
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -121,7 +186,7 @@ class UserHomeReplyWidget extends StatelessWidget {
                                 imageUrls: reply.replyPics
                                     .map((e) => e.url.toString())
                                     .toList(),
-                                initialIndex: index,
+                                initialIndex: imageIndex,
                               ),
                             ),
                           );
@@ -146,7 +211,7 @@ class UserHomeReplyWidget extends StatelessWidget {
 
                     separatorBuilder: (context, index) =>
                         const SizedBox(width: 6),
-                    itemCount: reply.replyPics.length,
+                    itemCount: reply.replyPics.length + (reply.videoInfo != null ? 1 : 0),
                   ),
                 ),
               ],
@@ -253,7 +318,7 @@ class UserHomeReplyListWidget extends StatelessWidget {
     required this.isLastPage,
   });
 
-    Widget _buildFooter(BuildContext context) {
+  Widget _buildFooter(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       alignment: Alignment.center,
@@ -276,7 +341,7 @@ class UserHomeReplyListWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverList(
       delegate: SliverChildBuilderDelegate((BuildContext context, int index) {
-        if(index == replyList.length) return _buildFooter(context);
+        if (index == replyList.length) return _buildFooter(context);
         final item = replyList[index];
         return UserHomeReplyWidget(reply: item, isQuote: false);
       }, childCount: replyList.length + 1),

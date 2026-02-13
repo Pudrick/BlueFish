@@ -46,7 +46,7 @@ class UserHomeInfoWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(8), 
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5), width: 0.5),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         info,
@@ -104,13 +104,13 @@ class UserHomeInfoWidget extends StatelessWidget {
                     child: Image.network(
                       userHome.avatarUrl.toString(),
                       fit: BoxFit.cover,
-                      height: 180,
+                      height: 100,
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(width: 16,),
+              // const SizedBox(width: 4,),
 
               // Expanded is used for provide a width value for Row.
               Expanded(

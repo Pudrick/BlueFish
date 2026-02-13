@@ -65,7 +65,7 @@ class UserHomeThreadTitle {
   final int contentType;
   final String visibleRange;
 
-  const UserHomeThreadTitle.UserHomeThreadTitle({
+  const UserHomeThreadTitle({
     required this.fid,
     required this.postTimeStamp,
     required this.lastReplyTimeStamp,
@@ -92,9 +92,11 @@ class UserHomeThreadTitle {
   });
 
   factory UserHomeThreadTitle.fromJson(Map<String, dynamic> json) =>
-      _$UserHomeThreadTitleFromJson(json);
+    _$UserHomeThreadTitleFromJson(json);
 
-  Map<String, dynamic> toJson() => _$UserHomeThreadTitleToJson(this);
+Map<String, dynamic> toJson() =>
+    _$UserHomeThreadTitleToJson(this);
+
 
   static bool _intToBool(dynamic value) => value == 1;
   static int _boolToInt(bool value) => value ? 1 : 0;

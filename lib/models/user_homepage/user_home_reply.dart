@@ -1,9 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:bluefish/utils/http_with_ua.dart';
+import 'package:bluefish/models/user_homepage/user_home_reply_video_peek.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:php_serializer/php_serializer.dart';
+
+part 'user_home_reply.g.dart';
 
 @JsonSerializable()
 class ReplyPicInfo {
@@ -24,7 +23,7 @@ class ReplyPicInfo {
   factory ReplyPicInfo.fromJson(Map<String, dynamic> json) =>
       replyPicInfoFromJson(json);
 
-  // Map<String, dynamic> toJson() => _$ReplyPicInfoToJson(this);
+  Map<String, dynamic> toJson() => _$ReplyPicInfoToJson(this);
 
   static ReplyPicInfo replyPicInfoFromJson(Map<String, dynamic> json) =>
       ReplyPicInfo(
@@ -36,7 +35,7 @@ class ReplyPicInfo {
       );
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class UserHomeReply {
   final int pid;
   final int tid;
@@ -46,7 +45,12 @@ class UserHomeReply {
 
   @JsonKey(name: 'username')
   final String userName;
-  @JsonKey(name: 'header')
+
+  @JsonKey(
+    name: 'header',
+    fromJson: _uriFromJson,
+    toJson: _uriToJson,
+  )
   final Uri avatarUrl;
 
   // what's this?
@@ -57,42 +61,46 @@ class UserHomeReply {
 
   @JsonKey(name: 'quote')
   final int quotePid;
+
   @JsonKey(name: 'quoteInfo')
   final UserHomeReply? quote;
 
   @JsonKey(name: 'createTime')
   final int createTimeStamp;
 
-  DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(createTimeStamp * 1000);
+  DateTime get createTime =>
+      DateTime.fromMillisecondsSinceEpoch(createTimeStamp * 1000);
 
   // ... and what's this?
   final String updateInfo;
 
   @JsonKey(name: 'attr')
-  final String rawPHPAttr;  
+  final String rawPHPAttr;
+
   // keys: client, source, audit_status
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final Map<String, dynamic> parsedPHPAttr;
 
   final int score;
 
-  // FIXME: make sure what type it is.
-  final String? videoInfo;
+  final UserHomeReplyVideoPeek? videoInfo;
+
   final int lightCount;
+
   @JsonKey(name: 'unlightCount')
   final int unLightCount;
 
   @JsonKey(name: 'picInfos')
   final List<ReplyPicInfo> replyPics;
 
-  // there's a replyReplyNum attribute, but it seems always null, so ignore it.
-  // final int? replyReplyNum
-
   @JsonKey(name: 'title')
   final String threadTitle;
+
   final String formatTime;
   final int topicId;
-  final String topicName = "崩坏3";
 
+  @JsonKey(includeFromJson: false)
+  final String topicName = "崩坏3";
 
   UserHomeReply({
     required this.pid,
@@ -118,42 +126,17 @@ class UserHomeReply {
     required this.formatTime,
     required this.topicId,
   }) : parsedPHPAttr = Map<String, dynamic>.from(
-         phpDeserialize(rawPHPAttr) as Map,
-       );
+          phpDeserialize(rawPHPAttr) as Map,
+        );
+
   factory UserHomeReply.fromJson(Map<String, dynamic> json) =>
-      authorHomeReplyFromJson(json);
+      _$UserHomeReplyFromJson(json);
 
-  // Map<String, dynamic> toJson() => _$AuthorHomeReplyToJson(this);
+  Map<String, dynamic> toJson() => _$UserHomeReplyToJson(this);
 
-  static UserHomeReply authorHomeReplyFromJson(Map<String, dynamic> json) =>
-      UserHomeReply(
-        pid: (json['pid'] as num).toInt(),
-        tid: (json['tid'] as num).toInt(),
-        aid: (json['aid'] as num?)?.toInt(),
-        puid: (json['puid'] as num).toInt(),
-        euid: (json['euid'] as num?)?.toInt(),
-        userName: json['username'] as String,
-        avatarUrl: Uri.parse(json['header'] as String),
-        via: (json['via'] as num).toInt(),
-        replyContent: json['content'] as String,
-        quotePid: (json['quote'] as num).toInt(),
-        quote: json['quoteInfo'] == null
-            ? null
-            : UserHomeReply.fromJson(
-                json['quoteInfo'] as Map<String, dynamic>,
-              ),
-        createTimeStamp: (json['createTime'] as num).toInt(),
-        updateInfo: json['updateInfo'] as String,
-        rawPHPAttr: json['attr'] as String,
-        score: (json['score'] as num).toInt(),
-        videoInfo: json['videoInfo'] as String?,
-        lightCount: (json['lightCount'] as num).toInt(),
-        unLightCount: (json['unlightCount'] as num).toInt(),
-        replyPics: (json['picInfos'] as List<dynamic>)
-            .map((e) => ReplyPicInfo.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        threadTitle: json['title'] as String,
-        formatTime: json['formatTime'] as String,
-        topicId: (json['topicId'] as num).toInt(),
-      );
+  // ---------- converters ----------
+
+  static Uri _uriFromJson(String value) => Uri.parse(value);
+
+  static String _uriToJson(Uri uri) => uri.toString();
 }

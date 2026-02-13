@@ -90,12 +90,14 @@ class UserHomeService {
         .toList();
   }
 
-  Future<List<UserHomeReply>> loadRepliesPage({
+  // return a record: {replies, maxTime}
+  Future<({List<UserHomeReply> replies, String lastMaxTime})> loadRepliesPage({
     required String authorEuid,
     required int page,
+    required String lastMaxTime,
   }) async {
     final Uri threadAPI = Uri.parse(
-      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList?euid=$authorEuid&maxTime=0&page=$page&pageSize=${UserHome.replyPageSize}",
+      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList?euid=$authorEuid&maxTime=$lastMaxTime&page=$page&pageSize=${UserHome.replyPageSize}",
     );
 
     final response = await HttpwithUA().get(threadAPI);
@@ -108,8 +110,12 @@ class UserHomeService {
         jsonDecode(response.body) as Map<String, dynamic>;
     final List<dynamic> repliesData =
         json['data']['replyWithQuoteDtoList'] as List<dynamic>? ?? [];
-    return repliesData
-        .map((e) => UserHomeReply.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final String maxTime = json['data']['maxTime'].toString();
+    return (
+      replies: repliesData
+          .map((e) => UserHomeReply.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      lastMaxTime: maxTime,
+    );
   }
 }

@@ -42,13 +42,19 @@ class _UserHomePageViewState extends State<UserHomePageView> {
       final vm = context.read<UserHomeViewModel>();
       switch (vm.displayStatus) {
         case DisplayStatus.threads:
+        if(!vm.isLoadingThreads) {
           vm.loadMoreThreads();
+        }
           break;
         case DisplayStatus.replies:
+        if (!vm.isLoadingReplies) {
           vm.loadMoreReplies();
           break;
+        }
         case DisplayStatus.recommends:
+        if(!vm.isLoadingRecommends) {
           vm.loadMoreRecommends();
+        }
           break;
       }
     }

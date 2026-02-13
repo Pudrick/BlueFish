@@ -1,6 +1,6 @@
 extension RemoveStringTagSuffix on String {
-  String removeImageSuffixTag() {
-    const tags = ["[图片]", "[多图]"];
+  String removeSuffixTag() {
+    const tags = ["[图片]", "[多图]", "[视频]"];
 
     for (final tag in tags) {
       if (endsWith(tag)) {

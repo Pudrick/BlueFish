@@ -52,9 +52,11 @@ class UserHomeViewModel extends ChangeNotifier {
   bool get isLastRecommendPage => _isLastRecommendPage;
 
   int _currentReplyPage = 1;
+  String _lastReplyMaxTime = "0";
   bool _isLoadingReplies = false;
   bool _isLastReplyPage = false;
   bool get isLastReplyPage => _isLastReplyPage;
+  String get lastReplyMaxTime => _lastReplyMaxTime;
 
   bool get isLoadingThreads => _isLoadingThreads;
   bool get isLoadingRecommends => _isLoadingRecommends;
@@ -127,12 +129,14 @@ class UserHomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final newReplies = await _service.loadRepliesPage(
+      final (replies :newReplies, :lastMaxTime) = await _service.loadRepliesPage(
         authorEuid: _data!.euid,
         page: _currentReplyPage,
+        lastMaxTime: lastReplyMaxTime
       );
 
       _data = _data!.copyWith(replies: [..._data!.replies, ...newReplies]);
+      _lastReplyMaxTime = lastMaxTime;
 
       if (newReplies.length < UserHome.replyPageSize) {
         _isLastReplyPage = true;

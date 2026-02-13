@@ -156,6 +156,7 @@ class ReplyFloor extends StatelessWidget {
 }
 
 // TODO: add a button that can directly reply to quote.
+// TODO: adjust the visual effect as the same with userhome's reply.
 class _QuoteWidget extends StatefulWidget {
   final Widget quoteWidget;
   final double maxHeight;
