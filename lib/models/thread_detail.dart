@@ -3,6 +3,7 @@ import 'package:bluefish/models/thread_main.dart';
 import 'package:bluefish/models/single_reply_floor.dart';
 import 'package:bluefish/utils/get_thread_info.dart';
 
+// TODO: refactor.
 class ThreadDetail {
   late String tid;
 

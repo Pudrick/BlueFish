@@ -1,4 +1,5 @@
 import 'package:bluefish/models/thread_detail.dart';
+import 'package:bluefish/widgets/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread_main_widget.dart';
 import 'package:bluefish/widgets/reply_floor_widget.dart';
 import 'package:bluefish/widgets/page_pill.dart';
@@ -74,102 +75,108 @@ class _ThreadPageState extends State<ThreadPage> {
 
     final bool canPrev = threadDetail.currentPage > 1;
     final bool canNext = threadDetail.currentPage < threadDetail.totalPagesNum;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              // TODO: make title widget independent so that can be sticked on the top.
-              SliverPersistentHeader(
-                delegate: StickyHeaderDelegate(
-                  child: ThreadTitleWidget(title: threadDetail.mainFloor.title),
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                // TODO: make title widget independent so that can be sticked on the top.
+                SliverPersistentHeader(
+                  delegate: StickyHeaderDelegate(
+                    child: ThreadTitleWidget(title: threadDetail.mainFloor.title),
+                  ),
+                  pinned: true,
                 ),
-                pinned: true,
+      
+                if (threadDetail.totalPagesNum >= 1)
+                  SliverToBoxAdapter(
+                    child: ThreadPaginationBar(
+                      currentPage: threadDetail.currentPage,
+                      totalPages: threadDetail.totalPagesNum,
+                      onPrev: canPrev
+                          ? () => _jumpToPage(threadDetail.currentPage - 1)
+                          : null,
+                      onNext: canNext
+                          ? () => _jumpToPage(threadDetail.currentPage + 1)
+                          : null,
+                    ),
+                  ),
+      
+                if (threadDetail.currentPage == 1)
+                  SliverToBoxAdapter(
+                    child: ThreadMainFloorWidget(
+                      mainFloor: threadDetail.mainFloor,
+                    ),
+                  ),
+      
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((
+                    BuildContext context,
+                    int index,
+                  ) {
+                    return ReplyFloor(
+                      replyFloor: threadDetail.replies[index],
+                      isQuote: false,
+                    );
+                  }, childCount: _repliesInPage(threadDetail.currentPage)),
+                ),
+      
+                // next page buttons.
+                if (threadDetail.totalPagesNum >= 1)
+                  SliverToBoxAdapter(
+                    child: ThreadPaginationBar(
+                      currentPage: threadDetail.currentPage,
+                      totalPages: threadDetail.totalPagesNum,
+                      onPrev: canPrev
+                          ? () => _jumpToPage(threadDetail.currentPage - 1)
+                          : null,
+                      onNext: canNext
+                          ? () => _jumpToPage(threadDetail.currentPage + 1)
+                          : null,
+                    ),
+                  ),
+      
+                // preserve space for page select pill button, avoid the pill lap over the next/prev page button.
+                const SliverToBoxAdapter(child: SizedBox(height: 55)),
+              ],
+            ),
+          ),
+      
+          // page select
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                bottom: 10.0,
+                left: 10.0,
+                right: 10.0,
               ),
-
-              if (threadDetail.totalPagesNum >= 1)
-                SliverToBoxAdapter(
-                  child: ThreadPaginationBar(
+              child: PagePill(
+                currentPage: threadDetail.currentPage,
+                totalPages: threadDetail.totalPagesNum,
+                onPageTap: () {
+                  showPageMenu(
+                    context: context,
                     currentPage: threadDetail.currentPage,
                     totalPages: threadDetail.totalPagesNum,
-                    onPrev: canPrev
-                        ? () => _jumpToPage(threadDetail.currentPage - 1)
-                        : null,
-                    onNext: canNext
-                        ? () => _jumpToPage(threadDetail.currentPage + 1)
-                        : null,
-                  ),
-                ),
-
-              if (threadDetail.currentPage == 1)
-                SliverToBoxAdapter(
-                  child: ThreadMainFloorWidget(
-                    mainFloor: threadDetail.mainFloor,
-                  ),
-                ),
-
-              SliverList(
-                delegate: SliverChildBuilderDelegate((
-                  BuildContext context,
-                  int index,
-                ) {
-                  return ReplyFloor(
-                    replyFloor: threadDetail.replies[index],
-                    isQuote: false,
+                    onPageSelected: (int selectedPage) {
+                      _jumpToPage(selectedPage);
+                    },
                   );
-                }, childCount: _repliesInPage(threadDetail.currentPage)),
+                },
               ),
-
-              // next page buttons.
-              if (threadDetail.totalPagesNum >= 1)
-                SliverToBoxAdapter(
-                  child: ThreadPaginationBar(
-                    currentPage: threadDetail.currentPage,
-                    totalPages: threadDetail.totalPagesNum,
-                    onPrev: canPrev
-                        ? () => _jumpToPage(threadDetail.currentPage - 1)
-                        : null,
-                    onNext: canNext
-                        ? () => _jumpToPage(threadDetail.currentPage + 1)
-                        : null,
-                  ),
-                ),
-
-              // preserve space for page select pill button, avoid the pill lap over the next/prev page button.
-              const SliverToBoxAdapter(child: SizedBox(height: 55)),
-            ],
-          ),
-        ),
-
-        // page select
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(
-              bottom: 10.0,
-              left: 10.0,
-              right: 10.0,
-            ),
-            child: PagePill(
-              currentPage: threadDetail.currentPage,
-              totalPages: threadDetail.totalPagesNum,
-              onPageTap: () {
-                showPageMenu(
-                  context: context,
-                  currentPage: threadDetail.currentPage,
-                  totalPages: threadDetail.totalPagesNum,
-                  onPageSelected: (int selectedPage) {
-                    _jumpToPage(selectedPage);
-                  },
-                );
-              },
             ),
           ),
-        ),
+      
+          
+        ],
+      ),
 
-        //TODO: add a bottombar for like/favo/share.
-      ],
+      bottomNavigationBar: ThreadBottomBar(hasRecommended: true, hasFavorated: false),
+      floatingActionButton: FloatingActionButton(onPressed: (){}, elevation: 0, child: const Icon(Icons.edit_outlined),),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
     );
   }
 }
