@@ -1,5 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home_reply.dart';
-import 'package:bluefish/pages/phoeo_gallery_page.dart';
+import 'package:bluefish/pages/photo_gallery_page.dart';
 import 'package:bluefish/utils/remove_string_tag_suffix.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

@@ -1,0 +1,381 @@
+// this widget is fully from vibe. so is it reliable?
+
+import 'package:bluefish/models/mention_reply.dart';
+import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+class MentionReplyCard extends StatelessWidget {
+  final MentionReply reply;
+
+  const MentionReplyCard({super.key, required this.reply});
+
+  // TODO: check what each status number's indicates.
+  bool get _notDisplay =>
+      reply.auditStatus != null && reply.auditStatus != 1 ||
+      reply.delete != null && reply.delete != 0 ||
+      reply.hide != null && reply.hide != 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      clipBehavior: Clip.antiAlias,
+      elevation: 0,
+      color: colorScheme.surfaceContainerHigh,
+      child: InkWell(
+        onTap: () {
+          // TODO: jump to thread detail.
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, colorScheme, textTheme),
+              if (_notDisplay) _buildNotDisplayWarning(context, colorScheme, textTheme),
+              const SizedBox(height: 16),
+              _buildContent(context, colorScheme, textTheme),
+              if (reply.imagesList.isNotEmpty) _buildImages(context),
+              if (reply.quoteContent.isNotEmpty) _buildQuote(context, colorScheme, textTheme),
+              const SizedBox(height: 12),
+              _buildThreadSource(context, colorScheme, textTheme),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Image.network(
+            reply.avatarUrl.toString(),
+            fit: BoxFit.cover,
+            height: 40,
+            width: 40,
+            errorBuilder: (context, error, stack) => Container(
+              height: 40,
+              width: 40,
+              color: colorScheme.surfaceContainerHighest,
+              child: Icon(
+                Icons.person,
+                size: 24,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                reply.username,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              // check if there's Chinese characters in time str.
+              RegExp(r"[\u4e00-\u9fa5]").hasMatch(reply.publishTimeFormatStr)
+                  ? Text(
+                      "${DateFormat("yyyy-MM-dd HH:mm:ss").format(reply.publishTime)} (${reply.publishTimeFormatStr})",
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : Text(
+                      DateFormat("yyyy-MM-dd HH:mm:ss").format(reply.publishTime),
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotDisplayWarning(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: colorScheme.errorContainer,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.visibility_off,
+              size: 16,
+              color: colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              "该回复当前可能无法查看",
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onErrorContainer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Text(
+      reply.content,
+      textAlign: TextAlign.start,
+      style: textTheme.bodyLarge?.copyWith(
+        color: colorScheme.onSurface,
+        height: 1.5,
+      ),
+    );
+  }
+
+  Widget _buildImages(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: SizedBox(
+        height: 160,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemBuilder: (context, index) {
+            final imageUrl = reply.imagesList[index].Url.toString();
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PhotoGalleryPage(
+                      imageUrls: reply.imagesList
+                          .map((e) => e.Url.toString())
+                          .toList(),
+                      initialIndex: index,
+                    ),
+                  ),
+                );
+              },
+              child: Hero(
+                tag: imageUrl,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.broken_image),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+          separatorBuilder: (context, index) => const SizedBox(width: 6),
+          itemCount: reply.imagesList.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuote(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(6),
+          border: Border(
+            left: BorderSide(color: colorScheme.tertiary, width: 4),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          reply.quoteContent,
+          style: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThreadSource(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.forum_outlined,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              reply.threadTitle,
+              style: textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.normal,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionDivider extends StatelessWidget {
+  final String title;
+
+  const _SectionDivider({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: colorScheme.outlineVariant,
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              title,
+              style: textTheme.labelLarge?.copyWith(
+                color: colorScheme.outline,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: colorScheme.outlineVariant,
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MentionReplyListWidget extends StatelessWidget {
+  final List<MentionReply> newReplies;
+  final List<MentionReply> oldReplies;
+  final bool isLoading;
+  final bool hasNextPage;
+
+  const MentionReplyListWidget({
+    super.key,
+    required this.newReplies,
+    required this.oldReplies,
+    required this.isLoading,
+    required this.hasNextPage,
+  });
+
+  Widget _buildFooter(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      alignment: Alignment.center,
+      child: !hasNextPage
+          ? Text(
+              "—— 后面没有了 ——",
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.outline,
+              ),
+            )
+          : const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNewReplies = newReplies.isNotEmpty;
+    final hasOldReplies = oldReplies.isNotEmpty;
+    if (!hasNewReplies && !hasOldReplies) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverMainAxisGroup(
+      slivers: [
+        if (hasNewReplies) ...[
+          const SliverToBoxAdapter(child: _SectionDivider(title: "新消息")),
+          SliverList.builder(
+            itemCount: newReplies.length,
+            itemBuilder: (BuildContext context, int index) {
+              return MentionReplyCard(reply: newReplies[index]);
+            },
+          ),
+        ],
+        if (hasOldReplies) ...[
+          const SliverToBoxAdapter(child: _SectionDivider(title: "历史消息")),
+          SliverList.builder(
+            itemCount: oldReplies.length,
+            itemBuilder: (BuildContext context, int index) {
+              return MentionReplyCard(reply: oldReplies[index]);
+            },
+          ),
+        ],
+        SliverToBoxAdapter(child: _buildFooter(context)),
+      ],
+    );
+  }
+}

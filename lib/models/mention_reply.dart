@@ -59,6 +59,8 @@ class MentionReply {
 
     //TODO: get type of this field.
     final int? video;
+
+    // quote here is just a string, do not has pic or other elements.
     final String quoteContent;
     
     //TODO: these status variable types do not know. temporarily use int.
