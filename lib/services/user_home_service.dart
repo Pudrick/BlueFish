@@ -68,8 +68,15 @@ class UserHomeService {
     required ThreadListType type,
     required int page,
   }) async {
-    final Uri threadAPI = Uri.parse(
-      "https://bbs.hupu.com/pcmapi/pc/space/v1/${type.apiType}?euid=$authorEuid&page=$page&pageSize=${UserHome.threadPageSize}",
+    final baseUrl = Uri.parse(
+      "https://bbs.hupu.com/pcmapi/pc/space/v1/${type.apiType}",
+    );
+    final threadAPI = baseUrl.replace(
+      queryParameters: {
+        'euid': authorEuid,
+        'page': page.toString(),
+        'pageSize': UserHome.threadPageSize.toString(),
+      },
     );
 
     final response = await HttpwithUA().get(threadAPI);
@@ -96,8 +103,16 @@ class UserHomeService {
     required int page,
     required String lastMaxTime,
   }) async {
-    final Uri threadAPI = Uri.parse(
-      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList?euid=$authorEuid&maxTime=$lastMaxTime&page=$page&pageSize=${UserHome.replyPageSize}",
+    final baseUrl = Uri.parse(
+      "https://my.hupu.com/pcmapi/pc/space/v1/getReplyList",
+    );
+    final threadAPI = baseUrl.replace(
+      queryParameters: {
+        'euid': authorEuid,
+        'maxTime': lastMaxTime,
+        'page': page.toString(),
+        'pageSize': UserHome.replyPageSize.toString(),
+      },
     );
 
     final response = await HttpwithUA().get(threadAPI);
