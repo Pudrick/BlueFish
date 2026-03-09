@@ -1,3 +1,7 @@
+// almost pure from vibe.
+
+// TODO: check vibe results.
+
 import 'package:bluefish/models/mention_light.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
