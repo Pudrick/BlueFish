@@ -38,7 +38,7 @@ class _MentionReplyPageViewState extends State<MentionReplyPageView> {
         _scrollController.position.maxScrollExtent - 200) {
       final vm = context.read<MentionReplyViewModel>();
       if (!vm.isLoading && vm.hasNextPage) {
-        vm.getMoreReplies();
+        vm.loadMore();
       }
     }
   }
