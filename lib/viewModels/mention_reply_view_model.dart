@@ -8,7 +8,7 @@ class MentionReplyViewModel extends ChangeNotifier {
   final MentionReplyService _service = MentionReplyService();
 
   String? pageStr;
-  bool hasNextPage = true;
+  bool hasNextPage = false;
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -24,14 +24,14 @@ class MentionReplyViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final (
-        newReplyList: newList,
-        oldReplyList: oldList,
+        newList: newItems,
+        oldList: oldItems,
         :pageStr,
         :hasNextPage,
       ) = await _service
-          .getReplyList();
-      _newList = newList;
-      _oldList = oldList;
+          .getList();
+      _newList = newItems;
+      _oldList = oldItems;
       this.pageStr = pageStr;
       this.hasNextPage = hasNextPage;
     } finally {
@@ -47,20 +47,20 @@ class MentionReplyViewModel extends ChangeNotifier {
     if (pageStr != null) {
       try {
         final (
-          newReplyList: apiNewList,
-          oldReplyList: apiOldList,
+          newList: newItems,
+          oldList: oldItems,
           :pageStr,
           :hasNextPage,
-        ) = await _service.getReplyList(
+        ) = await _service.getList(
           currentPageStr: this.pageStr,
         );
         this.pageStr = pageStr;
         this.hasNextPage = hasNextPage;
-        // now newList should be empty here, so addAll will add nothing eventually ...?
-        if (apiNewList.isNotEmpty) {
-          _newList.addAll(apiNewList);
+        // now newItems should be empty here, so addAll will add nothing eventually ...?
+        if (newItems.isNotEmpty) {
+          _newList.addAll(newItems);
         }
-        _oldList.addAll(apiOldList);
+        _oldList.addAll(oldItems);
       } finally {
         _isLoading = false;
         notifyListeners();
