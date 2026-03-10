@@ -12,15 +12,42 @@ class MentionLightCard extends StatelessWidget {
 
   const MentionLightCard({super.key, required this.light});
 
+  // TODO: manually changed here to 0. make sure what value it is.
   bool get _notDisplay =>
-      light.post.auditStatus != 1 ||
+      light.post.auditStatus != 0 ||
       light.post.isDelete ||
       light.post.isHide;
 
+  String get _notDisplayReason {
+    if (light.post.auditStatus != 0) {
+      return "卡审核";
+    }
+    if (light.post.isDelete) {
+      return "已删除";
+    }
+    if (light.post.isHide) {
+      return "已隐藏";
+    }
+    return "无法查看";
+  }
+
   bool get _quoteNotDisplay =>
-      (light.post.quoteAuditStatus != null && light.post.quoteAuditStatus != 1) ||
+      (light.post.quoteAuditStatus != null && light.post.quoteAuditStatus != 0) ||
       (light.post.quoteIsDeleted != null && light.post.quoteIsDeleted != 0) ||
       (light.post.quoteIsHide != null && light.post.quoteIsHide != 0);
+
+  String get _quoteNotDisplayReason {
+    if (light.post.quoteAuditStatus != null && light.post.quoteAuditStatus != 0) {
+      return "卡审核";
+    }
+    if (light.post.quoteIsDeleted != null && light.post.quoteIsDeleted != 0) {
+      return "已删除";
+    }
+    if (light.post.quoteIsHide != null && light.post.quoteIsHide != 0) {
+      return "已隐藏";
+    }
+    return "无法查看";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,51 +95,44 @@ class MentionLightCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        // Stacked overlapping avatars
-        SizedBox(
-          width: 40 + (displayCount > 1 ? (displayCount - 1) * 14.0 : 0),
-          height: 40,
-          child: displayCount > 0
-              ? Stack(
-                  clipBehavior: Clip.none,
-                  children: List.generate(displayCount, (index) {
-                    final operator = operators[index];
-                    return Positioned(
-                      left: index * 14.0,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colorScheme.surfaceContainerHigh,
-                            width: 2,
-                          ),
+        // Horizontally arranged avatars
+        displayCount > 0
+            ? Row(
+                children: List.generate(displayCount, (index) {
+                  final operator = operators[index];
+                  return Padding(
+                    padding: EdgeInsets.only(right: index < displayCount - 1 ? 8 : 0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colorScheme.surfaceContainerHigh,
+                          width: 2,
                         ),
-                        child: ClipOval(
-                          child: Image.network(
-                            operator.avatarUrl.toString(),
-                            fit: BoxFit.cover,
+                      ),
+                      child: ClipOval(
+                        child: Image.network(
+                          operator.avatarUrl.toString(),
+                          fit: BoxFit.cover,
+                          width: 36,
+                          height: 36,
+                          errorBuilder: (context, error, stack) => Container(
                             width: 36,
                             height: 36,
-                            errorBuilder: (context, error, stack) => Container(
-                              width: 36,
-                              height: 36,
-                              color: colorScheme.surfaceContainerHighest,
-                              child: Icon(
-                                Icons.person,
-                                size: 20,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              Icons.person,
+                              size: 20,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                       ),
-                    );
-                  }),
-                )
-              : const SizedBox.shrink(),
-        ),
+                    ),
+                  );
+                }),
+              )
+            : const SizedBox(width: 36, height: 36),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -128,7 +148,10 @@ class MentionLightCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
-                DateFormat("yyyy-MM-dd HH:mm:ss").format(light.lastTime),
+                // check if there's Chinese characters in time str.
+                RegExp(r"[\u4e00-\u9fa5]").hasMatch(light.createTimeString)
+                    ? "${DateFormat("yyyy-MM-dd HH:mm:ss").format(light.lastTime)} (${light.createTimeString})"
+                    : DateFormat("yyyy-MM-dd HH:mm:ss").format(light.lastTime),
                 style: textTheme.labelMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -176,7 +199,7 @@ class MentionLightCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              "该回复当前可能无法查看",
+              "该回复 $_notDisplayReason",
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onErrorContainer,
               ),
@@ -192,23 +215,35 @@ class MentionLightCard extends StatelessWidget {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          Icons.thumb_up_outlined,
-          size: 18,
-          color: colorScheme.primary,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            light.post.content,
-            textAlign: TextAlign.start,
-            style: textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface,
-              height: 1.5,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.thumb_up_outlined,
+              size: 18,
+              color: colorScheme.primary,
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                light.post.content,
+                textAlign: TextAlign.start,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurface,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "${light.lightNum}人偶点亮了",
+          style: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -277,7 +312,7 @@ class MentionLightCard extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(
-          "该引用可能无法查看",
+          "该引用 $_quoteNotDisplayReason",
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
