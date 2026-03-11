@@ -148,8 +148,8 @@ class LightPost
   bool get isUserBanned => (userBannedInt != 0);
 
   final String? quoteInfo;
-  final String? quotePuid;
-  final String? quoteFloor;
+  final int? quotePuid;
+  final int? quoteFloor;
   final String? quoteUsername;
   final String? quoteContent;
   final String? isMerged;
