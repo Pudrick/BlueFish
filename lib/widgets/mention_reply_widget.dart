@@ -6,10 +6,17 @@ import 'package:bluefish/widgets/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class MentionReplyCard extends StatelessWidget {
+class MentionReplyCard extends StatefulWidget {
   final MentionReply reply;
 
   const MentionReplyCard({super.key, required this.reply});
+
+  @override
+  State<MentionReplyCard> createState() => _MentionReplyCardState();
+}
+
+class _MentionReplyCardState extends State<MentionReplyCard> {
+  MentionReply get reply => widget.reply;
 
   // TODO: check what each status number's indicates.
   bool get _notDisplay =>
@@ -150,10 +157,10 @@ class MentionReplyCard extends StatelessWidget {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    return Text(
-      reply.content,
-      textAlign: TextAlign.start,
-      style: textTheme.bodyLarge?.copyWith(
+    return _ExpandableTextSection(
+      text: reply.content,
+      maxLines: 4,
+      textStyle: textTheme.bodyLarge?.copyWith(
         color: colorScheme.onSurface,
         height: 1.5,
       ),
@@ -225,9 +232,10 @@ class MentionReplyCard extends StatelessWidget {
           ),
         ),
         padding: const EdgeInsets.all(12),
-        child: Text(
-          displayQuote,
-          style: textTheme.bodyMedium?.copyWith(
+        child: _ExpandableTextSection(
+          text: displayQuote,
+          maxLines: 3,
+          textStyle: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
         ),
@@ -298,6 +306,119 @@ class MentionReplyListWidget extends StatelessWidget {
       oldItems: oldReplies,
       hasNextPage: hasNextPage,
       itemBuilder: (context, item) => MentionReplyCard(reply: item),
+    );
+  }
+}
+
+class _ExpandableTextSection extends StatefulWidget {
+  final String text;
+  final int maxLines;
+  final TextStyle? textStyle;
+
+  const _ExpandableTextSection({
+    required this.text,
+    required this.maxLines,
+    required this.textStyle,
+  });
+
+  @override
+  State<_ExpandableTextSection> createState() => _ExpandableTextSectionState();
+}
+
+class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textPainter = TextPainter(
+          text: TextSpan(text: widget.text, style: widget.textStyle),
+          maxLines: widget.maxLines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+
+        final isOverflowing = textPainter.didExceedMaxLines;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isOverflowing && !_expanded)
+              Stack(
+                children: [
+                  Text(
+                    widget.text,
+                    textAlign: TextAlign.start,
+                    style: widget.textStyle,
+                    maxLines: widget.maxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(() {
+                        _expanded = true;
+                      }),
+                      child: Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              colorScheme.surfaceContainerHigh.withValues(alpha: 0),
+                              colorScheme.surfaceContainerHigh.withValues(alpha: 0.95),
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: colorScheme.primary,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                widget.text,
+                textAlign: TextAlign.start,
+                style: widget.textStyle,
+                maxLines: null,
+              ),
+            if (isOverflowing)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() {
+                    _expanded = !_expanded;
+                  }),
+                  child: _expanded
+                      ? Center(
+                          child: Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            color: colorScheme.primary,
+                            size: 22,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                  ),
+                ),
+          ],
+        );
+      },
     );
   }
 }
