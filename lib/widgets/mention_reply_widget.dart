@@ -2,6 +2,7 @@
 
 import 'package:bluefish/models/mention_reply.dart';
 import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/widgets/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -210,6 +211,8 @@ class MentionReplyCard extends StatelessWidget {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
+    final displayQuote = _sanitizeQuoteContent(reply.quoteContent);
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Container(
@@ -223,12 +226,19 @@ class MentionReplyCard extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(12),
         child: Text(
-          reply.quoteContent,
+          displayQuote,
           style: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
         ),
       ),
+    );
+  }
+
+  String _sanitizeQuoteContent(String input) {
+    return input.replaceAllMapped(
+      RegExp(r'(\[(?:图片|多图|视频)\][^\/]*).*?/quality.*$'),
+      (match) => match.group(1) ?? '',
     );
   }
 
@@ -269,113 +279,25 @@ class MentionReplyCard extends StatelessWidget {
   }
 }
 
-class _SectionDivider extends StatelessWidget {
-  final String title;
-
-  const _SectionDivider({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: colorScheme.outlineVariant,
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              title,
-              style: textTheme.labelLarge?.copyWith(
-                color: colorScheme.outline,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: colorScheme.outlineVariant,
-              thickness: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class MentionReplyListWidget extends StatelessWidget {
   final List<MentionReply> newReplies;
   final List<MentionReply> oldReplies;
-  final bool isLoading;
   final bool hasNextPage;
 
   const MentionReplyListWidget({
     super.key,
     required this.newReplies,
     required this.oldReplies,
-    required this.isLoading,
     required this.hasNextPage,
   });
 
-  Widget _buildFooter(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      alignment: Alignment.center,
-      child: !hasNextPage
-          ? Text(
-              "—— 后面没有了 ——",
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.outline,
-              ),
-            )
-          : const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hasNewReplies = newReplies.isNotEmpty;
-    final hasOldReplies = oldReplies.isNotEmpty;
-    if (!hasNewReplies && !hasOldReplies) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverMainAxisGroup(
-      slivers: [
-        if (hasNewReplies) ...[
-          const SliverToBoxAdapter(child: _SectionDivider(title: "新消息")),
-          SliverList.builder(
-            itemCount: newReplies.length,
-            itemBuilder: (BuildContext context, int index) {
-              return MentionReplyCard(reply: newReplies[index]);
-            },
-          ),
-        ],
-        if (hasOldReplies) ...[
-          const SliverToBoxAdapter(child: _SectionDivider(title: "历史消息")),
-          SliverList.builder(
-            itemCount: oldReplies.length,
-            itemBuilder: (BuildContext context, int index) {
-              return MentionReplyCard(reply: oldReplies[index]);
-            },
-          ),
-        ],
-        SliverToBoxAdapter(child: _buildFooter(context)),
-      ],
+    return MentionGroupedSliverList<MentionReply>(
+      newItems: newReplies,
+      oldItems: oldReplies,
+      hasNextPage: hasNextPage,
+      itemBuilder: (context, item) => MentionReplyCard(reply: item),
     );
   }
 }

@@ -6,5 +6,6 @@ class MentionLightService extends MentionService<MentionLight> {
       : super(
           apiPath: "getLightRemindList",
           fromJson: MentionLight.fromJson,
+          defaultQueryParameters: const {'plat': '2'},
         );
 }

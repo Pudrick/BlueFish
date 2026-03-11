@@ -6,10 +6,12 @@ import 'package:bluefish/utils/http_with_ua_coke.dart';
 class MentionService<T> {
   final String apiPath;
   final T Function(Map<String, dynamic>) fromJson;
+  final Map<String, String> defaultQueryParameters;
 
   MentionService({
     required this.apiPath,
     required this.fromJson,
+    this.defaultQueryParameters = const {},
   });
 
   String get _baseUrl => "https://bbs.hupu.com/pcmapi/pc/space/v1/$apiPath";
@@ -25,7 +27,10 @@ class MentionService<T> {
   getList({String? currentPageStr}) async {
     final baseUri = Uri.parse(_baseUrl);
     final url = baseUri.replace(
-      queryParameters: {if (currentPageStr != null) 'pageStr': currentPageStr},
+      queryParameters: {
+        ...defaultQueryParameters,
+        if (currentPageStr != null) 'pageStr': currentPageStr,
+      },
     );
     var response = await HttpwithUA().get(url);
     if (response.statusCode != 200) {
