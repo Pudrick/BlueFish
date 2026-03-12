@@ -44,11 +44,13 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(context, colorScheme, textTheme),
-              if (_notDisplay) _buildNotDisplayWarning(context, colorScheme, textTheme),
+              if (_notDisplay)
+                _buildNotDisplayWarning(context, colorScheme, textTheme),
               const SizedBox(height: 16),
               _buildContent(context, colorScheme, textTheme),
               if (reply.imagesList.isNotEmpty) _buildImages(context),
-              if (reply.quoteContent.isNotEmpty) _buildQuote(context, colorScheme, textTheme),
+              if (reply.quoteContent.isNotEmpty)
+                _buildQuote(context, colorScheme, textTheme),
               const SizedBox(height: 12),
               _buildThreadSource(context, colorScheme, textTheme),
             ],
@@ -106,7 +108,9 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
                       ),
                     )
                   : Text(
-                      DateFormat("yyyy-MM-dd HH:mm:ss").format(reply.publishTime),
+                      DateFormat(
+                        "yyyy-MM-dd HH:mm:ss",
+                      ).format(reply.publishTime),
                       style: textTheme.labelMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -170,46 +174,7 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
   Widget _buildImages(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: SizedBox(
-        height: 160,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemBuilder: (context, index) {
-            final imageUrl = reply.imagesList[index].Url.toString();
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PhotoGalleryPage(
-                      imageUrls: reply.imagesList
-                          .map((e) => e.Url.toString())
-                          .toList(),
-                      initialIndex: index,
-                    ),
-                  ),
-                );
-              },
-              child: Hero(
-                tag: imageUrl,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.broken_image),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-          separatorBuilder: (context, index) => const SizedBox(width: 6),
-          itemCount: reply.imagesList.length,
-        ),
-      ),
+      child: _MentionReplyImageStrip(reply: reply),
     );
   }
 
@@ -282,6 +247,157 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MentionReplyImageStrip extends StatefulWidget {
+  final MentionReply reply;
+
+  const _MentionReplyImageStrip({required this.reply});
+
+  @override
+  State<_MentionReplyImageStrip> createState() =>
+      _MentionReplyImageStripState();
+}
+
+class _MentionReplyImageStripState extends State<_MentionReplyImageStrip> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showRightFade = false;
+  bool _hasScrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateRightFade());
+  }
+
+  void _handleScroll() {
+    if (!_hasScrolled &&
+        _scrollController.hasClients &&
+        _scrollController.position.pixels > 4) {
+      setState(() {
+        _hasScrolled = true;
+      });
+    }
+    _updateRightFade();
+  }
+
+  void _updateRightFade() {
+    if (!mounted || !_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final shouldShowFade =
+        widget.reply.imagesList.length > 1 &&
+        position.maxScrollExtent > 0 &&
+        position.pixels < position.maxScrollExtent - 4;
+
+    if (shouldShowFade != _showRightFade) {
+      setState(() {
+        _showRightFade = shouldShowFade;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      height: 160,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _updateRightFade(),
+          );
+          final imageWidth = (constraints.maxWidth * 0.72)
+              .clamp(120.0, 180.0)
+              .toDouble();
+
+          return Stack(
+            children: [
+              ListView.separated(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (context, index) {
+                  final imageUrl = widget.reply.imagesList[index].Url
+                      .toString();
+
+                  return SizedBox(
+                    width: imageWidth,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PhotoGalleryPage(
+                              imageUrls: widget.reply.imagesList
+                                  .map((e) => e.Url.toString())
+                                  .toList(),
+                              initialIndex: index,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Hero(
+                        tag: imageUrl,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox.expand(
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.broken_image),
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                separatorBuilder: (context, index) => const SizedBox(width: 6),
+                itemCount: widget.reply.imagesList.length,
+              ),
+              if (_showRightFade)
+                IgnorePointer(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      width: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            colorScheme.surfaceContainerHigh.withValues(
+                              alpha: 0,
+                            ),
+                            colorScheme.surfaceContainerHigh.withValues(
+                              alpha: 0.96,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -371,8 +487,12 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              colorScheme.surfaceContainerHigh.withValues(alpha: 0),
-                              colorScheme.surfaceContainerHigh.withValues(alpha: 0.95),
+                              colorScheme.surfaceContainerHigh.withValues(
+                                alpha: 0,
+                              ),
+                              colorScheme.surfaceContainerHigh.withValues(
+                                alpha: 0.95,
+                              ),
                             ],
                           ),
                         ),
@@ -414,8 +534,8 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
                           ),
                         )
                       : const SizedBox.shrink(),
-                  ),
                 ),
+              ),
           ],
         );
       },
