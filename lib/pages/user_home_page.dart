@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/user_home_display_select_widget.dart';
@@ -29,6 +31,9 @@ class UserHomePageView extends StatefulWidget {
 
 class _UserHomePageViewState extends State<UserHomePageView> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _infoSectionKey = GlobalKey();
+
+  static const double _infoSectionVerticalPadding = 32;
 
   @override
   void initState() {
@@ -42,22 +47,48 @@ class _UserHomePageViewState extends State<UserHomePageView> {
       final vm = context.read<UserHomeViewModel>();
       switch (vm.displayStatus) {
         case DisplayStatus.threads:
-        if(!vm.isLoadingThreads) {
-          vm.loadMoreThreads();
-        }
+          if (!vm.isLoadingThreads) {
+            vm.loadMoreThreads();
+          }
           break;
         case DisplayStatus.replies:
-        if (!vm.isLoadingReplies) {
-          vm.loadMoreReplies();
+          if (!vm.isLoadingReplies) {
+            vm.loadMoreReplies();
+          }
           break;
-        }
         case DisplayStatus.recommends:
-        if(!vm.isLoadingRecommends) {
-          vm.loadMoreRecommends();
-        }
+          if (!vm.isLoadingRecommends) {
+            vm.loadMoreRecommends();
+          }
           break;
       }
     }
+  }
+
+  double _getContentStartOffset() {
+    final context = _infoSectionKey.currentContext;
+    final renderBox = context?.findRenderObject() as RenderBox?;
+
+    if (renderBox == null || !renderBox.hasSize) {
+      return 0;
+    }
+
+    return renderBox.size.height + _infoSectionVerticalPadding;
+  }
+
+  void _scrollToContentStart() {
+    if (!_scrollController.hasClients) return;
+
+    final maxScrollExtent = _scrollController.position.maxScrollExtent;
+    final targetOffset = math
+        .min(maxScrollExtent, math.max(0.0, _getContentStartOffset()))
+        .toDouble();
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -84,27 +115,20 @@ class _UserHomePageViewState extends State<UserHomePageView> {
             SliverPadding(
               padding: const EdgeInsets.all(16),
               sliver: SliverToBoxAdapter(
-                child: UserHomeInfoWidget(userHome: data),
+                child: Container(
+                  key: _infoSectionKey,
+                  child: UserHomeInfoWidget(userHome: data),
+                ),
               ),
             ),
             SliverPersistentHeader(
               pinned: true,
               delegate: _StickyTabBarDelegate(
                 child: UserHomeDisplaySelectWidget(
-                  onTabChanged: () {
-                    if (_scrollController.hasClients) {
-                      _scrollController.animateTo(
-                        // this height is measured on Windows. Android is same? 
-                        260.0,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      );
-                    }
-                  },
+                  onTabChanged: _scrollToContentStart,
                 ),
               ),
             ),
-
             switch (viewModel.displayStatus) {
               DisplayStatus.threads => UserHomeThreadListWidget(
                 threadsList: data.threads,

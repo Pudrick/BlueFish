@@ -10,48 +10,84 @@ class UserHomeInfoWidget extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return InkWell(
-      onTap: () {},
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              count.toString(), 
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colorScheme.onSurface,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            count.toString(),
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colorScheme.onSurface,
             ),
-            const SizedBox(height: 4), 
-            Text(
-              name,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.outline, 
-                fontSize: 11,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            style: textTheme.labelMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
-          ],
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(BuildContext context, {required bool isCompact}) {
+    final avatarSize = isCompact ? 92.0 : 108.0;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.network(
+          userHome.avatarUrl.toString(),
+          fit: BoxFit.cover,
+          width: avatarSize,
+          height: avatarSize,
         ),
       ),
     );
   }
 
-  Widget _infoStrContainer(ColorScheme colorScheme, String info) {
+  Widget _infoStrContainer(BuildContext context, String info) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5), 
-        borderRadius: BorderRadius.circular(8), 
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5), width: 0.5),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: 0.5,
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Text(
         info,
-        style: TextStyle(
-          fontSize: 10,
+        style: textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurfaceVariant,
         ),
@@ -59,230 +95,189 @@ class UserHomeInfoWidget extends StatelessWidget {
     );
   }
 
-  Widget _verticalDivider(BuildContext context) {
-  return VerticalDivider(
-    width: 1, 
-    thickness: 1, 
-    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5), 
-    indent: 10, 
-    endIndent: 10,
-  );
-}
+  Widget _buildMetaWrap(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _infoStrContainer(context, userHome.bbsUserLevelFormatedStr),
+        _infoStrContainer(context, 'IP属地：${userHome.location}'),
+        _infoStrContainer(context, '${userHome.reputation}声望'),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context) {
+    const cardGap = 10.0;
+    final stats = [
+      ('回复被点亮', userHome.beLightCount),
+      ('主贴被推荐', userHome.beRecommendCount),
+      ('关注', userHome.followCount),
+      ('粉丝', userHome.fansCount),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwoColumns = constraints.maxWidth < 640;
+        final columns = useTwoColumns ? 2 : 4;
+        final tileWidth =
+            (constraints.maxWidth - cardGap * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: cardGap,
+          runSpacing: cardGap,
+          children: [
+            for (final (label, count) in stats)
+              SizedBox(
+                width: tileWidth,
+                child: _statusCard(context, label, count),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
+    final isFollowed = userHome.followStatus != FollowStatus.notFollowed;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stackButtons = constraints.maxWidth < 320;
+        final followButton = SizedBox(
+          height: 40,
+          child: isFollowed
+              ? FilledButton.tonal(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check),
+                      SizedBox(width: 4),
+                      Text('已关注', style: TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                )
+              : FilledButton(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_add_outlined),
+                      SizedBox(width: 4),
+                      Text('关注', style: TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                ),
+        );
+        final messageButton = SizedBox(
+          height: 40,
+          child: OutlinedButton(
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.mail_outline_outlined),
+                SizedBox(width: 4),
+                Text('私信', style: TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        );
+
+        if (stackButtons) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [followButton, const SizedBox(height: 10), messageButton],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: followButton),
+            const SizedBox(width: 10),
+            Expanded(child: messageButton),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileSummary(BuildContext context, {required bool isCompact}) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: isCompact
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          userHome.nickname,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 12),
+        _buildMetaWrap(context),
+        const SizedBox(height: 16),
+        _buildStatsGrid(context),
+        const SizedBox(height: 12),
+        _buildActionButtons(context),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 1,
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Container(
-                  padding: const EdgeInsets.all(8.0),
-                  
 
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                        spreadRadius: -2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 680;
+
+        return Card(
+          elevation: 1,
+          color: colorScheme.surfaceContainerLow,
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(child: _buildAvatar(context, isCompact: true)),
+                      const SizedBox(height: 16),
+                      _buildProfileSummary(context, isCompact: true),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAvatar(context, isCompact: false),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: _buildProfileSummary(context, isCompact: false),
                       ),
                     ],
                   ),
-
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      userHome.avatarUrl.toString(),
-                      fit: BoxFit.cover,
-                      height: 100,
-                    ),
-                  ),
-                ),
-              ),
-
-              // const SizedBox(width: 4,),
-
-              // Expanded is used for provide a width value for Row.
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: SizedBox(
-                    height: 180,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            userHome.nickname,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _infoStrContainer(
-                              colorScheme,
-                              userHome.bbsUserLevelFormatedStr,
-                            ),
-                            _infoStrContainer(
-                              colorScheme,
-                              "IP属地：${userHome.location}",
-                            ),
-                            _infoStrContainer(
-                              colorScheme,
-                              "${userHome.reputation}声望",
-                            ),
-                          ],
-                        ),
-                        // a "stupid" way to do it...
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 320),
-                          child: Column(
-                            children: [
-                              // IntrinsicHeight is for visualize the vertical divider.
-                              IntrinsicHeight(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _statusCard(
-                                        context,
-                                        "回复被点亮",
-                                        userHome.beLightCount,
-                                      ),
-                                    ),
-                                    _verticalDivider(context),
-                                    Expanded(
-                                      child: _statusCard(
-                                        context,
-                                        "主贴被推荐",
-                                        userHome.beRecommendCount,
-                                      ),
-                                    ),
-                                    _verticalDivider(context),
-                                       Expanded(
-                                      child: _statusCard(
-                                        context,
-                                        "关注",
-                                        userHome.followCount,
-                                      ),
-                                    ),
-                                    _verticalDivider(context),
-                                    Expanded(
-                                      child: _statusCard(
-                                        context,
-                                        "粉丝",
-                                        userHome.fansCount,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 36, 
-                                      child: 
-                                      (userHome.followStatus == FollowStatus.notFollowed) ? 
-                                      FilledButton(
-                                        onPressed: () {},
-                                        style: 
-                                        FilledButton.styleFrom(
-                                          padding: EdgeInsets.zero, 
-                                          visualDensity:
-                                              VisualDensity.compact, 
-                                        ),
-                                        child: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.person_add_outlined),
-                                            SizedBox(width: 4,),
-                                            Text(
-                                              "关注",
-                                              style: TextStyle(fontSize: 13),
-                                            ),
-                                          ],
-                                        ),
-                                      ) :
-                                                FilledButton.tonal(
-                                        onPressed: (){},
-                                        style: 
-                                        FilledButton.styleFrom(
-                                          padding: EdgeInsets.zero, 
-                                          visualDensity:
-                                              VisualDensity.compact, 
-                                        ),
-                                        child: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.check),
-                                            SizedBox(width: 4,),
-                                            Text(
-                                              "已关注",
-                                              style: TextStyle(fontSize: 13),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 36,
-                                      child: OutlinedButton(
-                                        onPressed: () {},
-                                        style: FilledButton.styleFrom(
-                                          padding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        child: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.mail_outline_outlined),
-                                            SizedBox(width: 4,),
-                                            Text(
-                                              "私信",
-                                              style: TextStyle(fontSize: 13),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // ),
-            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
