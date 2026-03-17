@@ -452,12 +452,14 @@ class MentionReplyListWidget extends StatelessWidget {
   final List<MentionReply> newReplies;
   final List<MentionReply> oldReplies;
   final bool hasNextPage;
+  final bool isLoading;
 
   const MentionReplyListWidget({
     super.key,
     required this.newReplies,
     required this.oldReplies,
     required this.hasNextPage,
+    required this.isLoading,
   });
 
   @override
@@ -466,6 +468,7 @@ class MentionReplyListWidget extends StatelessWidget {
       newItems: newReplies,
       oldItems: oldReplies,
       hasNextPage: hasNextPage,
+      isLoading: isLoading,
       itemBuilder: (context, item) => MentionReplyCard(reply: item),
     );
   }
@@ -502,24 +505,24 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
         )..layout(maxWidth: constraints.maxWidth);
 
         final isOverflowing = textPainter.didExceedMaxLines;
-        final collapsedText = Stack(
-          children: [
-            Text(
-              widget.text,
-              textAlign: TextAlign.start,
-              style: widget.textStyle,
-              maxLines: widget.maxLines,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() {
-                  _expanded = true;
-                }),
+        final collapsedText = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() {
+            _expanded = true;
+          }),
+          child: Stack(
+            children: [
+              Text(
+                widget.text,
+                textAlign: TextAlign.start,
+                style: widget.textStyle,
+                maxLines: widget.maxLines,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: Container(
                   height: 36,
                   decoration: BoxDecoration(
@@ -545,8 +548,8 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
         final expandedText = Text(
           widget.text,

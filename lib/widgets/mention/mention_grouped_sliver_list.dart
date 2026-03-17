@@ -4,6 +4,7 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
   final List<T> newItems;
   final List<T> oldItems;
   final bool hasNextPage;
+  final bool isLoading;
   final Widget Function(BuildContext context, T item) itemBuilder;
 
   const MentionGroupedSliverList({
@@ -11,6 +12,7 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
     required this.newItems,
     required this.oldItems,
     required this.hasNextPage,
+    required this.isLoading,
     required this.itemBuilder,
   });
 
@@ -23,13 +25,18 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
       alignment: Alignment.center,
       child: !hasNextPage
           ? Text(
-              "—— 后面没有了 ——",
+              '—— 后面没有了 ——',
               style: textTheme.bodySmall?.copyWith(color: colorScheme.outline),
             )
-          : const SizedBox(
+          : isLoading
+          ? const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(
+              '上滑加载更多',
+              style: textTheme.bodySmall?.copyWith(color: colorScheme.outline),
             ),
     );
   }
@@ -46,7 +53,7 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
     return SliverMainAxisGroup(
       slivers: [
         if (hasNewItems) ...[
-          const SliverToBoxAdapter(child: _SectionDivider(title: "新消息")),
+          const SliverToBoxAdapter(child: _SectionDivider(title: '新消息')),
           SliverList.builder(
             itemCount: newItems.length,
             itemBuilder: (context, index) =>
@@ -54,7 +61,7 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
           ),
         ],
         if (hasOldItems) ...[
-          const SliverToBoxAdapter(child: _SectionDivider(title: "历史消息")),
+          const SliverToBoxAdapter(child: _SectionDivider(title: '历史消息')),
           SliverList.builder(
             itemCount: oldItems.length,
             itemBuilder: (context, index) =>

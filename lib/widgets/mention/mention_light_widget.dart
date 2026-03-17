@@ -182,7 +182,7 @@ class _MentionLightCardState extends State<MentionLightCard> {
       return operators.first.username;
     }
     if (operators.length == 2) {
-      return "${operators[0].username} 和 ${operators[1].username}";
+      return "${operators[0].username} 和 ${operators[1].username} 等 ${widget.light.lightNum} 人";
     }
     return "${operators[0].username} 等 ${operators.length} 人";
   }
@@ -414,12 +414,14 @@ class MentionLightListWidget extends StatelessWidget {
   final List<MentionLight> newLights;
   final List<MentionLight> oldLights;
   final bool hasNextPage;
+  final bool isLoading;
 
   const MentionLightListWidget({
     super.key,
     required this.newLights,
     required this.oldLights,
     required this.hasNextPage,
+    required this.isLoading,
   });
 
   @override
@@ -428,6 +430,7 @@ class MentionLightListWidget extends StatelessWidget {
       newItems: newLights,
       oldItems: oldLights,
       hasNextPage: hasNextPage,
+      isLoading: isLoading,
       itemBuilder: (context, item) => MentionLightCard(light: item),
     );
   }
@@ -467,12 +470,18 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
         )..layout(maxWidth: constraints.maxWidth);
 
         final isOverflowing = textPainter.didExceedMaxLines;
-        final collapsedText = Text(
-          widget.text,
-          textAlign: TextAlign.start,
-          style: widget.textStyle,
-          maxLines: widget.maxLines,
-          overflow: TextOverflow.ellipsis,
+        final collapsedText = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() {
+            _expanded = true;
+          }),
+          child: Text(
+            widget.text,
+            textAlign: TextAlign.start,
+            style: widget.textStyle,
+            maxLines: widget.maxLines,
+            overflow: TextOverflow.ellipsis,
+          ),
         );
         final expandedText = Text(
           widget.text,
@@ -564,31 +573,31 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final collapsedHtml = SizedBox(
-          height: widget.collapsedMaxHeight,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ClipRect(
-                  child: OverflowBox(
-                    alignment: Alignment.topCenter,
-                    minWidth: constraints.maxWidth,
-                    maxWidth: constraints.maxWidth,
-                    minHeight: widget.collapsedMaxHeight,
-                    maxHeight: double.infinity,
-                    child: _buildHtmlWidget(),
+        final collapsedHtml = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() {
+            _expanded = true;
+          }),
+          child: SizedBox(
+            height: widget.collapsedMaxHeight,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.topCenter,
+                      minWidth: constraints.maxWidth,
+                      maxWidth: constraints.maxWidth,
+                      minHeight: widget.collapsedMaxHeight,
+                      maxHeight: double.infinity,
+                      child: _buildHtmlWidget(),
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() {
-                    _expanded = true;
-                  }),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   child: Container(
                     height: 44,
                     decoration: BoxDecoration(
@@ -612,8 +621,8 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
 

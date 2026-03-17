@@ -90,6 +90,7 @@ class _MentionListSectionView<T, VM extends MentionViewModel<T>>
 
 class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
     extends State<_MentionListSectionView<T, VM>> {
+  static const double _loadMoreTriggerDistance = 80;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -99,13 +100,29 @@ class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final vm = context.read<VM>();
-      if (!vm.isLoading && vm.hasNextPage) {
-        vm.loadMore();
-      }
+    _maybeLoadMoreForViewport(context.read<VM>());
+  }
+
+  void _maybeLoadMoreForViewport(VM viewModel) {
+    if (!_scrollController.hasClients ||
+        viewModel.isLoading ||
+        !viewModel.hasNextPage) {
+      return;
     }
+
+    final position = _scrollController.position;
+    if (position.extentAfter <= _loadMoreTriggerDistance) {
+      viewModel.loadMore();
+    }
+  }
+
+  void _scheduleViewportFillCheck(VM viewModel) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _maybeLoadMoreForViewport(viewModel);
+    });
   }
 
   @override
@@ -165,6 +182,8 @@ class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
         ),
       );
     }
+
+    _scheduleViewportFillCheck(viewModel);
 
     return RefreshIndicator(
       onRefresh: () => viewModel.init(),

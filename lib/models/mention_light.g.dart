@@ -70,7 +70,7 @@ Map<String, dynamic> _$MentionLightToJson(MentionLight instance) =>
 LightPost _$LightPostFromJson(Map<String, dynamic> json) => LightPost(
   pid: (json['pid'] as num).toInt(),
   tid: (json['tid'] as num).toInt(),
-  aid: (json['aid'] as num?)?.toInt(),
+  aid: json['aid'] as String?,
   puid: (json['puid'] as num).toInt(),
   username: json['username'] as String,
   userIp: json['userIp'] as String,

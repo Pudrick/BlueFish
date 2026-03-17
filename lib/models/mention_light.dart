@@ -98,7 +98,7 @@ class LightPost
 {
   final int pid;
   final int tid;
-  final int? aid;
+  final String? aid;
   final int puid;
   final String username;
   final String userIp;

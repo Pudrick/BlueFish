@@ -88,6 +88,7 @@ class _MentionReplySection extends StatelessWidget {
           newReplies: viewModel.newList,
           oldReplies: viewModel.oldList,
           hasNextPage: viewModel.hasNextPage,
+          isLoading: viewModel.isLoading,
         ),
       ),
     );
@@ -109,6 +110,7 @@ class _MentionLightSection extends StatelessWidget {
           newLights: viewModel.newList,
           oldLights: viewModel.oldList,
           hasNextPage: viewModel.hasNextPage,
+          isLoading: viewModel.isLoading,
         ),
       ),
     );
