@@ -14,9 +14,7 @@ class UserHomeDisplaySelectWidget extends StatelessWidget {
     return SegmentedButton<DisplayStatus>(
       style: SegmentedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        textStyle: const TextStyle(
-          fontSize: 15
-        )
+        textStyle: const TextStyle(fontSize: 15),
       ),
       segments: const <ButtonSegment<DisplayStatus>>[
         ButtonSegment(
@@ -38,11 +36,11 @@ class UserHomeDisplaySelectWidget extends StatelessWidget {
       selected: {vm.displayStatus},
       // the argument must be Set, but here is a single selection.
       onSelectionChanged: (Set<DisplayStatus> selectionSet) {
-        if(vm.displayStatus != selectionSet.first) {
+        if (vm.displayStatus != selectionSet.first) {
           vm.changeDisplayTo(selectionSet.first);
           onTabChanged?.call();
         }
-      }
+      },
     );
   }
 }

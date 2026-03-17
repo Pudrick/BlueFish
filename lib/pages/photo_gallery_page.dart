@@ -4,7 +4,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 
 class PhotoGalleryPage extends StatefulWidget {
   final List<String> imageUrls;
-  final int initialIndex;       
+  final int initialIndex;
 
   const PhotoGalleryPage({
     super.key,
@@ -30,25 +30,24 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, 
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           PhotoViewGallery.builder(
-            scrollPhysics: const BouncingScrollPhysics(), 
+            scrollPhysics: const BouncingScrollPhysics(),
             builder: (BuildContext context, int index) {
               final url = widget.imageUrls[index];
               return PhotoViewGalleryPageOptions(
                 imageProvider: NetworkImage(url),
-                initialScale: PhotoViewComputedScale.contained, 
+                initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 2,
                 heroAttributes: PhotoViewHeroAttributes(tag: url),
               );
             },
             itemCount: widget.imageUrls.length,
-            loadingBuilder: (context, event) => const Center(
-              child: CircularProgressIndicator(), 
-            ),
+            loadingBuilder: (context, event) =>
+                const Center(child: CircularProgressIndicator()),
             backgroundDecoration: const BoxDecoration(color: Colors.black),
             pageController: _pageController,
             onPageChanged: (index) {
@@ -57,7 +56,7 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
               });
             },
           ),
-          
+
           Positioned(
             top: 50,
             right: 20,
@@ -73,7 +72,7 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
               ),
             ),
           ),
-          
+
           Positioned(
             top: 40,
             left: 10,

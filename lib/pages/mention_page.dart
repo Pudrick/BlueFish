@@ -1,8 +1,8 @@
 import 'package:bluefish/pages/mention_list_page_base.dart';
 import 'package:bluefish/viewModels/mention_light_view_model.dart';
 import 'package:bluefish/viewModels/mention_reply_view_model.dart';
-import 'package:bluefish/widgets/mention_light_widget.dart';
-import 'package:bluefish/widgets/mention_reply_widget.dart';
+import 'package:bluefish/widgets/mention/mention_light_widget.dart';
+import 'package:bluefish/widgets/mention/mention_reply_widget.dart';
 import 'package:flutter/material.dart';
 
 enum MentionTab { reply, light }

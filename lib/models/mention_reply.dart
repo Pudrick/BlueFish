@@ -5,34 +5,35 @@ part 'mention_reply.g.dart';
 
 @JsonSerializable()
 class ReplyPic {
-    @JsonKey(name: 'url')
-    final String urlStr;
-    Uri get Url => Uri.parse(urlStr);
+  @JsonKey(name: 'url')
+  final String urlStr;
+  Uri get Url => Uri.parse(urlStr);
 
-    @JsonKey(name: 'is_gif')
-    final int isGifInt;
-    bool get isGif => isGifInt == 1;
+  @JsonKey(name: 'is_gif')
+  final int isGifInt;
+  bool get isGif => isGifInt == 1;
 
-    final int width;
-    final int height;
+  final int width;
+  final int height;
 
-    ReplyPic({
+  ReplyPic({
     required this.urlStr,
     required this.isGifInt,
     required this.width,
     required this.height,
   });
 
-  factory ReplyPic.fromJson(Map<String, dynamic> json) => _$ReplyPicFromJson(json);
+  factory ReplyPic.fromJson(Map<String, dynamic> json) =>
+      _$ReplyPicFromJson(json);
   Map<String, dynamic> toJson() => _$ReplyPicToJson(this);
 }
 
 @JsonSerializable()
 class MentionReply {
-    // is this pid? but there is a existing pid field.
+  // is this pid? but there is a existing pid field.
   final int id;
 
-    // what's this?
+  // what's this?
   final int msgType;
   final int puid;
   final String username;
@@ -40,53 +41,54 @@ class MentionReply {
   //TODO: make sure what type is
   final int? userBanned;
 
-    @JsonKey(name: 'headerUrl')
-    final String avatarUrlStr;
-    Uri get avatarUrl => Uri.parse(avatarUrlStr);
+  @JsonKey(name: 'headerUrl')
+  final String avatarUrlStr;
+  Uri get avatarUrl => Uri.parse(avatarUrlStr);
 
-    // TODO: make sure what type is
-    final int? cert;
+  // TODO: make sure what type is
+  final int? cert;
 
-    @JsonKey(name: 'postContent')
-    final String content;
-    final String threadTitle;
-    final int tid;
-    final int pid;
-    final int fid;
-    final int topicId;
-    @JsonKey(name: 'pics')
-    final List<ReplyPic> imagesList;
+  @JsonKey(name: 'postContent')
+  final String content;
+  final String threadTitle;
+  final int tid;
+  final int pid;
+  final int fid;
+  final int topicId;
+  @JsonKey(name: 'pics', defaultValue: <ReplyPic>[])
+  final List<ReplyPic> imagesList;
 
-    //TODO: get type of this field.
-    final int? video;
+  //TODO: get type of this field.
+  final int? video;
 
-    // quote here is just a string, do not has pic or other elements.
-    final String quoteContent;
-    
-    //TODO: these status variable types do not know. temporarily use int.
-    final int? delete;
-    final int? hide;
-    final int? auditStatus;
+  // quote here is just a string, do not has pic or other elements.
+  final String quoteContent;
 
-    @JsonKey(name: 'publishTime')
-    final String publishTimeFormatStr;
+  //TODO: these status variable types do not know. temporarily use int.
+  final int? delete;
+  final int? hide;
+  final int? auditStatus;
 
-    //TODO: what type is this?
-    final int? threader;
+  @JsonKey(name: 'publishTime')
+  final String publishTimeFormatStr;
 
-    @JsonKey(name: 'yrConcern')
-    final String? followStatus;
+  //TODO: verify whether this is always a display label like "楼主".
+  final String? threader;
 
-    @JsonKey(name: 'threadSchema')
-    final String protocolThreadUrl;
-    @JsonKey(name: 'replySchema')
-    final String protocolReplyUrl;
+  @JsonKey(name: 'yrConcern')
+  final String? followStatus;
 
-    @JsonKey(name: 'updateTime')
-    final int publishTimeStamp;
-    DateTime get publishTime => DateTime.fromMillisecondsSinceEpoch(publishTimeStamp * 1000);
+  @JsonKey(name: 'threadSchema')
+  final String protocolThreadUrl;
+  @JsonKey(name: 'replySchema')
+  final String protocolReplyUrl;
 
-    MentionReply({
+  @JsonKey(name: 'updateTime')
+  final int publishTimeStamp;
+  DateTime get publishTime =>
+      DateTime.fromMillisecondsSinceEpoch(publishTimeStamp * 1000);
+
+  MentionReply({
     required this.id,
     required this.msgType,
     required this.puid,
@@ -114,6 +116,7 @@ class MentionReply {
     required this.publishTimeStamp,
   });
 
-  factory MentionReply.fromJson(Map<String, dynamic> json) => _$MentionReplyFromJson(json);
+  factory MentionReply.fromJson(Map<String, dynamic> json) =>
+      _$MentionReplyFromJson(json);
   Map<String, dynamic> toJson() => _$MentionReplyToJson(this);
 }

@@ -66,7 +66,6 @@ class UserHomeThreadListWidget extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  
                 ],
               ),
               Row(

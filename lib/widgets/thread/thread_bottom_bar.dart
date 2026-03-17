@@ -24,22 +24,27 @@ class ThreadBottomBar extends StatelessWidget {
             icon: hasRecommended
                 ? const Icon(Icons.thumb_up)
                 : const Icon(Icons.thumb_up_outlined),
-                color: hasRecommended ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            color: hasRecommended
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 8,),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: () {},
             icon: hasFavorated
                 ? const Icon(Icons.star_outline)
                 : const Icon(Icons.star),
-                color: hasFavorated ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            color: hasFavorated
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 8,),
-          IconButton(onPressed: (){}, icon: 
-          const Icon(Icons.share_outlined),
-          color: colorScheme.onSurfaceVariant,
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.share_outlined),
+            color: colorScheme.onSurfaceVariant,
           ),
-          const Spacer()
+          const Spacer(),
         ],
       ),
     );

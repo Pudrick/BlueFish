@@ -3,7 +3,7 @@
 // TODO: check vibe results.
 
 import 'package:bluefish/models/mention_light.dart';
-import 'package:bluefish/widgets/mention_grouped_sliver_list.dart';
+import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:intl/intl.dart';
@@ -22,9 +22,7 @@ class _MentionLightCardState extends State<MentionLightCard> {
 
   // TODO: manually changed here to 0. make sure what value it is.
   bool get _notDisplay =>
-      light.post.auditStatus != 0 ||
-      light.post.isDelete ||
-      light.post.isHide;
+      light.post.auditStatus != 0 || light.post.isDelete || light.post.isHide;
 
   String get _notDisplayReason {
     if (light.post.auditStatus != 0) {
@@ -40,12 +38,14 @@ class _MentionLightCardState extends State<MentionLightCard> {
   }
 
   bool get _quoteNotDisplay =>
-      (light.post.quoteAuditStatus != null && light.post.quoteAuditStatus != 0) ||
+      (light.post.quoteAuditStatus != null &&
+          light.post.quoteAuditStatus != 0) ||
       (light.post.quoteIsDeleted != null && light.post.quoteIsDeleted != 0) ||
       (light.post.quoteIsHide != null && light.post.quoteIsHide != 0);
 
   String get _quoteNotDisplayReason {
-    if (light.post.quoteAuditStatus != null && light.post.quoteAuditStatus != 0) {
+    if (light.post.quoteAuditStatus != null &&
+        light.post.quoteAuditStatus != 0) {
       return "卡审核";
     }
     if (light.post.quoteIsDeleted != null && light.post.quoteIsDeleted != 0) {
@@ -81,7 +81,8 @@ class _MentionLightCardState extends State<MentionLightCard> {
                 _buildNotDisplayWarning(context, colorScheme, textTheme),
               const SizedBox(height: 16),
               _buildContent(context, colorScheme, textTheme),
-              if (light.post.quoteInfo != null && light.post.quoteInfo!.isNotEmpty)
+              if (light.post.quoteInfo != null &&
+                  light.post.quoteInfo!.isNotEmpty)
                 _buildQuote(context, colorScheme, textTheme),
               const SizedBox(height: 12),
               _buildThreadSource(context, colorScheme, textTheme),
@@ -109,7 +110,9 @@ class _MentionLightCardState extends State<MentionLightCard> {
                 children: List.generate(displayCount, (index) {
                   final operator = operators[index];
                   return Padding(
-                    padding: EdgeInsets.only(right: index < displayCount - 1 ? 2 : 0),
+                    padding: EdgeInsets.only(
+                      right: index < displayCount - 1 ? 2 : 0,
+                    ),
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -236,11 +239,7 @@ class _MentionLightCardState extends State<MentionLightCard> {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.thumb_up,
-                size: 18,
-                color: colorScheme.primary,
-              ),
+              Icon(Icons.thumb_up, size: 18, color: colorScheme.primary),
               const SizedBox(width: 8),
               RichText(
                 text: TextSpan(
@@ -311,17 +310,6 @@ class _MentionLightCardState extends State<MentionLightCard> {
             if (_quoteNotDisplay)
               _buildQuoteNotDisplayWarning(context, colorScheme, textTheme)
             else ...[
-              if (light.post.quoteUsername != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    "@${light.post.quoteUsername}",
-                    style: textTheme.labelMedium?.copyWith(
-                      color: colorScheme.tertiary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               _ExpandableHtmlSection(
                 html: _buildQuoteHtml(quoteInfo),
                 collapsedMaxHeight: 120,
@@ -466,9 +454,9 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
   @override
   Widget build(BuildContext context) {
     final linkStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-        );
+      color: Theme.of(context).colorScheme.primary,
+      fontWeight: FontWeight.bold,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -479,17 +467,39 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
         )..layout(maxWidth: constraints.maxWidth);
 
         final isOverflowing = textPainter.didExceedMaxLines;
+        final collapsedText = Text(
+          widget.text,
+          textAlign: TextAlign.start,
+          style: widget.textStyle,
+          maxLines: widget.maxLines,
+          overflow: TextOverflow.ellipsis,
+        );
+        final expandedText = Text(
+          widget.text,
+          textAlign: TextAlign.start,
+          style: widget.textStyle,
+          maxLines: null,
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.text,
-              textAlign: TextAlign.start,
-              style: widget.textStyle,
-              maxLines: _expanded ? null : widget.maxLines,
-              overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            ),
+            if (isOverflowing)
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 240),
+                reverseDuration: const Duration(milliseconds: 200),
+                firstCurve: Curves.easeOutCubic,
+                secondCurve: Curves.easeOutCubic,
+                sizeCurve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                crossFadeState: _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: collapsedText,
+                secondChild: expandedText,
+              )
+            else
+              expandedText,
             if (isOverflowing)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -497,10 +507,7 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
                   onTap: () => setState(() {
                     _expanded = !_expanded;
                   }),
-                  child: Text(
-                    _expanded ? "收起" : "展开",
-                    style: linkStyle,
-                  ),
+                  child: Text(_expanded ? "收起" : "展开", style: linkStyle),
                 ),
               ),
           ],
@@ -535,11 +542,8 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
     return plainText.length > 90;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final htmlWidget = HtmlWidget(
+  Widget _buildHtmlWidget() {
+    return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
       customStylesBuilder: (element) {
@@ -552,67 +556,86 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
         return null;
       },
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final collapsedHtml = SizedBox(
+          height: widget.collapsedMaxHeight,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minWidth: constraints.maxWidth,
+                    maxWidth: constraints.maxWidth,
+                    minHeight: widget.collapsedMaxHeight,
+                    maxHeight: double.infinity,
+                    child: _buildHtmlWidget(),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() {
+                    _expanded = true;
+                  }),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          colorScheme.tertiaryContainer.withValues(alpha: 0),
+                          colorScheme.tertiaryContainer.withValues(alpha: 0.95),
+                        ],
+                      ),
+                    ),
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: colorScheme.tertiary,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_shouldCollapse && !_expanded)
-              SizedBox(
-                height: widget.collapsedMaxHeight,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: ClipRect(
-                        child: OverflowBox(
-                          alignment: Alignment.topCenter,
-                          minWidth: constraints.maxWidth,
-                          maxWidth: constraints.maxWidth,
-                          minHeight: widget.collapsedMaxHeight,
-                          maxHeight: double.infinity,
-                          child: htmlWidget,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => setState(() {
-                          _expanded = true;
-                        }),
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                colorScheme.tertiaryContainer.withValues(alpha: 0),
-                                colorScheme.tertiaryContainer.withValues(alpha: 0.95),
-                              ],
-                            ),
-                          ),
-                          alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: colorScheme.tertiary,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            if (_shouldCollapse)
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 240),
+                reverseDuration: const Duration(milliseconds: 200),
+                firstCurve: Curves.easeOutCubic,
+                secondCurve: Curves.easeOutCubic,
+                sizeCurve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                crossFadeState: _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: collapsedHtml,
+                secondChild: _buildHtmlWidget(),
               )
             else
-              htmlWidget,
+              _buildHtmlWidget(),
             if (_shouldCollapse && _expanded)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

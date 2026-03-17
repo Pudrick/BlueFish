@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 class ThreadPaginationBar extends StatelessWidget {
   final int currentPage;
   final int totalPages;
-  final VoidCallback? onPrev; 
-  final VoidCallback? onNext; 
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
 
   const ThreadPaginationBar({
     super.key,

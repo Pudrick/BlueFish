@@ -34,16 +34,18 @@ MentionReply _$MentionReplyFromJson(Map<String, dynamic> json) => MentionReply(
   pid: (json['pid'] as num).toInt(),
   fid: (json['fid'] as num).toInt(),
   topicId: (json['topicId'] as num).toInt(),
-  imagesList: (json['pics'] as List<dynamic>)
-      .map((e) => ReplyPic.fromJson(e as Map<String, dynamic>))
-      .toList(),
+  imagesList:
+      (json['pics'] as List<dynamic>?)
+          ?.map((e) => ReplyPic.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
   video: (json['video'] as num?)?.toInt(),
   quoteContent: json['quoteContent'] as String,
   delete: (json['delete'] as num?)?.toInt(),
   hide: (json['hide'] as num?)?.toInt(),
   auditStatus: (json['auditStatus'] as num?)?.toInt(),
   publishTimeFormatStr: json['publishTime'] as String,
-  threader: (json['threader'] as num?)?.toInt(),
+  threader: json['threader'] as String?,
   followStatus: json['yrConcern'] as String?,
   protocolThreadUrl: json['threadSchema'] as String,
   protocolReplyUrl: json['replySchema'] as String,

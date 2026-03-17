@@ -1,9 +1,9 @@
 import 'package:bluefish/models/thread_detail.dart';
-import 'package:bluefish/widgets/thread_bottom_bar.dart';
-import 'package:bluefish/widgets/thread_main_widget.dart';
-import 'package:bluefish/widgets/reply_floor_widget.dart';
-import 'package:bluefish/widgets/page_pill.dart';
-import 'package:bluefish/widgets/thread_pagination_bar.dart';
+import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
+import 'package:bluefish/widgets/thread/thread_main_widget.dart';
+import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
+import 'package:bluefish/widgets/thread/page_pill.dart';
+import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
 
 class ThreadPage extends StatefulWidget {
@@ -85,11 +85,13 @@ class _ThreadPageState extends State<ThreadPage> {
                 // TODO: make title widget independent so that can be sticked on the top.
                 SliverPersistentHeader(
                   delegate: StickyHeaderDelegate(
-                    child: ThreadTitleWidget(title: threadDetail.mainFloor.title),
+                    child: ThreadTitleWidget(
+                      title: threadDetail.mainFloor.title,
+                    ),
                   ),
                   pinned: true,
                 ),
-      
+
                 if (threadDetail.totalPagesNum >= 1)
                   SliverToBoxAdapter(
                     child: ThreadPaginationBar(
@@ -103,14 +105,14 @@ class _ThreadPageState extends State<ThreadPage> {
                           : null,
                     ),
                   ),
-      
+
                 if (threadDetail.currentPage == 1)
                   SliverToBoxAdapter(
                     child: ThreadMainFloorWidget(
                       mainFloor: threadDetail.mainFloor,
                     ),
                   ),
-      
+
                 SliverList(
                   delegate: SliverChildBuilderDelegate((
                     BuildContext context,
@@ -122,7 +124,7 @@ class _ThreadPageState extends State<ThreadPage> {
                     );
                   }, childCount: _repliesInPage(threadDetail.currentPage)),
                 ),
-      
+
                 // next page buttons.
                 if (threadDetail.totalPagesNum >= 1)
                   SliverToBoxAdapter(
@@ -137,13 +139,13 @@ class _ThreadPageState extends State<ThreadPage> {
                           : null,
                     ),
                   ),
-      
+
                 // preserve space for page select pill button, avoid the pill lap over the next/prev page button.
                 const SliverToBoxAdapter(child: SizedBox(height: 55)),
               ],
             ),
           ),
-      
+
           // page select
           Align(
             alignment: Alignment.bottomCenter,
@@ -169,13 +171,18 @@ class _ThreadPageState extends State<ThreadPage> {
               ),
             ),
           ),
-      
-          
         ],
       ),
 
-      bottomNavigationBar: ThreadBottomBar(hasRecommended: true, hasFavorated: false),
-      floatingActionButton: FloatingActionButton(onPressed: (){}, elevation: 0, child: const Icon(Icons.edit_outlined),),
+      bottomNavigationBar: ThreadBottomBar(
+        hasRecommended: true,
+        hasFavorated: false,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        elevation: 0,
+        child: const Icon(Icons.edit_outlined),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
     );
   }

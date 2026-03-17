@@ -2,7 +2,7 @@
 
 import 'package:bluefish/models/mention_reply.dart';
 import 'package:bluefish/pages/photo_gallery_page.dart';
-import 'package:bluefish/widgets/mention_grouped_sliver_list.dart';
+import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -17,6 +17,13 @@ class MentionReplyCard extends StatefulWidget {
 
 class _MentionReplyCardState extends State<MentionReplyCard> {
   MentionReply get reply => widget.reply;
+  String? get _threaderLabel {
+    final label = reply.threader?.trim();
+    if (label == null || label.isEmpty) {
+      return null;
+    }
+    return label;
+  }
 
   // TODO: check what each status number's indicates.
   bool get _notDisplay =>
@@ -92,12 +99,24 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                reply.username,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      reply.username,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (_threaderLabel != null) ...[
+                    const SizedBox(width: 8),
+                    _ThreaderBadge(label: _threaderLabel!),
+                  ],
+                ],
               ),
               // check if there's Chinese characters in time str.
               RegExp(r"[\u4e00-\u9fa5]").hasMatch(reply.publishTimeFormatStr)
@@ -247,6 +266,32 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ThreaderBadge extends StatelessWidget {
+  final String label;
+
+  const _ThreaderBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: colorScheme.onPrimaryContainer,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -457,66 +502,78 @@ class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
         )..layout(maxWidth: constraints.maxWidth);
 
         final isOverflowing = textPainter.didExceedMaxLines;
+        final collapsedText = Stack(
+          children: [
+            Text(
+              widget.text,
+              textAlign: TextAlign.start,
+              style: widget.textStyle,
+              maxLines: widget.maxLines,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() {
+                  _expanded = true;
+                }),
+                child: Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        colorScheme.surfaceContainerHigh.withValues(alpha: 0),
+                        colorScheme.surfaceContainerHigh.withValues(
+                          alpha: 0.95,
+                        ),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: colorScheme.primary,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+        final expandedText = Text(
+          widget.text,
+          textAlign: TextAlign.start,
+          style: widget.textStyle,
+          maxLines: null,
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isOverflowing && !_expanded)
-              Stack(
-                children: [
-                  Text(
-                    widget.text,
-                    textAlign: TextAlign.start,
-                    style: widget.textStyle,
-                    maxLines: widget.maxLines,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => setState(() {
-                        _expanded = true;
-                      }),
-                      child: Container(
-                        height: 36,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              colorScheme.surfaceContainerHigh.withValues(
-                                alpha: 0,
-                              ),
-                              colorScheme.surfaceContainerHigh.withValues(
-                                alpha: 0.95,
-                              ),
-                            ],
-                          ),
-                        ),
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: colorScheme.primary,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            if (isOverflowing)
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 240),
+                reverseDuration: const Duration(milliseconds: 200),
+                firstCurve: Curves.easeOutCubic,
+                secondCurve: Curves.easeOutCubic,
+                sizeCurve: Curves.easeInOutCubic,
+                alignment: Alignment.topCenter,
+                crossFadeState: _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: collapsedText,
+                secondChild: expandedText,
               )
             else
-              Text(
-                widget.text,
-                textAlign: TextAlign.start,
-                style: widget.textStyle,
-                maxLines: null,
-              ),
+              expandedText,
             if (isOverflowing)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

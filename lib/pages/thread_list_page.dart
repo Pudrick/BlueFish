@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 
 import 'package:bluefish/models/thread_list.dart';
 
-import 'package:bluefish/widgets/bottom_navigation.dart';
-import 'package:bluefish/widgets/thread_list_body.dart';
-import 'package:bluefish/widgets/top_bar.dart';
+import 'package:bluefish/widgets/thread/bottom_navigation.dart';
+import 'package:bluefish/widgets/thread/thread_list_body.dart';
+import 'package:bluefish/widgets/thread/top_bar.dart';
 
 class ThreadListPage extends StatelessWidget {
   const ThreadListPage({super.key});

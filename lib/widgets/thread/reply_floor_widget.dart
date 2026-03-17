@@ -1,5 +1,5 @@
-import "package:bluefish/widgets/author_info_widget.dart";
-import "package:bluefish/widgets/htmlWidget_with_vote.dart";
+import "package:bluefish/widgets/thread/author_info_widget.dart";
+import "package:bluefish/widgets/thread/htmlWidget_with_vote.dart";
 import "package:flutter/material.dart";
 
 import 'package:bluefish/models/single_reply_floor.dart';
@@ -138,7 +138,7 @@ class ReplyFloor extends StatelessWidget {
                       onTap: () {},
                       isLeft: true,
                     ),
-                    const SizedBox(width: 2), 
+                    const SizedBox(width: 2),
                     _ActionPill(
                       icon: Icons.thumb_down_alt_outlined,
                       onTap: () {},

@@ -24,9 +24,7 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
       child: !hasNextPage
           ? Text(
               "—— 后面没有了 ——",
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.outline,
-              ),
+              style: textTheme.bodySmall?.copyWith(color: colorScheme.outline),
             )
           : const SizedBox(
               width: 24,
@@ -51,14 +49,16 @@ class MentionGroupedSliverList<T> extends StatelessWidget {
           const SliverToBoxAdapter(child: _SectionDivider(title: "新消息")),
           SliverList.builder(
             itemCount: newItems.length,
-            itemBuilder: (context, index) => itemBuilder(context, newItems[index]),
+            itemBuilder: (context, index) =>
+                itemBuilder(context, newItems[index]),
           ),
         ],
         if (hasOldItems) ...[
           const SliverToBoxAdapter(child: _SectionDivider(title: "历史消息")),
           SliverList.builder(
             itemCount: oldItems.length,
-            itemBuilder: (context, index) => itemBuilder(context, oldItems[index]),
+            itemBuilder: (context, index) =>
+                itemBuilder(context, oldItems[index]),
           ),
         ],
         SliverToBoxAdapter(child: _buildFooter(context)),
@@ -82,25 +82,17 @@ class _SectionDivider extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Divider(
-              color: colorScheme.outlineVariant,
-              thickness: 1,
-            ),
+            child: Divider(color: colorScheme.outlineVariant, thickness: 1),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               title,
-              style: textTheme.labelLarge?.copyWith(
-                color: colorScheme.outline,
-              ),
+              style: textTheme.labelLarge?.copyWith(color: colorScheme.outline),
             ),
           ),
           Expanded(
-            child: Divider(
-              color: colorScheme.outlineVariant,
-              thickness: 1,
-            ),
+            child: Divider(color: colorScheme.outlineVariant, thickness: 1),
           ),
         ],
       ),

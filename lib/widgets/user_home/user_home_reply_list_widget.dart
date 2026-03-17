@@ -141,8 +141,8 @@ class UserHomeReplyWidget extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) {
                       final bool hasVideo = reply.videoInfo != null;
-                      
-                      if(index == 0 && hasVideo) {
+
+                      if (index == 0 && hasVideo) {
                         return GestureDetector(
                           onTap: () {
                             //TODO: add the video play logic.
@@ -155,20 +155,27 @@ class UserHomeReplyWidget extends StatelessWidget {
                                 Image.network(
                                   reply.videoInfo!.coverImgUrl,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stack) => Container(
-                      width: 160,
-                      color: Colors.black12,
-                      child: const Center(child: Icon(Icons.videocam, size: 40)),
-                    ),
+                                  errorBuilder: (context, error, stack) =>
+                                      Container(
+                                        width: 160,
+                                        color: Colors.black12,
+                                        child: const Center(
+                                          child: Icon(Icons.videocam, size: 40),
+                                        ),
+                                      ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: Colors.black.withValues(alpha: 0.4),
-                                    shape: BoxShape.circle
+                                    shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 30,),
-                                )
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -176,7 +183,8 @@ class UserHomeReplyWidget extends StatelessWidget {
                       }
 
                       final int imageIndex = hasVideo ? index - 1 : index;
-                      final imageUrl = reply.replyPics[imageIndex].url.toString();
+                      final imageUrl = reply.replyPics[imageIndex].url
+                          .toString();
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -211,7 +219,9 @@ class UserHomeReplyWidget extends StatelessWidget {
 
                     separatorBuilder: (context, index) =>
                         const SizedBox(width: 6),
-                    itemCount: reply.replyPics.length + (reply.videoInfo != null ? 1 : 0),
+                    itemCount:
+                        reply.replyPics.length +
+                        (reply.videoInfo != null ? 1 : 0),
                   ),
                 ),
               ],
