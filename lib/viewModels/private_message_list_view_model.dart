@@ -3,7 +3,7 @@ import 'package:bluefish/services/private_message_list_service.dart';
 import 'package:flutter/foundation.dart';
 
 class PrivateMessageListViewModel extends ChangeNotifier {
-  static const int defaultPageSize = 20;
+  static const int defaultPageSize = 10;
 
   final PrivateMessageListService _service;
   final int pageSize;
