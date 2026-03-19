@@ -16,7 +16,7 @@ class PrivateMessageDetail {
   final int isBanInt;
   bool get isBanned => (isBanInt != 0);
 
-  @JsonKey(name: 'dataList', defaultValue: <SinglePrivateMessage>[])
+  @JsonKey(name: 'pmDetailList', defaultValue: <SinglePrivateMessage>[])
   final List<SinglePrivateMessage> messages;
 
   final int loginPuid;

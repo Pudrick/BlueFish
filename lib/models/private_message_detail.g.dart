@@ -13,7 +13,7 @@ PrivateMessageDetail _$PrivateMessageDetailFromJson(
   unReadInt: (json['unread'] as num).toInt(),
   isBanInt: (json['isban'] as num).toInt(),
   messages:
-      (json['dataList'] as List<dynamic>?)
+      (json['pmDetailList'] as List<dynamic>?)
           ?.map((e) => SinglePrivateMessage.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
@@ -30,7 +30,7 @@ Map<String, dynamic> _$PrivateMessageDetailToJson(
   'isSystem': instance.isSystemInt,
   'unread': instance.unReadInt,
   'isban': instance.isBanInt,
-  'dataList': instance.messages,
+  'pmDetailList': instance.messages,
   'loginPuid': instance.loginPuid,
   'page': instance.pageInfo,
   'interval': instance.interval,
