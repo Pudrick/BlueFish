@@ -3,6 +3,7 @@
 // TODO: check vibe results.
 
 import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
@@ -62,33 +63,23 @@ class _MentionLightCardState extends State<MentionLightCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      color: colorScheme.surfaceContainerHigh,
-      child: InkWell(
-        onTap: () {
-          // TODO: jump to thread detail.
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context, colorScheme, textTheme),
-              if (_notDisplay)
-                _buildNotDisplayWarning(context, colorScheme, textTheme),
-              const SizedBox(height: 16),
-              _buildContent(context, colorScheme, textTheme),
-              if (light.post.quoteInfo != null &&
-                  light.post.quoteInfo!.isNotEmpty)
-                _buildQuote(context, colorScheme, textTheme),
-              const SizedBox(height: 12),
-              _buildThreadSource(context, colorScheme, textTheme),
-            ],
-          ),
-        ),
+    return MentionCardShell(
+      onTap: () {
+        // TODO: jump to thread detail.
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context, colorScheme, textTheme),
+          if (_notDisplay)
+            MentionUnavailableBanner(message: "该回复 $_notDisplayReason"),
+          const SizedBox(height: 16),
+          _buildContent(context, colorScheme, textTheme),
+          if (light.post.quoteInfo != null && light.post.quoteInfo!.isNotEmpty)
+            _buildQuote(context, colorScheme, textTheme),
+          const SizedBox(height: 12),
+          MentionThreadSource(title: light.threadTitle),
+        ],
       ),
     );
   }
@@ -187,40 +178,6 @@ class _MentionLightCardState extends State<MentionLightCard> {
     return "${operators[0].username} 等 ${operators.length} 人";
   }
 
-  Widget _buildNotDisplayWarning(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: colorScheme.errorContainer,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        child: Row(
-          children: [
-            Icon(
-              Icons.visibility_off,
-              size: 16,
-              color: colorScheme.onErrorContainer,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              "该回复 $_notDisplayReason",
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildContent(
     BuildContext context,
     ColorScheme colorScheme,
@@ -263,13 +220,15 @@ class _MentionLightCardState extends State<MentionLightCard> {
           ),
         ),
         const SizedBox(height: 12),
-        _ExpandableTextSection(
+        MentionExpandableTextSection(
           text: displayContent,
           maxLines: 4,
           textStyle: textTheme.bodyLarge?.copyWith(
             color: colorScheme.onSurface,
             height: 1.5,
           ),
+          style: MentionExpandableTextStyle.textLink,
+          accentColor: colorScheme.primary,
         ),
       ],
     );
@@ -372,42 +331,6 @@ class _MentionLightCardState extends State<MentionLightCard> {
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'");
   }
-
-  Widget _buildThreadSource(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.forum_outlined,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              light.threadTitle,
-              style: textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.normal,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class MentionLightListWidget extends StatelessWidget {
@@ -432,96 +355,6 @@ class MentionLightListWidget extends StatelessWidget {
       hasNextPage: hasNextPage,
       isLoading: isLoading,
       itemBuilder: (context, item) => MentionLightCard(light: item),
-    );
-  }
-}
-
-class _ExpandableTextSection extends StatefulWidget {
-  final String text;
-  final int maxLines;
-  final TextStyle? textStyle;
-
-  const _ExpandableTextSection({
-    required this.text,
-    required this.maxLines,
-    required this.textStyle,
-  });
-
-  @override
-  State<_ExpandableTextSection> createState() => _ExpandableTextSectionState();
-}
-
-class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final linkStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: Theme.of(context).colorScheme.primary,
-      fontWeight: FontWeight.bold,
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final textPainter = TextPainter(
-          text: TextSpan(text: widget.text, style: widget.textStyle),
-          maxLines: widget.maxLines,
-          textDirection: Directionality.of(context),
-        )..layout(maxWidth: constraints.maxWidth);
-
-        final isOverflowing = textPainter.didExceedMaxLines;
-        final collapsedText = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() {
-            _expanded = true;
-          }),
-          child: Text(
-            widget.text,
-            textAlign: TextAlign.start,
-            style: widget.textStyle,
-            maxLines: widget.maxLines,
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-        final expandedText = Text(
-          widget.text,
-          textAlign: TextAlign.start,
-          style: widget.textStyle,
-          maxLines: null,
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isOverflowing)
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 240),
-                reverseDuration: const Duration(milliseconds: 200),
-                firstCurve: Curves.easeOutCubic,
-                secondCurve: Curves.easeOutCubic,
-                sizeCurve: Curves.easeInOutCubic,
-                alignment: Alignment.topCenter,
-                crossFadeState: _expanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                firstChild: collapsedText,
-                secondChild: expandedText,
-              )
-            else
-              expandedText,
-            if (isOverflowing)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: GestureDetector(
-                  onTap: () => setState(() {
-                    _expanded = !_expanded;
-                  }),
-                  child: Text(_expanded ? "收起" : "展开", style: linkStyle),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

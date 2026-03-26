@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'reply_sheet/interactive_icon_surface.dart';
+import 'reply_sheet/thread_reply_sheet_actions.dart';
+import 'reply_sheet/thread_reply_sheet_context_card.dart';
+import 'reply_sheet/thread_reply_sheet_input_box.dart';
+import 'reply_sheet/thread_reply_sheet_models.dart';
+
+export 'reply_sheet/thread_reply_sheet_models.dart';
+
 Future<String?> showThreadReplySheet({
   required BuildContext context,
   required Future<void> Function(String content) onSubmit,
@@ -506,7 +514,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                                       const EdgeInsets.only(
                                                         right: 4,
                                                       ),
-                                                  child: _InteractiveIconSurface(
+                                                  child: ThreadReplyInteractiveIconSurface(
                                                     key: const ValueKey(
                                                       'thread_reply_sheet_collapse_button',
                                                     ),
@@ -538,7 +546,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                                   ),
                                                 ),
                                         ),
-                                        _InteractiveIconSurface(
+                                        ThreadReplyInteractiveIconSurface(
                                           key: const ValueKey(
                                             'thread_reply_sheet_close_button',
                                           ),
@@ -589,7 +597,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                         );
                                       },
                                       child: _isOverflowExpanded
-                                          ? _ExpandedActionPanel(
+                                          ? ThreadReplySheetExpandedActionPanel(
                                               key: const ValueKey(
                                                 'thread_reply_sheet_all_actions_panel',
                                               ),
@@ -597,7 +605,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                               onToggleOverflow:
                                                   _toggleOverflowActions,
                                             )
-                                          : _ReplyActionRow(
+                                          : ThreadReplySheetActionRow(
                                               key: const ValueKey(
                                                 'thread_reply_sheet_primary_actions',
                                               ),
@@ -679,7 +687,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                             buildHeader(compact: false),
                                             if (_hasContextCard) ...[
                                               const SizedBox(height: 12),
-                                              _ReplyContextCard(
+                                              ThreadReplySheetContextCard(
                                                 label: widget.contextLabel,
                                                 preview: widget.contextPreview,
                                                 collapsedMaxLines: widget
@@ -693,7 +701,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                                   minHeight:
                                                       effectiveInputMinHeight,
                                                 ),
-                                                child: _ReplyInputBox(
+                                                child: ThreadReplySheetInputBox(
                                                   controller: _controller,
                                                   focusNode: _focusNode,
                                                   hintText: widget.hintText,
@@ -735,7 +743,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                           buildHeader(compact: true),
                                           if (_hasContextCard) ...[
                                             const SizedBox(height: 12),
-                                            _ReplyContextCard(
+                                            ThreadReplySheetContextCard(
                                               label: widget.contextLabel,
                                               preview: widget.contextPreview,
                                               collapsedMaxLines: widget
@@ -745,7 +753,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                           const SizedBox(height: 16),
                                           SizedBox(
                                             height: effectiveInputMinHeight,
-                                            child: _ReplyInputBox(
+                                            child: ThreadReplySheetInputBox(
                                               controller: _controller,
                                               focusNode: _focusNode,
                                               hintText: widget.hintText,
@@ -770,452 +778,6 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class ThreadReplySheetAction {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final String? tooltip;
-  final bool enabled;
-  final bool selected;
-
-  const ThreadReplySheetAction({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.tooltip,
-    this.enabled = true,
-    this.selected = false,
-  });
-}
-
-class _ReplyContextCard extends StatefulWidget {
-  final String? label;
-  final String? preview;
-  final int collapsedMaxLines;
-
-  const _ReplyContextCard({
-    this.label,
-    this.preview,
-    required this.collapsedMaxLines,
-  });
-
-  @override
-  State<_ReplyContextCard> createState() => _ReplyContextCardState();
-}
-
-class _ReplyContextCardState extends State<_ReplyContextCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.label != null && widget.label!.trim().isNotEmpty)
-            Text(
-              widget.label!,
-              style: textTheme.labelLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          if (widget.preview != null && widget.preview!.trim().isNotEmpty) ...[
-            if (widget.label != null && widget.label!.trim().isNotEmpty)
-              const SizedBox(height: 6),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final previewText = widget.preview!.trim();
-                final previewStyle = textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.45,
-                );
-
-                final textPainter = TextPainter(
-                  text: TextSpan(text: previewText, style: previewStyle),
-                  maxLines: widget.collapsedMaxLines,
-                  textDirection: Directionality.of(context),
-                )..layout(maxWidth: constraints.maxWidth);
-
-                final hasOverflow = textPainter.didExceedMaxLines;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutCubic,
-                      child: Text(
-                        previewText,
-                        maxLines: _isExpanded ? null : widget.collapsedMaxLines,
-                        overflow: _isExpanded
-                            ? TextOverflow.visible
-                            : TextOverflow.ellipsis,
-                        style: previewStyle,
-                      ),
-                    ),
-                    if (hasOverflow) ...[
-                      const SizedBox(height: 8),
-                      TextButton.icon(
-                        key: const ValueKey(
-                          'thread_reply_sheet_context_toggle',
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isExpanded = !_isExpanded;
-                          });
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          minimumSize: Size.zero,
-                        ),
-                        icon: Icon(
-                          _isExpanded
-                              ? Icons.unfold_less_rounded
-                              : Icons.unfold_more_rounded,
-                          size: 18,
-                        ),
-                        label: Text(_isExpanded ? '收起引用' : '展开引用'),
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ReplyInputBox extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final String hintText;
-  final double cornerRadius;
-  final bool elevated;
-
-  const _ReplyInputBox({
-    required this.controller,
-    required this.focusNode,
-    required this.hintText,
-    this.cornerRadius = 20,
-    this.elevated = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: elevated
-            ? colorScheme.surfaceContainerLow
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(cornerRadius),
-        border: elevated
-            ? Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-              )
-            : null,
-      ),
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        key: const ValueKey('thread_reply_sheet_input'),
-        controller: controller,
-        focusNode: focusNode,
-        keyboardType: TextInputType.multiline,
-        textInputAction: TextInputAction.newline,
-        expands: true,
-        minLines: null,
-        maxLines: null,
-        textAlignVertical: TextAlignVertical.top,
-        decoration: InputDecoration.collapsed(
-          hintText: hintText,
-          hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReplyActionRow extends StatelessWidget {
-  final List<ThreadReplySheetAction> actions;
-  final bool hasOverflowActions;
-  final VoidCallback onToggleOverflow;
-
-  const _ReplyActionRow({
-    super.key,
-    required this.actions,
-    required this.hasOverflowActions,
-    required this.onToggleOverflow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ...actions.map((action) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: _ReplyActionButton(action: action),
-            );
-          }),
-          if (hasOverflowActions)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: _OverflowToggleButton(
-                expanded: false,
-                onTap: onToggleOverflow,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InteractiveIconSurface extends StatefulWidget {
-  final VoidCallback? onTap;
-  final String semanticLabel;
-  final String? tooltip;
-  final Color baseColor;
-  final Color hoverColor;
-  final Color pressedColor;
-  final Color inkColor;
-  final Widget child;
-
-  const _InteractiveIconSurface({
-    super.key,
-    required this.semanticLabel,
-    required this.baseColor,
-    required this.hoverColor,
-    required this.pressedColor,
-    required this.inkColor,
-    required this.child,
-    this.onTap,
-    this.tooltip,
-  });
-
-  @override
-  State<_InteractiveIconSurface> createState() =>
-      _InteractiveIconSurfaceState();
-}
-
-class _InteractiveIconSurfaceState extends State<_InteractiveIconSurface> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = _pressed
-        ? widget.pressedColor
-        : _hovered
-        ? widget.hoverColor
-        : widget.baseColor;
-
-    return Tooltip(
-      message: widget.tooltip ?? widget.semanticLabel,
-      child: Semantics(
-        button: true,
-        label: widget.semanticLabel,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOutCubic,
-          width: 40,
-          height: 40,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              onHover: (value) {
-                if (widget.onTap == null || _hovered == value) {
-                  return;
-                }
-                setState(() {
-                  _hovered = value;
-                });
-              },
-              onHighlightChanged: (value) {
-                if (widget.onTap == null || _pressed == value) {
-                  return;
-                }
-                setState(() {
-                  _pressed = value;
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              splashFactory: InkRipple.splashFactory,
-              hoverColor: widget.inkColor.withValues(alpha: 0.06),
-              highlightColor: widget.inkColor.withValues(alpha: 0.08),
-              splashColor: widget.inkColor.withValues(alpha: 0.14),
-              child: SizedBox.expand(child: Center(child: widget.child)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReplyActionButton extends StatelessWidget {
-  final ThreadReplySheetAction action;
-  final String? keyName;
-
-  const _ReplyActionButton({required this.action, this.keyName});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final foregroundColor = action.enabled
-        ? action.selected
-              ? colorScheme.onSecondaryContainer
-              : colorScheme.onSurface
-        : colorScheme.onSurfaceVariant;
-
-    return _InteractiveIconSurface(
-      key: ValueKey(keyName ?? 'thread_reply_sheet_action_${action.label}'),
-      semanticLabel: action.label,
-      tooltip: action.tooltip ?? action.label,
-      onTap: action.enabled ? action.onTap : null,
-      baseColor: action.selected
-          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
-          : Colors.transparent,
-      hoverColor: action.selected
-          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
-          : colorScheme.secondaryContainer.withValues(alpha: 0.4),
-      pressedColor: action.selected
-          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
-          : colorScheme.secondaryContainer.withValues(alpha: 0.58),
-      inkColor: foregroundColor,
-      child: Icon(action.icon, size: 22, color: foregroundColor),
-    );
-  }
-}
-
-class _ExpandedActionPanel extends StatelessWidget {
-  final List<ThreadReplySheetAction> actions;
-  final VoidCallback onToggleOverflow;
-
-  const _ExpandedActionPanel({
-    super.key,
-    required this.actions,
-    required this.onToggleOverflow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      key: const ValueKey('thread_reply_sheet_more_actions_panel'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 8,
-        children: [
-          ...actions.map((action) {
-            return _ReplyActionButton(
-              action: action,
-              keyName: 'thread_reply_sheet_expanded_${action.label}',
-            );
-          }),
-          _OverflowToggleButton(expanded: true, onTap: onToggleOverflow),
-        ],
-      ),
-    );
-  }
-}
-
-class _OverflowToggleButton extends StatelessWidget {
-  final bool expanded;
-  final VoidCallback onTap;
-
-  const _OverflowToggleButton({required this.expanded, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final foregroundColor = expanded
-        ? colorScheme.onErrorContainer
-        : colorScheme.onSurface;
-    final baseColor = expanded
-        ? colorScheme.errorContainer.withValues(alpha: 0.92)
-        : Colors.transparent;
-    final hoverColor = expanded
-        ? Color.alphaBlend(
-            colorScheme.error.withValues(alpha: 0.16),
-            colorScheme.errorContainer.withValues(alpha: 0.92),
-          )
-        : colorScheme.secondaryContainer.withValues(alpha: 0.4);
-    final pressedColor = expanded
-        ? Color.alphaBlend(
-            colorScheme.error.withValues(alpha: 0.28),
-            colorScheme.errorContainer.withValues(alpha: 0.92),
-          )
-        : colorScheme.secondaryContainer.withValues(alpha: 0.58);
-    final double iconSize = expanded ? 20 : 22;
-
-    return _InteractiveIconSurface(
-      key: const ValueKey('thread_reply_sheet_more_actions_toggle'),
-      semanticLabel: expanded ? '收起更多功能' : '展开更多功能',
-      tooltip: expanded ? '收起更多功能' : '展开更多功能',
-      onTap: onTap,
-      baseColor: baseColor,
-      hoverColor: hoverColor,
-      pressedColor: pressedColor,
-      inkColor: foregroundColor,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 180),
-        transitionBuilder: (child, animation) {
-          return RotationTransition(
-            turns: Tween<double>(begin: 0.8, end: 1.0).animate(animation),
-            child: FadeTransition(opacity: animation, child: child),
-          );
-        },
-        child: Icon(
-          expanded ? Icons.close_rounded : Icons.add_rounded,
-          key: ValueKey(expanded),
-          size: iconSize,
-          color: foregroundColor,
         ),
       ),
     );

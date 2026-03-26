@@ -2,6 +2,7 @@
 
 import 'package:bluefish/models/mention_reply.dart';
 import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -36,33 +37,24 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      color: colorScheme.surfaceContainerHigh,
-      child: InkWell(
-        onTap: () {
-          // TODO: jump to thread detail.
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context, colorScheme, textTheme),
-              if (_notDisplay)
-                _buildNotDisplayWarning(context, colorScheme, textTheme),
-              const SizedBox(height: 16),
-              _buildContent(context, colorScheme, textTheme),
-              if (reply.imagesList.isNotEmpty) _buildImages(context),
-              if (reply.quoteContent.isNotEmpty)
-                _buildQuote(context, colorScheme, textTheme),
-              const SizedBox(height: 12),
-              _buildThreadSource(context, colorScheme, textTheme),
-            ],
-          ),
-        ),
+    return MentionCardShell(
+      onTap: () {
+        // TODO: jump to thread detail.
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context, colorScheme, textTheme),
+          if (_notDisplay)
+            const MentionUnavailableBanner(message: "该回复当前可能无法查看"),
+          const SizedBox(height: 16),
+          _buildContent(context, colorScheme, textTheme),
+          if (reply.imagesList.isNotEmpty) _buildImages(context),
+          if (reply.quoteContent.isNotEmpty)
+            _buildQuote(context, colorScheme, textTheme),
+          const SizedBox(height: 12),
+          MentionThreadSource(title: reply.threadTitle),
+        ],
       ),
     );
   }
@@ -141,52 +133,21 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
     );
   }
 
-  Widget _buildNotDisplayWarning(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: colorScheme.errorContainer,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        child: Row(
-          children: [
-            Icon(
-              Icons.visibility_off,
-              size: 16,
-              color: colorScheme.onErrorContainer,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              "该回复当前可能无法查看",
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onErrorContainer,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildContent(
     BuildContext context,
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    return _ExpandableTextSection(
+    return MentionExpandableTextSection(
       text: reply.content,
       maxLines: 4,
       textStyle: textTheme.bodyLarge?.copyWith(
         color: colorScheme.onSurface,
         height: 1.5,
       ),
+      style: MentionExpandableTextStyle.fade,
+      accentColor: colorScheme.primary,
+      fadeColor: colorScheme.surfaceContainerHigh,
     );
   }
 
@@ -216,12 +177,15 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
           ),
         ),
         padding: const EdgeInsets.all(12),
-        child: _ExpandableTextSection(
+        child: MentionExpandableTextSection(
           text: displayQuote,
           maxLines: 3,
           textStyle: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
+          style: MentionExpandableTextStyle.fade,
+          accentColor: colorScheme.primary,
+          fadeColor: colorScheme.surfaceContainerHigh,
         ),
       ),
     );
@@ -231,42 +195,6 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
     return input.replaceAllMapped(
       RegExp(r'(\[(?:图片|多图|视频)\][^\/]*).*?/quality.*$'),
       (match) => match.group(1) ?? '',
-    );
-  }
-
-  Widget _buildThreadSource(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.forum_outlined,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              reply.threadTitle,
-              style: textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.normal,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -470,135 +398,6 @@ class MentionReplyListWidget extends StatelessWidget {
       hasNextPage: hasNextPage,
       isLoading: isLoading,
       itemBuilder: (context, item) => MentionReplyCard(reply: item),
-    );
-  }
-}
-
-class _ExpandableTextSection extends StatefulWidget {
-  final String text;
-  final int maxLines;
-  final TextStyle? textStyle;
-
-  const _ExpandableTextSection({
-    required this.text,
-    required this.maxLines,
-    required this.textStyle,
-  });
-
-  @override
-  State<_ExpandableTextSection> createState() => _ExpandableTextSectionState();
-}
-
-class _ExpandableTextSectionState extends State<_ExpandableTextSection> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final textPainter = TextPainter(
-          text: TextSpan(text: widget.text, style: widget.textStyle),
-          maxLines: widget.maxLines,
-          textDirection: Directionality.of(context),
-        )..layout(maxWidth: constraints.maxWidth);
-
-        final isOverflowing = textPainter.didExceedMaxLines;
-        final collapsedText = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() {
-            _expanded = true;
-          }),
-          child: Stack(
-            children: [
-              Text(
-                widget.text,
-                textAlign: TextAlign.start,
-                style: widget.textStyle,
-                maxLines: widget.maxLines,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        colorScheme.surfaceContainerHigh.withValues(alpha: 0),
-                        colorScheme.surfaceContainerHigh.withValues(
-                          alpha: 0.95,
-                        ),
-                      ],
-                    ),
-                  ),
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: colorScheme.primary,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-        final expandedText = Text(
-          widget.text,
-          textAlign: TextAlign.start,
-          style: widget.textStyle,
-          maxLines: null,
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isOverflowing)
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 240),
-                reverseDuration: const Duration(milliseconds: 200),
-                firstCurve: Curves.easeOutCubic,
-                secondCurve: Curves.easeOutCubic,
-                sizeCurve: Curves.easeInOutCubic,
-                alignment: Alignment.topCenter,
-                crossFadeState: _expanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                firstChild: collapsedText,
-                secondChild: expandedText,
-              )
-            else
-              expandedText,
-            if (isOverflowing)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() {
-                    _expanded = !_expanded;
-                  }),
-                  child: _expanded
-                      ? Center(
-                          child: Icon(
-                            Icons.keyboard_arrow_up_rounded,
-                            color: colorScheme.primary,
-                            size: 22,
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }
