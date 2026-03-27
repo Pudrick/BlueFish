@@ -25,33 +25,36 @@ class ThreadReplySheetActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          if (showEmojiToggle)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ThreadReplySheetEmojiToggleButton(
-                expanded: emojiExpanded,
-                onTap: onToggleEmoji,
+    return SizedBox(
+      width: double.infinity,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            if (showEmojiToggle)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetEmojiToggleButton(
+                  expanded: emojiExpanded,
+                  onTap: onToggleEmoji,
+                ),
               ),
-            ),
-          ...actions.map((action) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ThreadReplySheetActionButton(action: action),
-            );
-          }),
-          if (hasOverflowActions)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ThreadReplySheetOverflowToggleButton(
-                expanded: overflowExpanded,
-                onTap: onToggleOverflow,
+            ...actions.map((action) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetActionButton(action: action),
+              );
+            }),
+            if (hasOverflowActions)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetOverflowToggleButton(
+                  expanded: overflowExpanded,
+                  onTap: onToggleOverflow,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
