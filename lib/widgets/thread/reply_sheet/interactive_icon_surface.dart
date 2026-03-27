@@ -8,6 +8,9 @@ class ThreadReplyInteractiveIconSurface extends StatefulWidget {
   final Color hoverColor;
   final Color pressedColor;
   final Color inkColor;
+  final double width;
+  final double height;
+  final double borderRadius;
   final Widget child;
 
   const ThreadReplyInteractiveIconSurface({
@@ -20,6 +23,9 @@ class ThreadReplyInteractiveIconSurface extends StatefulWidget {
     required this.child,
     this.onTap,
     this.tooltip,
+    this.width = 40,
+    this.height = 40,
+    this.borderRadius = 12,
   });
 
   @override
@@ -48,12 +54,12 @@ class _ThreadReplyInteractiveIconSurfaceState
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOutCubic,
-          width: 40,
-          height: 40,
+          width: widget.width,
+          height: widget.height,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
           child: Material(
             color: Colors.transparent,
@@ -75,7 +81,7 @@ class _ThreadReplyInteractiveIconSurfaceState
                   _pressed = value;
                 });
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
               splashFactory: InkRipple.splashFactory,
               hoverColor: widget.inkColor.withValues(alpha: 0.06),
               highlightColor: widget.inkColor.withValues(alpha: 0.08),

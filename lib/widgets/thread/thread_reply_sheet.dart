@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'reply_sheet/interactive_icon_surface.dart';
 import 'reply_sheet/thread_reply_sheet_actions.dart';
 import 'reply_sheet/thread_reply_sheet_context_card.dart';
+import 'reply_sheet/thread_reply_sheet_emoji_panel.dart';
 import 'reply_sheet/thread_reply_sheet_input_box.dart';
 import 'reply_sheet/thread_reply_sheet_models.dart';
 
@@ -23,6 +26,11 @@ Future<String?> showThreadReplySheet({
   int maxLines = 8,
   List<ThreadReplySheetAction> actions = const [],
   List<ThreadReplySheetAction> overflowActions = const [],
+  List<ThreadReplySheetEmojiCategory> emojiCategories =
+      ThreadReplySheetEmojiCategory.defaultCategories,
+  bool keepEmojiPanelOpenOnInsert = true,
+  double emojiPanelMaxHeight = 240,
+  int emojiGridCrossAxisCount = 7,
   int collapsedContextPreviewLines = 3,
   double minChildSize = 0.36,
   double initialChildSize = 0.68,
@@ -55,6 +63,10 @@ Future<String?> showThreadReplySheet({
         maxLines: maxLines,
         actions: actions,
         overflowActions: overflowActions,
+        emojiCategories: emojiCategories,
+        keepEmojiPanelOpenOnInsert: keepEmojiPanelOpenOnInsert,
+        emojiPanelMaxHeight: emojiPanelMaxHeight,
+        emojiGridCrossAxisCount: emojiGridCrossAxisCount,
         collapsedContextPreviewLines: collapsedContextPreviewLines,
         minChildSize: minChildSize,
         initialChildSize: initialChildSize,
@@ -80,6 +92,10 @@ class ThreadReplySheet extends StatefulWidget {
   final int maxLines;
   final List<ThreadReplySheetAction> actions;
   final List<ThreadReplySheetAction> overflowActions;
+  final List<ThreadReplySheetEmojiCategory> emojiCategories;
+  final bool keepEmojiPanelOpenOnInsert;
+  final double emojiPanelMaxHeight;
+  final int emojiGridCrossAxisCount;
   final int collapsedContextPreviewLines;
   final double minChildSize;
   final double initialChildSize;
@@ -103,6 +119,10 @@ class ThreadReplySheet extends StatefulWidget {
     this.maxLines = 8,
     this.actions = const [],
     this.overflowActions = const [],
+    this.emojiCategories = ThreadReplySheetEmojiCategory.defaultCategories,
+    this.keepEmojiPanelOpenOnInsert = true,
+    this.emojiPanelMaxHeight = 240,
+    this.emojiGridCrossAxisCount = 7,
     this.collapsedContextPreviewLines = 3,
     this.minChildSize = 0.36,
     this.initialChildSize = 0.68,
@@ -111,6 +131,8 @@ class ThreadReplySheet extends StatefulWidget {
     this.topSafePadding = 0,
   }) : assert(minLines > 0),
        assert(maxLines >= minLines),
+       assert(emojiPanelMaxHeight > 0),
+       assert(emojiGridCrossAxisCount > 0),
        assert(collapsedContextPreviewLines > 0),
        assert(minChildSize > 0),
        assert(initialChildSize >= minChildSize),
@@ -123,13 +145,140 @@ class ThreadReplySheet extends StatefulWidget {
   State<ThreadReplySheet> createState() => _ThreadReplySheetState();
 }
 
+enum _ThreadReplySheetAccessoryPanel { none, overflow, emoji }
+
+class _ThreadReplySheetAnimatedAccessoryPanel extends StatefulWidget {
+  final bool visible;
+  final Object? identity;
+  final Widget? child;
+
+  const _ThreadReplySheetAnimatedAccessoryPanel({
+    required this.visible,
+    required this.identity,
+    required this.child,
+  });
+
+  @override
+  State<_ThreadReplySheetAnimatedAccessoryPanel> createState() =>
+      _ThreadReplySheetAnimatedAccessoryPanelState();
+}
+
+class _ThreadReplySheetAnimatedAccessoryPanelState
+    extends State<_ThreadReplySheetAnimatedAccessoryPanel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final CurvedAnimation _curve;
+  Widget? _displayedChild;
+  Object? _displayedIdentity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _curve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    if (widget.visible && widget.child != null) {
+      _displayedChild = widget.child;
+      _displayedIdentity = widget.identity;
+      _controller.value = 1;
+    }
+  }
+
+  @override
+  void didUpdateWidget(
+    covariant _ThreadReplySheetAnimatedAccessoryPanel oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+
+    final identityChanged = widget.identity != _displayedIdentity;
+    final nextChild = widget.child;
+
+    if (widget.visible && nextChild != null) {
+      if (!oldWidget.visible || identityChanged || _displayedChild == null) {
+        setState(() {
+          _displayedChild = nextChild;
+          _displayedIdentity = widget.identity;
+        });
+        _controller.forward(from: 0);
+      } else {
+        setState(() {
+          _displayedChild = nextChild;
+          _displayedIdentity = widget.identity;
+        });
+      }
+      return;
+    }
+
+    if (_displayedChild != null && _controller.value > 0) {
+      _controller.reverse().whenCompleteOrCancel(() {
+        if (!mounted || widget.visible) {
+          return;
+        }
+        setState(() {
+          _displayedChild = null;
+          _displayedIdentity = null;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_displayedChild == null && _controller.isDismissed) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedBuilder(
+      animation: _curve,
+      child: IgnorePointer(
+        ignoring: _curve.value <= 0.001,
+        child: _displayedChild ?? const SizedBox.shrink(),
+      ),
+      builder: (context, child) {
+        final progress = _curve.value;
+
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            heightFactor: progress,
+            child: Opacity(
+              opacity: progress,
+              child: Transform.translate(
+                offset: Offset(0, (1 - progress) * 20),
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ThreadReplySheetState extends State<ThreadReplySheet> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   late final DraggableScrollableController _sheetController;
 
   bool _isSubmitting = false;
-  bool _isOverflowExpanded = false;
+  _ThreadReplySheetAccessoryPanel _activeAccessoryPanel =
+      _ThreadReplySheetAccessoryPanel.none;
+  String? _selectedEmojiCategoryKey;
   late double _currentSheetExtent;
 
   bool get _canSubmit => !_isSubmitting && _controller.text.trim().isNotEmpty;
@@ -137,6 +286,14 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     ...widget.actions,
     ...widget.overflowActions,
   ];
+  bool get _hasEmojiPicker => widget.emojiCategories.isNotEmpty;
+  bool get _isEmojiPanelExpanded =>
+      _activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.emoji &&
+      _hasEmojiPicker;
+  bool get _isOverflowExpanded =>
+      _activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.overflow &&
+      widget.overflowActions.isNotEmpty;
+  bool get _hasActionControls => _allActions.isNotEmpty || _hasEmojiPicker;
   double get _fullScreenProgress {
     final fullscreenStart = (widget.maxChildSize - 0.08).clamp(
       widget.initialChildSize,
@@ -155,6 +312,19 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   bool get _hasContextCard =>
       (widget.contextLabel?.trim().isNotEmpty ?? false) ||
       (widget.contextPreview?.trim().isNotEmpty ?? false);
+  ThreadReplySheetEmojiCategory? get _selectedEmojiCategory {
+    if (!_hasEmojiPicker) {
+      return null;
+    }
+
+    for (final category in widget.emojiCategories) {
+      if (category.key == _selectedEmojiCategoryKey) {
+        return category;
+      }
+    }
+
+    return widget.emojiCategories.first;
+  }
 
   @override
   void initState() {
@@ -163,6 +333,9 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     _focusNode = FocusNode();
     _sheetController = DraggableScrollableController();
     _currentSheetExtent = widget.initialChildSize;
+    _selectedEmojiCategoryKey = widget.emojiCategories.isNotEmpty
+        ? widget.emojiCategories.first.key
+        : null;
     _controller.addListener(_handleTextChanged);
 
     if (widget.autofocus) {
@@ -171,6 +344,25 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
           _focusNode.requestFocus();
         }
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ThreadReplySheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (_hasEmojiPicker) {
+      final hasMatchingCategory = widget.emojiCategories.any(
+        (category) => category.key == _selectedEmojiCategoryKey,
+      );
+      if (!hasMatchingCategory) {
+        _selectedEmojiCategoryKey = widget.emojiCategories.first.key;
+      }
+    } else {
+      _selectedEmojiCategoryKey = null;
+      if (_activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.emoji) {
+        _activeAccessoryPanel = _ThreadReplySheetAccessoryPanel.none;
+      }
     }
   }
 
@@ -194,10 +386,59 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     Navigator.of(context).maybePop();
   }
 
-  void _toggleOverflowActions() {
+  Future<void> _toggleEmojiPanel() async {
+    if (!_hasEmojiPicker) {
+      return;
+    }
+
+    final shouldOpen = !_isEmojiPanelExpanded;
     setState(() {
-      _isOverflowExpanded = !_isOverflowExpanded;
+      _activeAccessoryPanel = shouldOpen
+          ? _ThreadReplySheetAccessoryPanel.emoji
+          : _ThreadReplySheetAccessoryPanel.none;
+      _selectedEmojiCategoryKey ??= _selectedEmojiCategory?.key;
     });
+
+    if (shouldOpen) {
+      await _ensureExtentForAccessoryPanel();
+    }
+  }
+
+  Future<void> _toggleOverflowActions() async {
+    if (widget.overflowActions.isEmpty) {
+      return;
+    }
+
+    final shouldOpen = !_isOverflowExpanded;
+    setState(() {
+      _activeAccessoryPanel = shouldOpen
+          ? _ThreadReplySheetAccessoryPanel.overflow
+          : _ThreadReplySheetAccessoryPanel.none;
+    });
+
+    if (shouldOpen) {
+      await _ensureExtentForAccessoryPanel();
+    }
+  }
+
+  Future<void> _ensureExtentForAccessoryPanel() async {
+    if (!_sheetController.isAttached) {
+      return;
+    }
+
+    final targetExtent = math.min(
+      widget.maxChildSize,
+      math.max(widget.initialChildSize, 0.8),
+    );
+    if (_currentSheetExtent >= targetExtent - 0.0005) {
+      return;
+    }
+
+    await _sheetController.animateTo(
+      targetExtent,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _collapseToInitialExtent() async {
@@ -218,6 +459,51 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
       ..showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
+  }
+
+  void _setSelectedEmojiCategory(String key) {
+    if (_selectedEmojiCategoryKey == key) {
+      return;
+    }
+    setState(() {
+      _selectedEmojiCategoryKey = key;
+    });
+  }
+
+  void _insertEmoji(ThreadReplySheetEmojiItem item) {
+    final textValue = _controller.value;
+    final selection = textValue.selection;
+    final text = textValue.text;
+    final textLength = text.length;
+
+    final start = selection.isValid
+        ? selection.start.clamp(0, textLength).toInt()
+        : textLength;
+    final end = selection.isValid
+        ? selection.end.clamp(0, textLength).toInt()
+        : textLength;
+    final insertionStart = math.min(start, end);
+    final insertionEnd = math.max(start, end);
+    final replacementText = item.insertText;
+    final nextText = text.replaceRange(
+      insertionStart,
+      insertionEnd,
+      replacementText,
+    );
+    final caretOffset = insertionStart + replacementText.length;
+
+    _controller.value = textValue.copyWith(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: caretOffset),
+      composing: TextRange.empty,
+    );
+    _focusNode.requestFocus();
+
+    if (!widget.keepEmojiPanelOpenOnInsert) {
+      setState(() {
+        _activeAccessoryPanel = _ThreadReplySheetAccessoryPanel.none;
+      });
+    }
   }
 
   Future<void> _handleSubmit() async {
@@ -345,14 +631,22 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                               final estimatedContextHeight = _hasContextCard
                                   ? 112.0
                                   : 0.0;
-                              final estimatedActionsHeight =
-                                  _allActions.isNotEmpty ? 56.0 : 0.0;
+                              final estimatedActionsHeight = _hasActionControls
+                                  ? 56.0
+                                  : 0.0;
+                              final estimatedAccessoryPanelHeight =
+                                  _isEmojiPanelExpanded
+                                  ? widget.emojiPanelMaxHeight + 12
+                                  : _isOverflowExpanded
+                                  ? 92.0
+                                  : 0.0;
                               final availableInputHeight =
                                   constraints.maxHeight -
                                   headerTopPadding -
                                   116 -
                                   estimatedContextHeight -
-                                  estimatedActionsHeight;
+                                  estimatedActionsHeight -
+                                  estimatedAccessoryPanelHeight;
                               final usesCompactLayout =
                                   availableInputHeight < 72;
                               final effectiveInputMinHeight = usesCompactLayout
@@ -573,49 +867,82 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                               }
 
                               Widget buildActionSection() {
-                                if (_allActions.isEmpty) {
+                                if (!_hasActionControls) {
                                   return const SizedBox.shrink();
                                 }
+
+                                final selectedEmojiCategory =
+                                    _selectedEmojiCategory;
+                                final accessoryPanelVisible =
+                                    _isEmojiPanelExpanded ||
+                                    _isOverflowExpanded;
+                                final accessoryPanelIdentity =
+                                    _isEmojiPanelExpanded
+                                    ? _ThreadReplySheetAccessoryPanel.emoji
+                                    : _isOverflowExpanded
+                                    ? _ThreadReplySheetAccessoryPanel.overflow
+                                    : null;
+                                final Widget? accessoryPanel =
+                                    _isEmojiPanelExpanded &&
+                                        selectedEmojiCategory != null
+                                    ? ThreadReplySheetEmojiPanel(
+                                        key: const ValueKey(
+                                          'thread_reply_sheet_emoji_panel_wrapper',
+                                        ),
+                                        categories: widget.emojiCategories,
+                                        selectedCategoryKey:
+                                            selectedEmojiCategory.key,
+                                        onCategorySelected:
+                                            _setSelectedEmojiCategory,
+                                        onEmojiSelected: _insertEmoji,
+                                        maxHeight: widget.emojiPanelMaxHeight,
+                                        crossAxisCount:
+                                            widget.emojiGridCrossAxisCount,
+                                      )
+                                    : _isOverflowExpanded
+                                    ? ThreadReplySheetExpandedActionPanel(
+                                        key: const ValueKey(
+                                          'thread_reply_sheet_all_actions_panel',
+                                        ),
+                                        actions: widget.overflowActions,
+                                        onToggleOverflow: _isSubmitting
+                                            ? null
+                                            : () {
+                                                _toggleOverflowActions();
+                                              },
+                                      )
+                                    : null;
+
                                 return Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const SizedBox(height: 12),
-                                    AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 220,
+                                    ThreadReplySheetActionRow(
+                                      key: const ValueKey(
+                                        'thread_reply_sheet_primary_actions',
                                       ),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeInCubic,
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: SizeTransition(
-                                            sizeFactor: animation,
-                                            axisAlignment: -1,
-                                            child: child,
-                                          ),
-                                        );
-                                      },
-                                      child: _isOverflowExpanded
-                                          ? ThreadReplySheetExpandedActionPanel(
-                                              key: const ValueKey(
-                                                'thread_reply_sheet_all_actions_panel',
-                                              ),
-                                              actions: _allActions,
-                                              onToggleOverflow:
-                                                  _toggleOverflowActions,
-                                            )
-                                          : ThreadReplySheetActionRow(
-                                              key: const ValueKey(
-                                                'thread_reply_sheet_primary_actions',
-                                              ),
-                                              actions: widget.actions,
-                                              hasOverflowActions: widget
-                                                  .overflowActions
-                                                  .isNotEmpty,
-                                              onToggleOverflow:
-                                                  _toggleOverflowActions,
-                                            ),
+                                      actions: widget.actions,
+                                      showEmojiToggle: _hasEmojiPicker,
+                                      emojiExpanded: _isEmojiPanelExpanded,
+                                      onToggleEmoji: _isSubmitting
+                                          ? null
+                                          : () {
+                                              _toggleEmojiPanel();
+                                            },
+                                      hasOverflowActions:
+                                          widget.overflowActions.isNotEmpty,
+                                      overflowExpanded: _isOverflowExpanded,
+                                      onToggleOverflow: _isSubmitting
+                                          ? null
+                                          : () {
+                                              _toggleOverflowActions();
+                                            },
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _ThreadReplySheetAnimatedAccessoryPanel(
+                                      visible: accessoryPanelVisible,
+                                      identity: accessoryPanelIdentity,
+                                      child: accessoryPanel,
                                     ),
                                   ],
                                 );
