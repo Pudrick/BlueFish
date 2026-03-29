@@ -5,37 +5,109 @@ import 'thread_reply_sheet_models.dart';
 
 class ThreadReplySheetActionRow extends StatelessWidget {
   final List<ThreadReplySheetAction> actions;
+  final bool showEmojiToggle;
+  final bool emojiExpanded;
+  final VoidCallback? onToggleEmoji;
   final bool hasOverflowActions;
-  final VoidCallback onToggleOverflow;
+  final bool overflowExpanded;
+  final VoidCallback? onToggleOverflow;
 
   const ThreadReplySheetActionRow({
     super.key,
     required this.actions,
+    this.showEmojiToggle = false,
+    this.emojiExpanded = false,
+    this.onToggleEmoji,
     required this.hasOverflowActions,
+    this.overflowExpanded = false,
     required this.onToggleOverflow,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ...actions.map((action) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ThreadReplySheetActionButton(action: action),
-            );
-          }),
-          if (hasOverflowActions)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: ThreadReplySheetOverflowToggleButton(
-                expanded: false,
-                onTap: onToggleOverflow,
+    return SizedBox(
+      width: double.infinity,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            if (showEmojiToggle)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetEmojiToggleButton(
+                  expanded: emojiExpanded,
+                  onTap: onToggleEmoji,
+                ),
               ),
-            ),
-        ],
+            ...actions.map((action) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetActionButton(action: action),
+              );
+            }),
+            if (hasOverflowActions)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: ThreadReplySheetOverflowToggleButton(
+                  expanded: overflowExpanded,
+                  onTap: onToggleOverflow,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ThreadReplySheetEmojiToggleButton extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback? onTap;
+
+  const ThreadReplySheetEmojiToggleButton({
+    super.key,
+    required this.expanded,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foregroundColor = expanded
+        ? colorScheme.onSecondaryContainer
+        : colorScheme.onSurface;
+
+    return ThreadReplyInteractiveIconSurface(
+      key: const ValueKey('thread_reply_sheet_emoji_toggle'),
+      semanticLabel: expanded ? '收起表情面板' : '展开表情面板',
+      tooltip: expanded ? '收起表情面板' : '表情',
+      onTap: onTap,
+      baseColor: expanded
+          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
+          : Colors.transparent,
+      hoverColor: expanded
+          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
+          : colorScheme.secondaryContainer.withValues(alpha: 0.4),
+      pressedColor: expanded
+          ? colorScheme.secondaryContainer.withValues(alpha: 0.72)
+          : colorScheme.secondaryContainer.withValues(alpha: 0.58),
+      inkColor: foregroundColor,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 180),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(scale: animation, child: child),
+          );
+        },
+        child: Icon(
+          expanded
+              ? Icons.emoji_emotions_rounded
+              : Icons.emoji_emotions_outlined,
+          key: ValueKey(expanded),
+          size: 22,
+          color: foregroundColor,
+        ),
       ),
     );
   }
@@ -82,7 +154,7 @@ class ThreadReplySheetActionButton extends StatelessWidget {
 
 class ThreadReplySheetExpandedActionPanel extends StatelessWidget {
   final List<ThreadReplySheetAction> actions;
-  final VoidCallback onToggleOverflow;
+  final VoidCallback? onToggleOverflow;
 
   const ThreadReplySheetExpandedActionPanel({
     super.key,
@@ -127,7 +199,7 @@ class ThreadReplySheetExpandedActionPanel extends StatelessWidget {
 
 class ThreadReplySheetOverflowToggleButton extends StatelessWidget {
   final bool expanded;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const ThreadReplySheetOverflowToggleButton({
     super.key,

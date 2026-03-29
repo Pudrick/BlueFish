@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'reply_sheet/interactive_icon_surface.dart';
 import 'reply_sheet/thread_reply_sheet_actions.dart';
 import 'reply_sheet/thread_reply_sheet_context_card.dart';
+import 'reply_sheet/thread_reply_sheet_emoji_panel.dart';
 import 'reply_sheet/thread_reply_sheet_input_box.dart';
 import 'reply_sheet/thread_reply_sheet_models.dart';
 
@@ -23,45 +26,69 @@ Future<String?> showThreadReplySheet({
   int maxLines = 8,
   List<ThreadReplySheetAction> actions = const [],
   List<ThreadReplySheetAction> overflowActions = const [],
+  List<ThreadReplySheetEmojiCategory> emojiCategories =
+      ThreadReplySheetEmojiCategory.defaultCategories,
+  bool keepEmojiPanelOpenOnInsert = true,
+  double emojiPanelMaxHeight = 240,
+  int emojiGridCrossAxisCount = 7,
   int collapsedContextPreviewLines = 3,
   double minChildSize = 0.36,
   double initialChildSize = 0.68,
   double maxChildSize = 1.0,
 }) {
-  final rootMediaQuery = MediaQuery.of(context);
-
-  return showModalBottomSheet<String>(
+  return showGeneralDialog<String>(
     context: context,
-    isScrollControlled: true,
     useRootNavigator: true,
-    useSafeArea: true,
-    constraints: BoxConstraints(
-      minHeight: rootMediaQuery.size.height,
-      maxHeight: rootMediaQuery.size.height,
-    ),
-    backgroundColor: Colors.transparent,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black54,
-    builder: (context) {
-      return ThreadReplySheet(
-        title: title,
-        submitLabel: submitLabel,
-        hintText: hintText,
-        initialText: initialText,
-        contextLabel: contextLabel,
-        contextPreview: contextPreview,
-        autofocus: autofocus,
-        closeOnSubmit: closeOnSubmit,
-        minLines: minLines,
-        maxLines: maxLines,
-        actions: actions,
-        overflowActions: overflowActions,
-        collapsedContextPreviewLines: collapsedContextPreviewLines,
-        minChildSize: minChildSize,
-        initialChildSize: initialChildSize,
-        maxChildSize: maxChildSize,
-        viewportHeight: rootMediaQuery.size.height,
-        topSafePadding: rootMediaQuery.padding.top,
-        onSubmit: onSubmit,
+    transitionDuration: const Duration(milliseconds: 220),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(opacity: curvedAnimation, child: child);
+    },
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final dialogMediaQuery = MediaQuery.of(context);
+          final viewportHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : dialogMediaQuery.size.height;
+
+          return SizedBox(
+            width: double.infinity,
+            height: viewportHeight,
+            child: ThreadReplySheet(
+              title: title,
+              submitLabel: submitLabel,
+              hintText: hintText,
+              initialText: initialText,
+              contextLabel: contextLabel,
+              contextPreview: contextPreview,
+              autofocus: autofocus,
+              closeOnSubmit: closeOnSubmit,
+              minLines: minLines,
+              maxLines: maxLines,
+              actions: actions,
+              overflowActions: overflowActions,
+              emojiCategories: emojiCategories,
+              keepEmojiPanelOpenOnInsert: keepEmojiPanelOpenOnInsert,
+              emojiPanelMaxHeight: emojiPanelMaxHeight,
+              emojiGridCrossAxisCount: emojiGridCrossAxisCount,
+              collapsedContextPreviewLines: collapsedContextPreviewLines,
+              minChildSize: minChildSize,
+              initialChildSize: initialChildSize,
+              maxChildSize: maxChildSize,
+              viewportHeight: viewportHeight,
+              topSafePadding: dialogMediaQuery.padding.top,
+              onSubmit: onSubmit,
+            ),
+          );
+        },
       );
     },
   );
@@ -80,6 +107,10 @@ class ThreadReplySheet extends StatefulWidget {
   final int maxLines;
   final List<ThreadReplySheetAction> actions;
   final List<ThreadReplySheetAction> overflowActions;
+  final List<ThreadReplySheetEmojiCategory> emojiCategories;
+  final bool keepEmojiPanelOpenOnInsert;
+  final double emojiPanelMaxHeight;
+  final int emojiGridCrossAxisCount;
   final int collapsedContextPreviewLines;
   final double minChildSize;
   final double initialChildSize;
@@ -103,6 +134,10 @@ class ThreadReplySheet extends StatefulWidget {
     this.maxLines = 8,
     this.actions = const [],
     this.overflowActions = const [],
+    this.emojiCategories = ThreadReplySheetEmojiCategory.defaultCategories,
+    this.keepEmojiPanelOpenOnInsert = true,
+    this.emojiPanelMaxHeight = 240,
+    this.emojiGridCrossAxisCount = 7,
     this.collapsedContextPreviewLines = 3,
     this.minChildSize = 0.36,
     this.initialChildSize = 0.68,
@@ -111,6 +146,8 @@ class ThreadReplySheet extends StatefulWidget {
     this.topSafePadding = 0,
   }) : assert(minLines > 0),
        assert(maxLines >= minLines),
+       assert(emojiPanelMaxHeight > 0),
+       assert(emojiGridCrossAxisCount > 0),
        assert(collapsedContextPreviewLines > 0),
        assert(minChildSize > 0),
        assert(initialChildSize >= minChildSize),
@@ -123,20 +160,159 @@ class ThreadReplySheet extends StatefulWidget {
   State<ThreadReplySheet> createState() => _ThreadReplySheetState();
 }
 
-class _ThreadReplySheetState extends State<ThreadReplySheet> {
+enum _ThreadReplySheetAccessoryPanel { none, overflow, emoji }
+
+class _ThreadReplySheetAnimatedAccessoryPanel extends StatefulWidget {
+  final bool visible;
+  final Object? identity;
+  final Widget? child;
+
+  const _ThreadReplySheetAnimatedAccessoryPanel({
+    super.key,
+    required this.visible,
+    required this.identity,
+    required this.child,
+  });
+
+  @override
+  State<_ThreadReplySheetAnimatedAccessoryPanel> createState() =>
+      _ThreadReplySheetAnimatedAccessoryPanelState();
+}
+
+class _ThreadReplySheetAnimatedAccessoryPanelState
+    extends State<_ThreadReplySheetAnimatedAccessoryPanel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final CurvedAnimation _curve;
+  Widget? _displayedChild;
+  Object? _displayedIdentity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _curve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    if (widget.visible && widget.child != null) {
+      _displayedChild = widget.child;
+      _displayedIdentity = widget.identity;
+      _controller.value = 1;
+    }
+  }
+
+  @override
+  void didUpdateWidget(
+    covariant _ThreadReplySheetAnimatedAccessoryPanel oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+
+    final identityChanged = widget.identity != _displayedIdentity;
+    final nextChild = widget.child;
+
+    if (widget.visible && nextChild != null) {
+      if (!oldWidget.visible || identityChanged || _displayedChild == null) {
+        setState(() {
+          _displayedChild = nextChild;
+          _displayedIdentity = widget.identity;
+        });
+        _controller.forward(from: 0);
+      } else {
+        setState(() {
+          _displayedChild = nextChild;
+          _displayedIdentity = widget.identity;
+        });
+      }
+      return;
+    }
+
+    if (_displayedChild != null && _controller.value > 0) {
+      _controller.reverse().whenCompleteOrCancel(() {
+        if (!mounted || widget.visible) {
+          return;
+        }
+        setState(() {
+          _displayedChild = null;
+          _displayedIdentity = null;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_displayedChild == null && _controller.isDismissed) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRect(
+      child: FadeTransition(
+        opacity: _curve,
+        child: SizeTransition(
+          sizeFactor: _curve,
+          axisAlignment: -1,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, -0.04),
+              end: Offset.zero,
+            ).animate(_curve),
+            child: AnimatedBuilder(
+              animation: _curve,
+              child: _displayedChild ?? const SizedBox.shrink(),
+              builder: (context, child) {
+                return IgnorePointer(
+                  ignoring: _curve.value <= 0.001,
+                  child: child,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThreadReplySheetState extends State<ThreadReplySheet>
+    with SingleTickerProviderStateMixin {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
-  late final DraggableScrollableController _sheetController;
+  late final AnimationController _extentAnimationController;
 
   bool _isSubmitting = false;
-  bool _isOverflowExpanded = false;
+  _ThreadReplySheetAccessoryPanel _activeAccessoryPanel =
+      _ThreadReplySheetAccessoryPanel.none;
+  String? _selectedEmojiCategoryKey;
   late double _currentSheetExtent;
+  Animation<double>? _extentAnimation;
 
   bool get _canSubmit => !_isSubmitting && _controller.text.trim().isNotEmpty;
   List<ThreadReplySheetAction> get _allActions => [
     ...widget.actions,
     ...widget.overflowActions,
   ];
+  bool get _hasEmojiPicker => widget.emojiCategories.isNotEmpty;
+  bool get _isEmojiPanelExpanded =>
+      _activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.emoji &&
+      _hasEmojiPicker;
+  bool get _isOverflowExpanded =>
+      _activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.overflow &&
+      widget.overflowActions.isNotEmpty;
+  bool get _hasActionControls => _allActions.isNotEmpty || _hasEmojiPicker;
   double get _fullScreenProgress {
     final fullscreenStart = (widget.maxChildSize - 0.08).clamp(
       widget.initialChildSize,
@@ -155,14 +331,33 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   bool get _hasContextCard =>
       (widget.contextLabel?.trim().isNotEmpty ?? false) ||
       (widget.contextPreview?.trim().isNotEmpty ?? false);
+  ThreadReplySheetEmojiCategory? get _selectedEmojiCategory {
+    if (!_hasEmojiPicker) {
+      return null;
+    }
+
+    for (final category in widget.emojiCategories) {
+      if (category.key == _selectedEmojiCategoryKey) {
+        return category;
+      }
+    }
+
+    return widget.emojiCategories.first;
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText ?? '');
     _focusNode = FocusNode();
-    _sheetController = DraggableScrollableController();
+    _extentAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    )..addListener(_handleExtentAnimationTick);
     _currentSheetExtent = widget.initialChildSize;
+    _selectedEmojiCategoryKey = widget.emojiCategories.isNotEmpty
+        ? widget.emojiCategories.first.key
+        : null;
     _controller.addListener(_handleTextChanged);
 
     if (widget.autofocus) {
@@ -175,12 +370,33 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   }
 
   @override
+  void didUpdateWidget(covariant ThreadReplySheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (_hasEmojiPicker) {
+      final hasMatchingCategory = widget.emojiCategories.any(
+        (category) => category.key == _selectedEmojiCategoryKey,
+      );
+      if (!hasMatchingCategory) {
+        _selectedEmojiCategoryKey = widget.emojiCategories.first.key;
+      }
+    } else {
+      _selectedEmojiCategoryKey = null;
+      if (_activeAccessoryPanel == _ThreadReplySheetAccessoryPanel.emoji) {
+        _activeAccessoryPanel = _ThreadReplySheetAccessoryPanel.none;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _controller
       ..removeListener(_handleTextChanged)
       ..dispose();
     _focusNode.dispose();
-    _sheetController.dispose();
+    _extentAnimationController
+      ..removeListener(_handleExtentAnimationTick)
+      ..dispose();
     super.dispose();
   }
 
@@ -190,25 +406,138 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     }
   }
 
+  void _handleExtentAnimationTick() {
+    final animation = _extentAnimation;
+    if (animation == null) {
+      return;
+    }
+
+    final nextExtent = animation.value;
+    if ((nextExtent - _currentSheetExtent).abs() <= 0.0005) {
+      return;
+    }
+
+    setState(() {
+      _currentSheetExtent = nextExtent;
+    });
+  }
+
   void _closeSheet() {
     Navigator.of(context).maybePop();
   }
 
-  void _toggleOverflowActions() {
+  Future<void> _toggleEmojiPanel() async {
+    if (!_hasEmojiPicker) {
+      return;
+    }
+
+    final shouldOpen = !_isEmojiPanelExpanded;
+    if (shouldOpen) {
+      _focusNode.unfocus();
+    }
     setState(() {
-      _isOverflowExpanded = !_isOverflowExpanded;
+      _activeAccessoryPanel = shouldOpen
+          ? _ThreadReplySheetAccessoryPanel.emoji
+          : _ThreadReplySheetAccessoryPanel.none;
+      _selectedEmojiCategoryKey ??= _selectedEmojiCategory?.key;
     });
+
+    if (shouldOpen) {
+      await _ensureExtentForAccessoryPanel();
+    }
+  }
+
+  Future<void> _toggleOverflowActions() async {
+    if (widget.overflowActions.isEmpty) {
+      return;
+    }
+
+    final shouldOpen = !_isOverflowExpanded;
+    setState(() {
+      _activeAccessoryPanel = shouldOpen
+          ? _ThreadReplySheetAccessoryPanel.overflow
+          : _ThreadReplySheetAccessoryPanel.none;
+    });
+
+    if (shouldOpen) {
+      await _ensureExtentForAccessoryPanel();
+    }
+  }
+
+  Future<void> _ensureExtentForAccessoryPanel() async {
+    final targetExtent = math.min(
+      widget.maxChildSize,
+      math.max(widget.initialChildSize, 0.8),
+    );
+    await _animateSheetTo(targetExtent);
   }
 
   Future<void> _collapseToInitialExtent() async {
-    if (!_sheetController.isAttached) {
+    await _animateSheetTo(widget.initialChildSize);
+  }
+
+  Future<void> _expandToMaxExtent() async {
+    await _animateSheetTo(widget.maxChildSize);
+  }
+
+  Future<void> _animateSheetTo(double targetExtent) async {
+    final clampedTarget = targetExtent
+        .clamp(widget.minChildSize, widget.maxChildSize)
+        .toDouble();
+    if ((_currentSheetExtent - clampedTarget).abs() <= 0.0005) {
       return;
     }
-    await _sheetController.animateTo(
-      widget.initialChildSize,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
-    );
+
+    _extentAnimationController.stop();
+    _extentAnimation =
+        Tween<double>(begin: _currentSheetExtent, end: clampedTarget).animate(
+          CurvedAnimation(
+            parent: _extentAnimationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+
+    try {
+      _extentAnimationController.reset();
+      await _extentAnimationController.forward().orCancel;
+    } on TickerCanceled {
+      // Ignore cancellations when a new extent animation supersedes this one.
+    } finally {
+      _extentAnimation = null;
+    }
+  }
+
+  void _handleSheetDragStart(DragStartDetails details) {
+    if (_isSubmitting) {
+      return;
+    }
+    _extentAnimationController.stop();
+    _extentAnimation = null;
+  }
+
+  void _handleSheetDragUpdate(DragUpdateDetails details) {
+    _applySheetDragDelta(details.delta.dy);
+  }
+
+  void _applySheetDragDelta(double delta) {
+    if (_isSubmitting || delta.abs() <= 0.01) {
+      return;
+    }
+
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final availableHeight = (widget.viewportHeight - keyboardInset)
+        .clamp(1.0, double.infinity)
+        .toDouble();
+    final targetExtent = (_currentSheetExtent - (delta / availableHeight))
+        .clamp(widget.minChildSize, widget.maxChildSize)
+        .toDouble();
+    if ((targetExtent - _currentSheetExtent).abs() <= 0.0005) {
+      return;
+    }
+
+    setState(() {
+      _currentSheetExtent = targetExtent;
+    });
   }
 
   void _showSnackBar(String message) {
@@ -218,6 +547,53 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
       ..showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
+  }
+
+  void _setSelectedEmojiCategory(String key) {
+    if (_selectedEmojiCategoryKey == key) {
+      return;
+    }
+    setState(() {
+      _selectedEmojiCategoryKey = key;
+    });
+  }
+
+  void _insertEmoji(ThreadReplySheetEmojiItem item) {
+    final textValue = _controller.value;
+    final selection = textValue.selection;
+    final text = textValue.text;
+    final textLength = text.length;
+
+    final start = selection.isValid
+        ? selection.start.clamp(0, textLength).toInt()
+        : textLength;
+    final end = selection.isValid
+        ? selection.end.clamp(0, textLength).toInt()
+        : textLength;
+    final insertionStart = math.min(start, end);
+    final insertionEnd = math.max(start, end);
+    final replacementText = item.insertText;
+    final nextText = text.replaceRange(
+      insertionStart,
+      insertionEnd,
+      replacementText,
+    );
+    final caretOffset = insertionStart + replacementText.length;
+
+    _controller.value = textValue.copyWith(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: caretOffset),
+      composing: TextRange.empty,
+    );
+    if (!_isEmojiPanelExpanded) {
+      _focusNode.requestFocus();
+    }
+
+    if (!widget.keepEmojiPanelOpenOnInsert) {
+      setState(() {
+        _activeAccessoryPanel = _ThreadReplySheetAccessoryPanel.none;
+      });
+    }
   }
 
   Future<void> _handleSubmit() async {
@@ -264,6 +640,12 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     final sheetHostHeight = availableHeight
         .clamp(1.0, double.infinity)
         .toDouble();
+    final sheetHeight = (sheetHostHeight * _currentSheetExtent)
+        .clamp(
+          sheetHostHeight * widget.minChildSize,
+          sheetHostHeight * widget.maxChildSize,
+        )
+        .toDouble();
     final shellPadding = EdgeInsets.lerp(
       const EdgeInsets.symmetric(horizontal: 12),
       EdgeInsets.zero,
@@ -294,33 +676,22 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       padding: EdgeInsets.only(bottom: keyboardInset),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: shellPadding,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: SizedBox(
-              width: double.infinity,
-              height: sheetHostHeight,
-              child: NotificationListener<DraggableScrollableNotification>(
-                onNotification: (notification) {
-                  if ((_currentSheetExtent - notification.extent).abs() >
-                      0.0005) {
-                    setState(() {
-                      _currentSheetExtent = notification.extent;
-                    });
-                  }
-                  return false;
-                },
-                child: DraggableScrollableSheet(
-                  controller: _sheetController,
-                  expand: false,
-                  minChildSize: widget.minChildSize,
-                  initialChildSize: widget.initialChildSize,
-                  maxChildSize: widget.maxChildSize,
-                  builder: (context, scrollController) {
-                    return AnimatedContainer(
+      child: SizedBox.expand(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: shellPadding,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SizedBox(
+                width: double.infinity,
+                height: sheetHostHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: sheetHeight,
+                    child: AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
                       decoration: BoxDecoration(
@@ -342,13 +713,18 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                           color: Colors.transparent,
                           child: LayoutBuilder(
                             builder: (context, constraints) {
-                              final estimatedContextHeight = _hasContextCard
+                              final showContextCard =
+                                  _hasContextCard && !_isEmojiPanelExpanded;
+                              final estimatedContextHeight = showContextCard
                                   ? 112.0
                                   : 0.0;
-                              final estimatedActionsHeight =
-                                  _allActions.isNotEmpty ? 56.0 : 0.0;
+                              final estimatedActionsHeight = _hasActionControls
+                                  ? 56.0
+                                  : 0.0;
+                              const dragHandleLayoutCompensation = 12.0;
                               final availableInputHeight =
                                   constraints.maxHeight -
+                                  dragHandleLayoutCompensation -
                                   headerTopPadding -
                                   116 -
                                   estimatedContextHeight -
@@ -365,51 +741,82 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                 final showFullScreenHandle =
                                     isFullScreen && !compact;
                                 return Center(
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 220),
-                                    switchInCurve: Curves.easeOutCubic,
-                                    switchOutCurve: Curves.easeInCubic,
-                                    transitionBuilder: (child, animation) {
-                                      return FadeTransition(
-                                        opacity: animation,
-                                        child: SlideTransition(
-                                          position: Tween<Offset>(
-                                            begin: const Offset(0, -0.15),
-                                            end: Offset.zero,
-                                          ).animate(animation),
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    child: showFullScreenHandle
-                                        ? Container(
-                                            key: const ValueKey(
-                                              'thread_reply_sheet_fullscreen_handle',
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.resizeUpDown,
+                                    child: GestureDetector(
+                                      key: const ValueKey(
+                                        'thread_reply_sheet_drag_handle_zone',
+                                      ),
+                                      behavior: HitTestBehavior.opaque,
+                                      onVerticalDragStart:
+                                          _handleSheetDragStart,
+                                      onVerticalDragUpdate:
+                                          _handleSheetDragUpdate,
+                                      child: SizedBox(
+                                        width: 120,
+                                        height: 24,
+                                        child: Center(
+                                          child: AnimatedSwitcher(
+                                            duration: const Duration(
+                                              milliseconds: 220,
                                             ),
-                                            width: 30,
-                                            height: 4,
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.outline,
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                          )
-                                        : Opacity(
-                                            key: const ValueKey(
-                                              'thread_reply_sheet_default_handle',
-                                            ),
-                                            opacity: 1 - _fullScreenProgress,
-                                            child: Container(
-                                              width: 40,
-                                              height: 4,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    colorScheme.outlineVariant,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
-                                              ),
-                                            ),
+                                            switchInCurve: Curves.easeOutCubic,
+                                            switchOutCurve: Curves.easeInCubic,
+                                            transitionBuilder:
+                                                (child, animation) {
+                                                  return FadeTransition(
+                                                    opacity: animation,
+                                                    child: SlideTransition(
+                                                      position: Tween<Offset>(
+                                                        begin: const Offset(
+                                                          0,
+                                                          -0.15,
+                                                        ),
+                                                        end: Offset.zero,
+                                                      ).animate(animation),
+                                                      child: child,
+                                                    ),
+                                                  );
+                                                },
+                                            child: showFullScreenHandle
+                                                ? Container(
+                                                    key: const ValueKey(
+                                                      'thread_reply_sheet_fullscreen_handle',
+                                                    ),
+                                                    width: 30,
+                                                    height: 4,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          colorScheme.outline,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            999,
+                                                          ),
+                                                    ),
+                                                  )
+                                                : Opacity(
+                                                    key: const ValueKey(
+                                                      'thread_reply_sheet_default_handle',
+                                                    ),
+                                                    opacity:
+                                                        1 - _fullScreenProgress,
+                                                    child: Container(
+                                                      width: 40,
+                                                      height: 4,
+                                                      decoration: BoxDecoration(
+                                                        color: colorScheme
+                                                            .outlineVariant,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              999,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
                                           ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 );
                               }
@@ -505,7 +912,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                                   ),
                                                 );
                                               },
-                                          child: isFullScreen && !compact
+                                          child: isFullScreen
                                               ? Padding(
                                                   key: const ValueKey(
                                                     'thread_reply_sheet_collapse_button_wrapper',
@@ -540,9 +947,38 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                                     ),
                                                   ),
                                                 )
-                                              : const SizedBox.shrink(
-                                                  key: ValueKey(
-                                                    'thread_reply_sheet_collapse_button_hidden',
+                                              : Padding(
+                                                  key: const ValueKey(
+                                                    'thread_reply_sheet_fullscreen_button_wrapper',
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        right: 4,
+                                                      ),
+                                                  child: ThreadReplyInteractiveIconSurface(
+                                                    key: const ValueKey(
+                                                      'thread_reply_sheet_fullscreen_button',
+                                                    ),
+                                                    semanticLabel: '展开到全屏',
+                                                    tooltip: '展开到全屏',
+                                                    onTap: _isSubmitting
+                                                        ? null
+                                                        : _expandToMaxExtent,
+                                                    baseColor:
+                                                        headerActionBaseColor,
+                                                    hoverColor:
+                                                        headerActionHoverColor,
+                                                    pressedColor:
+                                                        headerActionPressedColor,
+                                                    inkColor:
+                                                        colorScheme.onSurface,
+                                                    child: Icon(
+                                                      Icons
+                                                          .open_in_full_rounded,
+                                                      size: 20,
+                                                      color:
+                                                          colorScheme.onSurface,
+                                                    ),
                                                   ),
                                                 ),
                                         ),
@@ -573,51 +1009,111 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                               }
 
                               Widget buildActionSection() {
-                                if (_allActions.isEmpty) {
+                                if (!_hasActionControls) {
                                   return const SizedBox.shrink();
                                 }
+
+                                final selectedEmojiCategory =
+                                    _selectedEmojiCategory;
+                                final accessoryPanelVisible =
+                                    _isEmojiPanelExpanded ||
+                                    _isOverflowExpanded;
+                                final accessoryPanelIdentity =
+                                    _isEmojiPanelExpanded
+                                    ? _ThreadReplySheetAccessoryPanel.emoji
+                                    : _isOverflowExpanded
+                                    ? _ThreadReplySheetAccessoryPanel.overflow
+                                    : null;
+                                final Widget? accessoryPanel =
+                                    _isEmojiPanelExpanded &&
+                                        selectedEmojiCategory != null
+                                    ? ThreadReplySheetEmojiPanel(
+                                        key: const ValueKey(
+                                          'thread_reply_sheet_emoji_panel_wrapper',
+                                        ),
+                                        categories: widget.emojiCategories,
+                                        selectedCategoryKey:
+                                            selectedEmojiCategory.key,
+                                        onCategorySelected:
+                                            _setSelectedEmojiCategory,
+                                        onEmojiSelected: _insertEmoji,
+                                        maxHeight: widget.emojiPanelMaxHeight,
+                                        crossAxisCount:
+                                            widget.emojiGridCrossAxisCount,
+                                      )
+                                    : _isOverflowExpanded
+                                    ? ThreadReplySheetExpandedActionPanel(
+                                        key: const ValueKey(
+                                          'thread_reply_sheet_all_actions_panel',
+                                        ),
+                                        actions: widget.overflowActions,
+                                        onToggleOverflow: _isSubmitting
+                                            ? null
+                                            : () {
+                                                _toggleOverflowActions();
+                                              },
+                                      )
+                                    : null;
+
                                 return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const SizedBox(height: 12),
-                                    AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 220,
+                                    ThreadReplySheetActionRow(
+                                      key: const ValueKey(
+                                        'thread_reply_sheet_primary_actions',
                                       ),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeInCubic,
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: SizeTransition(
-                                            sizeFactor: animation,
-                                            axisAlignment: -1,
-                                            child: child,
-                                          ),
-                                        );
-                                      },
-                                      child: _isOverflowExpanded
-                                          ? ThreadReplySheetExpandedActionPanel(
-                                              key: const ValueKey(
-                                                'thread_reply_sheet_all_actions_panel',
-                                              ),
-                                              actions: _allActions,
-                                              onToggleOverflow:
-                                                  _toggleOverflowActions,
-                                            )
-                                          : ThreadReplySheetActionRow(
-                                              key: const ValueKey(
-                                                'thread_reply_sheet_primary_actions',
-                                              ),
-                                              actions: widget.actions,
-                                              hasOverflowActions: widget
-                                                  .overflowActions
-                                                  .isNotEmpty,
-                                              onToggleOverflow:
-                                                  _toggleOverflowActions,
-                                            ),
+                                      actions: widget.actions,
+                                      showEmojiToggle: _hasEmojiPicker,
+                                      emojiExpanded: _isEmojiPanelExpanded,
+                                      onToggleEmoji: _isSubmitting
+                                          ? null
+                                          : () {
+                                              _toggleEmojiPanel();
+                                            },
+                                      hasOverflowActions:
+                                          widget.overflowActions.isNotEmpty,
+                                      overflowExpanded: _isOverflowExpanded,
+                                      onToggleOverflow: _isSubmitting
+                                          ? null
+                                          : () {
+                                              _toggleOverflowActions();
+                                            },
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _ThreadReplySheetAnimatedAccessoryPanel(
+                                      visible: accessoryPanelVisible,
+                                      identity: accessoryPanelIdentity,
+                                      child: accessoryPanel,
                                     ),
                                   ],
+                                );
+                              }
+
+                              Widget buildContextSection() {
+                                if (!_hasContextCard) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return _ThreadReplySheetAnimatedAccessoryPanel(
+                                  key: const ValueKey(
+                                    'thread_reply_sheet_context_section',
+                                  ),
+                                  visible: showContextCard,
+                                  identity: const ValueKey(
+                                    'thread_reply_sheet_context_section_identity',
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: ThreadReplySheetContextCard(
+                                      label: widget.contextLabel,
+                                      preview: widget.contextPreview,
+                                      collapsedMaxLines:
+                                          widget.collapsedContextPreviewLines,
+                                    ),
+                                  ),
                                 );
                               }
 
@@ -670,86 +1166,48 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                               );
 
                               if (!usesCompactLayout) {
-                                return ListView(
-                                  controller: scrollController,
-                                  physics: const ClampingScrollPhysics(),
-                                  children: [
-                                    SizedBox(
-                                      height: constraints.maxHeight,
-                                      child: Padding(
-                                        padding: contentPadding,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            buildHandle(compact: false),
-                                            const SizedBox(height: 16),
-                                            buildHeader(compact: false),
-                                            if (_hasContextCard) ...[
-                                              const SizedBox(height: 12),
-                                              ThreadReplySheetContextCard(
-                                                label: widget.contextLabel,
-                                                preview: widget.contextPreview,
-                                                collapsedMaxLines: widget
-                                                    .collapsedContextPreviewLines,
-                                              ),
-                                            ],
-                                            const SizedBox(height: 16),
-                                            Expanded(
-                                              child: ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                  minHeight:
-                                                      effectiveInputMinHeight,
-                                                ),
-                                                child: ThreadReplySheetInputBox(
-                                                  controller: _controller,
-                                                  focusNode: _focusNode,
-                                                  hintText: widget.hintText,
-                                                  cornerRadius:
-                                                      20 -
-                                                      (4 * _fullScreenProgress),
-                                                  elevated: isFullScreen,
-                                                ),
-                                              ),
-                                            ),
-                                            buildActionSection(),
-                                            const SizedBox(height: 12),
-                                            buildFooter(),
-                                          ],
+                                return Padding(
+                                  padding: contentPadding,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      buildHandle(compact: false),
+                                      const SizedBox(height: 16),
+                                      buildHeader(compact: false),
+                                      buildContextSection(),
+                                      const SizedBox(height: 16),
+                                      Expanded(
+                                        child: ThreadReplySheetInputBox(
+                                          controller: _controller,
+                                          focusNode: _focusNode,
+                                          hintText: widget.hintText,
+                                          cornerRadius:
+                                              20 - (4 * _fullScreenProgress),
+                                          elevated: isFullScreen,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      buildActionSection(),
+                                      const SizedBox(height: 6),
+                                      buildFooter(),
+                                    ],
+                                  ),
                                 );
                               }
 
-                              return ListView(
-                                controller: scrollController,
-                                physics: const ClampingScrollPhysics(),
-                                children: [
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      minHeight: constraints.maxHeight,
-                                    ),
-                                    child: Padding(
-                                      padding: contentPadding,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
+                              return Padding(
+                                padding: contentPadding,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    buildHandle(compact: true),
+                                    const SizedBox(height: 16),
+                                    Expanded(
+                                      child: ListView(
+                                        physics: const ClampingScrollPhysics(),
                                         children: [
-                                          buildHandle(compact: true),
-                                          const SizedBox(height: 16),
                                           buildHeader(compact: true),
-                                          if (_hasContextCard) ...[
-                                            const SizedBox(height: 12),
-                                            ThreadReplySheetContextCard(
-                                              label: widget.contextLabel,
-                                              preview: widget.contextPreview,
-                                              collapsedMaxLines: widget
-                                                  .collapsedContextPreviewLines,
-                                            ),
-                                          ],
+                                          buildContextSection(),
                                           const SizedBox(height: 16),
                                           SizedBox(
                                             height: effectiveInputMinHeight,
@@ -765,15 +1223,15 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                                         ],
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               );
                             },
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),

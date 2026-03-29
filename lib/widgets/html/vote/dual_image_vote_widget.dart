@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:bluefish/widgets/vote/vote_info_widget.dart';
-
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
+import 'package:flutter/material.dart';
 
 class DualImageVoteWidget extends StatefulWidget {
   final Vote vote;
@@ -25,9 +24,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
     vote = widget.vote;
   }
 
-  // TODO: add limitation of max vote count.
   Widget canVoteButtonWidget() {
-    // const double buttonHeight = 75;
     const double buttonVerticalMargin = 25;
     const double buttonTextSize = 27;
     return Row(
@@ -56,28 +53,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
             ),
           ),
         ),
-        // Expanded(
-        //   flex: 1,
-        //   child: InkWell(
-        //     // TODO: stupid implementation. maybe there's better constraints.
-        //     borderRadius: const BorderRadius.only(
-        //         bottomLeft: Radius.circular(
-        //             DualImageVoteWidget.outerBorderRoundRadius)),
-        //     onTap: () {},
-        //     child: Ink(
-        //       decoration: const BoxDecoration(
-        //           color: Colors.redAccent,
-        //           borderRadius: BorderRadius.only(
-        //               bottomLeft: Radius.circular(
-        //                   DualImageVoteWidget.outerBorderRoundRadius))),
-        //       height: buttonHeight,
-        //       child: Center(
-        //           child: Text(widget.vote.voteDetailList[0].content,
-        //               style: const TextStyle(
-        //                   color: Colors.white, fontSize: buttonTextSize))),
-        //     ),
-        //   ),
-        // ),
         const SizedBox(width: 10),
         Expanded(
           child: ElevatedButton(
@@ -102,45 +77,20 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
             ),
           ),
         ),
-        // Expanded(
-        //   flex: 1,
-        //   child: Material(
-        //     child: Ink(
-        //       decoration: const BoxDecoration(
-        //           color: Colors.blue,
-        //           borderRadius: BorderRadius.only(
-        //               bottomRight: Radius.circular(
-        //                   DualImageVoteWidget.outerBorderRoundRadius))),
-        //       height: buttonHeight,
-        //       child: InkWell(
-        //         // stupid, but works.
-        //         borderRadius: const BorderRadius.only(
-        //             bottomRight: Radius.circular(
-        //                 DualImageVoteWidget.outerBorderRoundRadius)),
-
-        //         onTap: () {},
-        //         child: Center(
-        //             child: Text(widget.vote.voteDetailList[1].content,
-        //                 style: const TextStyle(
-        //                     color: Colors.white, fontSize: buttonTextSize))),
-        //       ),
-        //     ),
-        //   ),
-        // ),
       ],
     );
   }
 
-  // TODO: handle end == true, that is vote expired.
   Widget cannotVoteButtonWidget() {
     const double buttonTextSize = 17;
     const double buttonHeight = 70;
-    Color leftColorOfNumberVotes = Theme.of(
+    final leftColorOfNumberVotes = Theme.of(
       context,
     ).colorScheme.onTertiaryContainer;
-    Color rightColorOfNumberVotes = Theme.of(
+    final rightColorOfNumberVotes = Theme.of(
       context,
     ).colorScheme.onSecondaryContainer;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -158,8 +108,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       Radius.circular(
                         DualImageVoteWidget.outerBorderRoundRadius,
                       ),
-                      // bottomLeft: Radius.circular(
-                      //     DualImageVoteWidget.innerBorderRoundRadius),
                     ),
                   ),
                   child: Padding(
@@ -209,8 +157,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                         DualImageVoteWidget.outerBorderRoundRadius,
                       ),
                     ),
-                    // border: Border.all(color: Colors.redAccent, width: 3),
-                    // color: Colors.red.shade100,
                     color: Theme.of(context).colorScheme.tertiaryContainer,
                   ),
                 ),
@@ -226,9 +172,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                         DualImageVoteWidget.outerBorderRoundRadius,
                       ),
                     ),
-                    // color: Colors.blue.shade100,
                     color: Theme.of(context).colorScheme.secondaryContainer,
-                    // border: Border.all(color: Colors.blue, width: 3)
                   ),
                 ),
               ),
@@ -242,8 +186,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       Radius.circular(
                         DualImageVoteWidget.outerBorderRoundRadius,
                       ),
-                      // bottomRight: Radius.circular(
-                      //     DualImageVoteWidget.innerBorderRoundRadius),
                     ),
                   ),
                   child: Padding(
@@ -304,7 +246,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                     ),
                   ),
                 ),
-                // height: buttonHeight,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -314,7 +255,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                           Icons.check,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.38),
+                          ).colorScheme.onSurface.withValues(alpha: 0.38),
                           size: buttonTextSize,
                         ),
                     Text(
@@ -322,7 +263,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       style: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.38),
+                        ).colorScheme.onSurface.withValues(alpha: 0.38),
                         fontSize: buttonTextSize,
                       ),
                     ),
@@ -334,12 +275,9 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
             if (widget.vote.userVoteRecordList != null &&
                 widget.vote.end == false)
               SizedBox(
-                // TODO: adjust this height to value that paired to the other two buttons.
                 height: 55,
                 child: Expanded(
-                  // height: buttonHeight,
                   child: OutlinedButton(
-                    // TODO: cancel vote.
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
                       shape: const RoundedRectangleBorder(
@@ -382,7 +320,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                           Icons.check_circle,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.38),
+                          ).colorScheme.onSurface.withValues(alpha: 0.38),
                           size: buttonTextSize,
                         ),
                     const SizedBox(width: 10),
@@ -391,7 +329,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       style: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.38),
+                        ).colorScheme.onSurface.withValues(alpha: 0.38),
                         fontSize: buttonTextSize,
                       ),
                     ),
@@ -441,7 +379,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      // TODO: add ink effect
       elevation: 6,
       margin: const EdgeInsets.all(7),
       child: Padding(

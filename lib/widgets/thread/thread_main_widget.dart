@@ -1,10 +1,10 @@
 import 'package:bluefish/models/thread_main.dart';
+import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:flutter/material.dart';
 
 // html widget package.
 // import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:bluefish/widgets/thread/htmlWidget_with_vote.dart';
 
 class ThreadTitleWidget extends StatelessWidget {
   final String title;
@@ -54,7 +54,6 @@ class ThreadMainFloorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     return Column(
       children: [
         Card(
@@ -72,7 +71,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
                   children: [
                     AuthorInfoWidget(content: mainFloor),
                     const Divider(),
-                    HtmlWidgetWithVote(
+                    BluefishHtmlWidget(
                       // TODO: add html parser and connect it with video parser.
                       mainFloor.contentHTML,
                       textStyle: const TextStyle(fontWeight: FontWeight.w500),
