@@ -41,7 +41,7 @@ class ThreadTitleList extends ChangeNotifier {
     refresh();
   }
   ThreadTitleList(this.topicID, this.zoneID, this.page, this.sortType)
-      : assert(sortType.index != 0) {
+    : assert(sortType.index != 0) {
     refresh();
   }
 
@@ -49,12 +49,14 @@ class ThreadTitleList extends ChangeNotifier {
 
   Uri baseURL() {
     return Uri.parse(
-        "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/getTopicThreads?");
+      "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/getTopicThreads?",
+    );
   }
 
   Uri pinnedURL() {
     return Uri.parse(
-        "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/$topicID");
+      "https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/$topicID",
+    );
   }
 
   Uri generateURL() {
@@ -73,39 +75,55 @@ class ThreadTitleList extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> getPinnedThreads() async {
+  Future<List<SingleThreadTitle>> getPinnedThreads() async {
     var jsonPinned = await _client.get(pinnedURL());
     var mappedThreads = jsonDecode(jsonPinned.body);
-    var pinnedList = mappedThreads["data"]["topicTopList"];
-    for (var thread in pinnedList) {
-      SingleThreadTitle pinThread = SingleThreadTitle.fromJson(thread);
-      pinThread.isPinned = true;
-      threadTitleList.add(pinThread);
-    }
+    var pinnedList = mappedThreads["data"]["topicTopList"] as List? ?? [];
+
+    return [
+      for (final thread in pinnedList)
+        SingleThreadTitle.fromJson({
+          ...Map<String, dynamic>.from(thread as Map),
+          'isPinned': true,
+        }),
+    ];
   }
 
-  Future<void> getNormalThreads() async {
-    var URL = generateURL();
-    var jsonThreads = await _client.get(URL);
+  Future<List<SingleThreadTitle>> getNormalThreads() async {
+    var url = generateURL();
+    var jsonThreads = await _client.get(url);
     var mappedthreads = jsonDecode(jsonThreads.body);
-    var threadList = mappedthreads["data"]["list"];
+    var threadList = mappedthreads["data"]["list"] as List? ?? [];
+    final normalThreads = <SingleThreadTitle>[];
+
     for (var thread in threadList) {
-      SingleThreadTitle newThread = SingleThreadTitle.fromJson(thread);
+      final newThread = SingleThreadTitle.fromJson(
+        Map<String, dynamic>.from(thread as Map),
+      );
       if (zoneID != 253 && newThread.zoneId != 253) {
-        threadTitleList.add(newThread);
+        normalThreads.add(newThread);
       } else if (zoneID == 253 && newThread.zoneId == 253) {
-        threadTitleList.add(newThread);
+        normalThreads.add(newThread);
       }
     }
+
+    return normalThreads;
   }
 
-  void refresh() async {
+  Future<void> refresh() async {
     isRefreshing = true;
     notifyListeners();
-    threadTitleList.clear();
-    await getPinnedThreads();
-    await getNormalThreads();
-    isRefreshing = false;
-    notifyListeners();
+
+    try {
+      final pinnedThreads = await getPinnedThreads();
+      final normalThreads = await getNormalThreads();
+      threadTitleList
+        ..clear()
+        ..addAll(pinnedThreads)
+        ..addAll(normalThreads);
+    } finally {
+      isRefreshing = false;
+      notifyListeners();
+    }
   }
 }

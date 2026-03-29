@@ -4,26 +4,64 @@ part 'single_thread_title.g.dart';
 
 @JsonSerializable()
 class SingleThreadTitle {
-  late int fid;
-  late int is_gif;
-  late int replys;
-  late String user_name;
-  late int cover_height;
-  late String title;
-  late int type;
-  late int tid;
-  late int light_replys;
-  late int puid;
-  late int cover_width;
-  late int image_count;
-  late int? zoneId; // for pinned, zoneid is null.
-  late int recommends;
-  late String time;
-  late String? threadType;
-  late int? contentType;
-  bool isPinned = false;
+  final int fid;
 
-  SingleThreadTitle();
+  @JsonKey(name: 'is_gif')
+  final int isGifInt;
+  bool get isGif => isGifInt == 1;
+
+  @JsonKey(name: 'replys')
+  final int repliesNum;
+
+  @JsonKey(name: 'user_name')
+  final String authorName;
+
+  @JsonKey(name: 'cover_height')
+  final int coverHeight;
+
+  final String title;
+  final int type;
+  final int tid;
+
+  @JsonKey(name: 'light_replys')
+  final int lightRepliesNum;
+
+  final int puid;
+
+  @JsonKey(name: 'cover_width')
+  final int coverWidth;
+
+  @JsonKey(name: 'image_count')
+  final int imageCount;
+
+  // For pinned threads, zoneId is null.
+  final int? zoneId;
+  final int recommends;
+  final String time;
+  final String? threadType;
+  final int? contentType;
+  final bool? isPinned;
+
+  const SingleThreadTitle({
+    required this.fid,
+    required this.isGifInt,
+    required this.repliesNum,
+    required this.authorName,
+    required this.coverHeight,
+    required this.title,
+    required this.type,
+    required this.tid,
+    required this.lightRepliesNum,
+    required this.puid,
+    required this.coverWidth,
+    required this.imageCount,
+    this.zoneId,
+    required this.recommends,
+    required this.time,
+    this.threadType,
+    this.contentType,
+    this.isPinned,
+  });
 
   factory SingleThreadTitle.fromJson(Map<String, dynamic> json) =>
       _$SingleThreadTitleFromJson(json);

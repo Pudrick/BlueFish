@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:bluefish/pages/thread_list_page.dart';
+import 'package:bluefish/router/app_router.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 
 void main() {
@@ -11,20 +11,14 @@ void launchApp() {
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    MaterialApp(
+    MaterialApp.router(
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('zh'),
-        Locale('en'),
-      ],
-
-      // TODO: theme: userThemeData,
+      supportedLocales: const [Locale('zh'), Locale('en')],
+      routerConfig: appRouter,
       theme: initUserThemeSettings(),
-
-      home: const ThreadListPage(),
     ),
   );
 }
