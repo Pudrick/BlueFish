@@ -360,10 +360,12 @@ packages:
   fwfh_chewie:
     dependency: "direct overridden"
     description:
-      path: "dependencies/fwfh_chewie-0.14.8"
-      relative: true
-    source: path
-    version: "0.14.8"
+      path: "packages/fwfh_chewie"
+      ref: chewie-Windows
+      resolved-ref: "529dbb446ca0b39b9afe489da5e0d89c65323797"
+      url: "https://github.com/Pudrick/flutter_widget_from_html.git"
+    source: git
+    version: "0.16.1"
   fwfh_just_audio:
     dependency: transitive
     description:

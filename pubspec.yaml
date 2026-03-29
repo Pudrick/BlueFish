@@ -54,7 +54,10 @@ dependencies:
 
 dependency_overrides:
   fwfh_chewie:
-    path: dependencies/fwfh_chewie-0.14.8
+    git:
+      url: https://github.com/Pudrick/flutter_widget_from_html.git
+      ref: chewie-Windows
+      path: packages/fwfh_chewie
 
 dev_dependencies:
   flutter_test:
