@@ -192,10 +192,11 @@ class _EmojiCategoryChip extends StatelessWidget {
       color: selected
           ? colorScheme.secondaryContainer.withValues(alpha: 0.92)
           : colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Text(
