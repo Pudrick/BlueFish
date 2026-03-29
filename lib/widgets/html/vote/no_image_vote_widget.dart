@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:bluefish/models/vote.dart';
-import 'package:bluefish/widgets/vote/vote_info_widget.dart';
+import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
+import 'package:flutter/material.dart';
 
 class NoImageVoteButton extends StatefulWidget {
   final Vote vote;
@@ -17,7 +16,6 @@ class _NoImageVoteButtonState extends State<NoImageVoteButton> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     if (widget.vote.userVoteRecordList != null) {
       selectedOptions = widget.vote.userVoteRecordList!;
@@ -31,33 +29,28 @@ class _NoImageVoteButtonState extends State<NoImageVoteButton> {
         for (var option in widget.vote.voteDetailList)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 70),
-            child:
-                // ElevatedButton(
-                //   onPressed: () {},
-                //   child: Text(option.content),
-                // )
-                ChoiceChip.elevated(
-                  label: Container(
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: Text(option.content),
-                  ),
-                  selected: selectedOptions.contains(option.sort),
-                  onSelected:
-                      ((selectedOptions.length < widget.vote.userOptionLimit ||
-                              selectedOptions.contains(option.sort)) &&
-                          widget.vote.canVote)
-                      ? (value) {
-                          setState(() {
-                            if (selectedOptions.contains(option.sort)) {
-                              selectedOptions.remove(option.sort);
-                            } else {
-                              selectedOptions.add(option.sort);
-                            }
-                          });
+            child: ChoiceChip.elevated(
+              label: Container(
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: Text(option.content),
+              ),
+              selected: selectedOptions.contains(option.sort),
+              onSelected:
+                  ((selectedOptions.length < widget.vote.userOptionLimit ||
+                          selectedOptions.contains(option.sort)) &&
+                      widget.vote.canVote)
+                  ? (value) {
+                      setState(() {
+                        if (selectedOptions.contains(option.sort)) {
+                          selectedOptions.remove(option.sort);
+                        } else {
+                          selectedOptions.add(option.sort);
                         }
-                      : null,
-                ),
+                      });
+                    }
+                  : null,
+            ),
           ),
       ],
     );
@@ -84,7 +77,6 @@ class NoImageVoteWidget extends StatelessWidget {
             const SizedBox(height: 10),
             if (vote.userVoteRecordList != null && vote.end == false)
               ElevatedButton(child: const Text("取消投票"), onPressed: () {}),
-            // TODO: add a pie chart to show the percentage of each option
           ],
         ),
       ),

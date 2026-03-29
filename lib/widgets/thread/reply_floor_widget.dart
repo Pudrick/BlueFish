@@ -1,5 +1,5 @@
 import "package:bluefish/widgets/thread/author_info_widget.dart";
-import "package:bluefish/widgets/thread/htmlWidget_with_vote.dart";
+import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import "package:flutter/material.dart";
 
 import 'package:bluefish/models/single_reply_floor.dart';
@@ -16,10 +16,6 @@ class ReplyFloor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double buttonHeight = 36.0;
-    const double capsuleRadius = buttonHeight / 2;
-    const double adjacentCornerRadius = 4.0;
-
     final colorScheme = Theme.of(context).colorScheme;
 
     var notDisplay =
@@ -126,7 +122,7 @@ class ReplyFloor extends StatelessWidget {
               if (!isQuote || (isQuote && !notDisplay))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: HtmlWidgetWithVote(replyFloor.contentHTML),
+                  child: BluefishHtmlWidget(replyFloor.contentHTML),
                 ),
               if (!isQuote) ...[
                 const SizedBox(height: 12),
@@ -158,10 +154,11 @@ class ReplyFloor extends StatelessWidget {
 // TODO: add a button that can directly reply to quote.
 // TODO: adjust the visual effect as the same with userhome's reply.
 class _QuoteWidget extends StatefulWidget {
-  final Widget quoteWidget;
-  final double maxHeight;
+  static const double maxHeight = 180;
 
-  const _QuoteWidget({required this.quoteWidget, this.maxHeight = 180});
+  final Widget quoteWidget;
+
+  const _QuoteWidget({required this.quoteWidget});
 
   @override
   State<_QuoteWidget> createState() => _QuoteWidgetState();
@@ -187,7 +184,7 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
         _contentKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox != null) {
       final height = renderBox.size.height;
-      if (height <= widget.maxHeight) {
+      if (height <= _QuoteWidget.maxHeight) {
         if (mounted) {
           setState(() {
             _needsExpansion = false;
@@ -243,7 +240,9 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
         alignment: Alignment.bottomCenter,
         children: [
           ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: widget.maxHeight),
+            constraints: const BoxConstraints(
+              maxHeight: _QuoteWidget.maxHeight,
+            ),
             child: ClipRect(
               child: SingleChildScrollView(
                 physics: const NeverScrollableScrollPhysics(),
