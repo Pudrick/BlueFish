@@ -18,25 +18,25 @@ class ThreadVideoPeek {
 
   @JsonKey(name: 'url')
   final String videoUrl;
-  
+
   // what's this?
+  @JsonKey(name: 'bullet_comment_num')
   final int bulletCommentNum;
 
   const ThreadVideoPeek({
-  required this.duration,
-  required this.vid,
-  required this.imgUrl,
-  required this.size,
-  required this.width,
-  required this.height,
-  required this.totalPlays,
-  required this.videoUrl,
-
-  // maybe means "danmaku"?
-  @JsonKey(name: 'bullet_comment_num')
-  required this.bulletCommentNum,
+    required this.duration,
+    required this.vid,
+    required this.imgUrl,
+    required this.size,
+    required this.width,
+    required this.height,
+    required this.totalPlays,
+    required this.videoUrl,
+    required this.bulletCommentNum,
   });
 
   factory ThreadVideoPeek.fromJson(Map<String, dynamic> json) =>
-    _$ThreadVideoPeekFromJson(json);
+      _$ThreadVideoPeekFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ThreadVideoPeekToJson(this);
 }

@@ -10,6 +10,8 @@ class ReplyPicInfo {
   final int height;
   final int width;
   final int count;
+
+  @JsonKey(fromJson: _intToBool, toJson: _boolToInt)
   final bool isGif;
 
   ReplyPicInfo({
@@ -21,18 +23,12 @@ class ReplyPicInfo {
   });
 
   factory ReplyPicInfo.fromJson(Map<String, dynamic> json) =>
-      replyPicInfoFromJson(json);
+      _$ReplyPicInfoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ReplyPicInfoToJson(this);
 
-  static ReplyPicInfo replyPicInfoFromJson(Map<String, dynamic> json) =>
-      ReplyPicInfo(
-        url: Uri.parse(json['url'] as String),
-        height: (json['height'] as num).toInt(),
-        width: (json['width'] as num).toInt(),
-        count: (json['count'] as num).toInt(),
-        isGif: (json['isGif'] as num) == 1 ? true : false,
-      );
+  static bool _intToBool(dynamic value) => value == 1;
+  static int _boolToInt(bool value) => value ? 1 : 0;
 }
 
 @JsonSerializable(explicitToJson: true)

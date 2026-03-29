@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'package:bluefish/models/single_thread_title.dart';
+import 'package:bluefish/utils/http_with_ua_coke.dart';
 import 'package:bluefish/userdata/user_settings.dart';
-import 'package:http/http.dart' as http;
 import 'package:bluefish/models/internal_settings.dart';
 
 /// position 0 just for index offset.
@@ -13,6 +13,7 @@ enum SortType { sortType0Position, newestPublish, newestReply, essences, rank }
 
 class ThreadTitleList extends ChangeNotifier {
   List<SingleThreadTitle> threadTitleList = List.empty(growable: true);
+  final HttpwithUA _client = HttpwithUA();
 
   int topicID = mainTopicID;
   int fid = 4875;
@@ -73,19 +74,19 @@ class ThreadTitleList extends ChangeNotifier {
   }
 
   Future<void> getPinnedThreads() async {
-    var jsonPinned = await http.get(pinnedURL());
+    var jsonPinned = await _client.get(pinnedURL());
     var mappedThreads = jsonDecode(jsonPinned.body);
     var pinnedList = mappedThreads["data"]["topicTopList"];
     for (var thread in pinnedList) {
-      SingleThreadTitle pinThead = SingleThreadTitle.fromJson(thread);
-      pinThead.isPinned = true;
-      threadTitleList.add(pinThead);
+      SingleThreadTitle pinThread = SingleThreadTitle.fromJson(thread);
+      pinThread.isPinned = true;
+      threadTitleList.add(pinThread);
     }
   }
 
   Future<void> getNormalThreads() async {
     var URL = generateURL();
-    var jsonThreads = await http.get(URL);
+    var jsonThreads = await _client.get(URL);
     var mappedthreads = jsonDecode(jsonThreads.body);
     var threadList = mappedthreads["data"]["list"];
     for (var thread in threadList) {

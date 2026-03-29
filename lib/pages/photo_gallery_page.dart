@@ -63,7 +63,7 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(

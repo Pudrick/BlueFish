@@ -23,8 +23,6 @@ class PagePill extends StatelessWidget {
     final backgroundColor = colorScheme.inverseSurface;
     final defaultContentColor = colorScheme.onInverseSurface;
 
-    final activeColor = colorScheme.primaryFixedDim;
-
     return Material(
       color: backgroundColor,
       shape: const StadiumBorder(),

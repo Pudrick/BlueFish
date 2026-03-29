@@ -27,4 +27,6 @@ class SingleThreadTitle {
 
   factory SingleThreadTitle.fromJson(Map<String, dynamic> json) =>
       _$SingleThreadTitleFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SingleThreadTitleToJson(this);
 }

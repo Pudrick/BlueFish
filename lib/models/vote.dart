@@ -52,11 +52,6 @@ class Vote {
   Future<void> refresh() async {
     var voteUrl = Uri.parse(
         "https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteID");
-
-    // for testing
-    final headers = {};
-
-    // var voteJsonStr = await HttpwithUA().get(voteUrl, headers: headers);
     var voteJsonStr = await HttpwithUA().get(voteUrl);
 
     var voteJson = jsonDecode(voteJsonStr.body);

@@ -11,7 +11,7 @@ ReplyPicInfo _$ReplyPicInfoFromJson(Map<String, dynamic> json) => ReplyPicInfo(
   height: (json['height'] as num).toInt(),
   width: (json['width'] as num).toInt(),
   count: (json['count'] as num).toInt(),
-  isGif: json['isGif'] as bool,
+  isGif: ReplyPicInfo._intToBool(json['isGif']),
 );
 
 Map<String, dynamic> _$ReplyPicInfoToJson(ReplyPicInfo instance) =>
@@ -20,7 +20,7 @@ Map<String, dynamic> _$ReplyPicInfoToJson(ReplyPicInfo instance) =>
       'height': instance.height,
       'width': instance.width,
       'count': instance.count,
-      'isGif': instance.isGif,
+      'isGif': ReplyPicInfo._boolToInt(instance.isGif),
     };
 
 UserHomeReply _$UserHomeReplyFromJson(Map<String, dynamic> json) =>

@@ -10,13 +10,13 @@ class ThreadPage extends StatefulWidget {
   final String tid;
   final int page;
 
-  ThreadPage._({super.key, required this.tid, required this.page});
+  const ThreadPage._({super.key, required this.tid, required this.page});
 
   factory ThreadPage({Key? key, required dynamic tid, int page = 1}) {
     if (tid is String) {
-      return ThreadPage._(tid: tid, page: page);
+      return ThreadPage._(key: key, tid: tid, page: page);
     } else if (tid is int) {
-      return ThreadPage._(tid: tid.toString(), page: page);
+      return ThreadPage._(key: key, tid: tid.toString(), page: page);
     } else {
       throw ArgumentError(
         "tid only can be String or int, but get ${tid.runtimeType}",
@@ -174,7 +174,7 @@ class _ThreadPageState extends State<ThreadPage> {
         ],
       ),
 
-      bottomNavigationBar: ThreadBottomBar(
+      bottomNavigationBar: const ThreadBottomBar(
         hasRecommended: true,
         hasFavorated: false,
       ),
