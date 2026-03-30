@@ -12,11 +12,13 @@ class UserHomeThreadTitle {
   final int postTimeStamp;
 
   // the timeStamp here is in seconds, so 1000x.
-  DateTime get postTime => DateTime.fromMillisecondsSinceEpoch(postTimeStamp * 1000);
+  DateTime get postTime =>
+      DateTime.fromMillisecondsSinceEpoch(postTimeStamp * 1000);
 
   @JsonKey(name: 'lastpost_time')
   final int lastReplyTimeStamp;
-  DateTime get lastReplyTime => DateTime.fromMillisecondsSinceEpoch(lastReplyTimeStamp * 1000);
+  DateTime get lastReplyTime =>
+      DateTime.fromMillisecondsSinceEpoch(lastReplyTimeStamp * 1000);
 
   // maybe always be "mt"?
   final String type;
@@ -34,10 +36,11 @@ class UserHomeThreadTitle {
   @JsonKey(name: 'topic_logo')
   final String forumIconUrl;
 
-  final int topic_id;
+  @JsonKey(name: 'topic_id')
+  final int topicId;
 
   @JsonKey(name: 'attr')
-  final String PHPattr;
+  final String phpAttr;
 
   @JsonKey(name: 'pics')
   final List<ThreadPicPeek>? picUrls;
@@ -77,8 +80,8 @@ class UserHomeThreadTitle {
     required this.repliesNum,
     required this.authorName,
     required this.forumIconUrl,
-    required this.topic_id,
-    required this.PHPattr,
+    required this.topicId,
+    required this.phpAttr,
     this.picUrls,
     required this.lights,
     required this.sharedNum,
@@ -92,11 +95,9 @@ class UserHomeThreadTitle {
   });
 
   factory UserHomeThreadTitle.fromJson(Map<String, dynamic> json) =>
-    _$UserHomeThreadTitleFromJson(json);
+      _$UserHomeThreadTitleFromJson(json);
 
-Map<String, dynamic> toJson() =>
-    _$UserHomeThreadTitleToJson(this);
-
+  Map<String, dynamic> toJson() => _$UserHomeThreadTitleToJson(this);
 
   static bool _intToBool(dynamic value) => value == 1;
   static int _boolToInt(bool value) => value ? 1 : 0;

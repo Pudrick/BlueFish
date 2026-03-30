@@ -24,7 +24,8 @@ class UserHome {
   // TODO: what is this used for?
   final bool isLogin;
 
-  final Uri bbs_follow_url;
+  @JsonKey(name: 'bbs_follow_url')
+  final Uri bbsFollowUrl;
 
   // -1 for not followed(include self), 2 for followed
   @JsonKey(
@@ -63,7 +64,8 @@ class UserHome {
 
   @JsonKey(name: 'header')
   final Uri avatarUrl;
-  final bool be_follow_status;
+  @JsonKey(name: 'be_follow_status')
+  final bool beFollowStatus;
 
   @JsonKey(name: 'be_recommend_count')
   final int beRecommendCount;
@@ -88,7 +90,8 @@ class UserHome {
 
   // what's this?
   // only appear in self page.
-  final int? bbs_favorite_count;
+  @JsonKey(name: 'bbs_favorite_count')
+  final int? bbsFavoriteCount;
 
   @JsonKey(name: 'bbs_post_count')
   final int replyCount;
@@ -103,17 +106,16 @@ class UserHome {
   // AuthorHomeThreadList threads;
   final List<UserHomeThreadTitle> threads;
   // AuthorHomeThreadList recommendThreads;
-  final List<UserHomeThreadTitle> recommendThreads;  
+  final List<UserHomeThreadTitle> recommendThreads;
 
-    static const int replyPageSize = 20;
+  static const int replyPageSize = 20;
   // AuthorHomeReplyList replies;
   final List<UserHomeReply> replies;
-
 
   final String euid;
 
   UserHome({
-    required this.bbs_follow_url,
+    required this.bbsFollowUrl,
     required this.followStatus,
     required this.reputation,
     required this.mainThreadsCount,
@@ -127,7 +129,7 @@ class UserHome {
     required this.recommendCount,
     required this.followCount,
     required this.avatarUrl,
-    required this.be_follow_status,
+    required this.beFollowStatus,
     required this.beRecommendCount,
     required this.gender,
     this.banStatus,
@@ -136,7 +138,7 @@ class UserHome {
     required this.nickname,
     required this.isSelf,
     required this.registerTimeStr,
-    this.bbs_favorite_count,
+    this.bbsFavoriteCount,
     required this.replyCount,
     required this.location,
     required this.nextPage,
@@ -157,7 +159,7 @@ class UserHome {
 
   factory UserHome.fromJson(Map<String, dynamic> json) {
     return UserHome(
-      bbs_follow_url: Uri.parse(json['bbs_follow_url'] as String),
+      bbsFollowUrl: Uri.parse(json['bbs_follow_url'] as String),
       followStatus: UserHome._intToFollowStatus(json['follow_status']),
       reputation: UserHome._getReputationNum(
         json['reputation'] as Map<String, dynamic>,
@@ -174,7 +176,7 @@ class UserHome {
       followCount: (json['follow_count'] as num).toInt(),
       avatarUrl: Uri.parse(json['header'] as String),
 
-      be_follow_status: (json['be_follow_status'] as int) == -1 ? false : true,
+      beFollowStatus: (json['be_follow_status'] as int) == -1 ? false : true,
       beRecommendCount: (json['be_recommend_count'] as num).toInt(),
       gender: UserHome._intToGender(json['gender']),
       banStatus: json['banStatus'] as String?,
@@ -184,7 +186,7 @@ class UserHome {
       isSelf: UserHome._intToBool(json['is_self']),
       registerTimeStr: json['reg_time_str'] as String,
 
-      bbs_favorite_count: (json['bbs_favorite_count'] as num?)?.toInt(),
+      bbsFavoriteCount: (json['bbs_favorite_count'] as num?)?.toInt(),
 
       replyCount: (json['bbs_post_count'] as num).toInt(),
       location: json['location'] as String,
@@ -202,11 +204,11 @@ class UserHome {
     );
   }
 
-    UserHome copyWith({
+  UserHome copyWith({
     List<UserHomeThreadTitle>? threads,
     List<UserHomeReply>? replies,
     List<UserHomeThreadTitle>? recommendThreads,
-    FollowStatus? followStatus, 
+    FollowStatus? followStatus,
   }) {
     return UserHome(
       // changed field
@@ -214,14 +216,14 @@ class UserHome {
       replies: replies ?? this.replies,
       recommendThreads: recommendThreads ?? this.recommendThreads,
       followStatus: followStatus ?? this.followStatus,
-      
+
       // fields that didn't change
       isLogin: isLogin,
       euid: euid,
       nickname: nickname,
       puid: puid,
       isSelf: isSelf,
-      be_follow_status: be_follow_status,
+      beFollowStatus: beFollowStatus,
       banStatus: banStatus,
       reputation: reputation,
       mainThreadsCount: mainThreadsCount,
@@ -230,7 +232,7 @@ class UserHome {
       recommendCount: recommendCount,
       followCount: followCount,
       beRecommendCount: beRecommendCount,
-      bbs_favorite_count: bbs_favorite_count,
+      bbsFavoriteCount: bbsFavoriteCount,
       replyCount: replyCount,
       bbsUserLevelPercent: bbsUserLevelPercent,
       level: level,
@@ -240,7 +242,7 @@ class UserHome {
       gender: gender,
       location: location,
       registerTimeStr: registerTimeStr,
-      bbs_follow_url: bbs_follow_url,
+      bbsFollowUrl: bbsFollowUrl,
       avatarUrl: avatarUrl,
       gaussAvatarUrl: gaussAvatarUrl,
       nextPage: nextPage,

@@ -19,8 +19,8 @@ UserHomeThreadTitle _$UserHomeThreadTitleFromJson(Map<String, dynamic> json) =>
       repliesNum: (json['replies'] as num).toInt(),
       authorName: json['nickname'] as String,
       forumIconUrl: json['topic_logo'] as String,
-      topic_id: (json['topic_id'] as num).toInt(),
-      PHPattr: json['attr'] as String,
+      topicId: (json['topic_id'] as num).toInt(),
+      phpAttr: json['attr'] as String,
       picUrls: (json['pics'] as List<dynamic>?)
           ?.map((e) => ThreadPicPeek.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -51,8 +51,8 @@ Map<String, dynamic> _$UserHomeThreadTitleToJson(
   'replies': instance.repliesNum,
   'nickname': instance.authorName,
   'topic_logo': instance.forumIconUrl,
-  'topic_id': instance.topic_id,
-  'attr': instance.PHPattr,
+  'topic_id': instance.topicId,
+  'attr': instance.phpAttr,
   'pics': instance.picUrls,
   'lights': instance.lights,
   'share_num': instance.sharedNum,

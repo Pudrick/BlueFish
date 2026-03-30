@@ -14,7 +14,7 @@ class UserHomeReplyVideoPeek {
   @JsonKey(name: 'src')
   final String playUrl;
 
-  Uri get URL => Uri.parse(playUrl);
+  Uri get url => Uri.parse(playUrl);
 
   @JsonKey(name: 'img')
   final String coverImgUrl;
@@ -29,7 +29,8 @@ class UserHomeReplyVideoPeek {
   //TODO：check what this mean. 0 can be play normally.
   final int expire;
   // seems always 0, useless?
-  final int play_num;
+  @JsonKey(name: 'play_num')
+  final int playNum;
   final String? origin;
 
   @JsonKey(name: 'bullet_comment_num')
@@ -58,7 +59,7 @@ class UserHomeReplyVideoPeek {
     required this.duration,
     required this.size,
     required this.expire,
-    required this.play_num,
+    required this.playNum,
     this.origin,
     required this.danmakuNum,
     required this.status,
@@ -71,10 +72,10 @@ class UserHomeReplyVideoPeek {
   Map<String, dynamic> toJson() => _$UserHomeReplyVideoPeekToJson(this);
 
   static int _durationFromJson(dynamic value) {
-  if (value == null) return 0;
-  if (value is int) return value;
-  return int.tryParse(value.toString()) ?? 0;
-}
+    if (value == null) return 0;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? 0;
+  }
 
-static dynamic _durationToJson(int value) => value;
+  static dynamic _durationToJson(int value) => value;
 }

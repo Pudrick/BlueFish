@@ -96,6 +96,30 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
     });
   }
 
+  Future<void> _scrollToTop() async {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    if (_scrollController.offset <= 0) {
+      return;
+    }
+
+    await _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _changePageAndScrollToTop(
+    Future<void> Function() changePage,
+  ) async {
+    final Future<void> scrollFuture = _scrollToTop();
+    await changePage();
+    await scrollFuture;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -110,15 +134,16 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                 titleList.isRefreshing && titleList.threadTitleList.isEmpty;
             final isEmpty =
                 !titleList.isRefreshing && titleList.threadTitleList.isEmpty;
-            final bool canTriggerPageChange = !titleList.isRefreshing;
+            final int currentPage = titleList.currentBoardPaginationCurrentPage;
+            final int totalPages = titleList.currentBoardPaginationTotalPages;
+            final bool canPrev = !titleList.isRefreshing && currentPage > 1;
+            final bool canNext =
+                !titleList.isRefreshing && titleList.hasNextPage;
             final bool isEssenceBoard =
                 titleList.currentBoard == ThreadListBoard.essence;
             final String boardLabel = titleList.currentBoardLabel;
 
-            _restoreOffsetIfNeeded(
-              titleList,
-              canRestore: !isInitialLoading,
-            );
+            _restoreOffsetIfNeeded(titleList, canRestore: !isInitialLoading);
 
             return ColoredBox(
               color: theme.colorScheme.surface,
@@ -166,6 +191,27 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                             ),
                           ),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ThreadPaginationBar(
+                          currentPage: currentPage,
+                          totalPages: totalPages,
+                          onPrev: canPrev
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    titleList.toPrevPage,
+                                  );
+                                }
+                              : null,
+                          onNext: canNext
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    titleList.toNextPage,
+                                  );
+                                }
+                              : null,
+                        ),
+                      ),
                       for (final title in titleList.threadTitleList)
                         SingleThreadTitleCard(
                           threadTitle: title,
@@ -175,16 +221,20 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: ThreadPaginationBar(
-                          currentPage: titleList.currentBoardPaginationCurrentPage,
-                          totalPages: titleList.currentBoardPaginationTotalPages,
-                          onPrev: canTriggerPageChange
-                              ? () {
-                                  titleList.toPrevPage();
+                          currentPage: currentPage,
+                          totalPages: totalPages,
+                          onPrev: canPrev
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    titleList.toPrevPage,
+                                  );
                                 }
                               : null,
-                          onNext: canTriggerPageChange
-                              ? () {
-                                  titleList.toNextPage();
+                          onNext: canNext
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    titleList.toNextPage,
+                                  );
                                 }
                               : null,
                         ),

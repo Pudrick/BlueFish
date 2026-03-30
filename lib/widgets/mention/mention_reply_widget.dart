@@ -303,7 +303,7 @@ class _MentionReplyImageStripState extends State<_MentionReplyImageStrip> {
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
                 itemBuilder: (context, index) {
-                  final imageUrl = widget.reply.imagesList[index].Url
+                  final imageUrl = widget.reply.imagesList[index].url
                       .toString();
 
                   return SizedBox(
@@ -315,7 +315,7 @@ class _MentionReplyImageStripState extends State<_MentionReplyImageStrip> {
                           MaterialPageRoute(
                             builder: (context) => PhotoGalleryPage(
                               imageUrls: widget.reply.imagesList
-                                  .map((e) => e.Url.toString())
+                                  .map((e) => e.url.toString())
                                   .toList(),
                               initialIndex: index,
                             ),

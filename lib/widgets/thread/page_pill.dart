@@ -24,7 +24,9 @@ class PagePill extends StatelessWidget {
     return Material(
       color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.96),
       shape: StadiumBorder(
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.65)),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.65),
+        ),
       ),
       elevation: 2,
       shadowColor: Colors.black26,
@@ -329,35 +331,38 @@ class _PageSheetState extends State<_PageSheet> {
                             final page = index + 1;
                             final isCurrent = page == _sliderValue.toInt();
 
-                            return Material(
-                              color: isCurrent
-                                  ? colorScheme.primary
-                                  : colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: () async {
-                                  setState(() {
-                                    _sliderValue = page.toDouble();
-                                  });
-                                  await Future.delayed(
-                                    const Duration(milliseconds: 150),
-                                  );
-                                  _jumpTo(page);
-                                },
+                            return Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Material(
+                                color: isCurrent
+                                    ? colorScheme.primary
+                                    : colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    "$page",
-                                    style: TextStyle(
-                                      color: isCurrent
-                                          ? colorScheme.onPrimary
-                                          : colorScheme.onSurface,
-                                      fontWeight: isCurrent
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      fontSize: 14,
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: () async {
+                                    setState(() {
+                                      _sliderValue = page.toDouble();
+                                    });
+                                    await Future.delayed(
+                                      const Duration(milliseconds: 150),
+                                    );
+                                    _jumpTo(page);
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      "$page",
+                                      style: TextStyle(
+                                        color: isCurrent
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurface,
+                                        fontWeight: isCurrent
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
                                 ),

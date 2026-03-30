@@ -6,7 +6,7 @@ part 'mention_reply.g.dart';
 class ReplyPic {
   @JsonKey(name: 'url')
   final String urlStr;
-  Uri get Url => Uri.parse(urlStr);
+  Uri get url => Uri.parse(urlStr);
 
   @JsonKey(name: 'is_gif')
   final int isGifInt;

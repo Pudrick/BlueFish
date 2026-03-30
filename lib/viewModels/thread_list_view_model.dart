@@ -62,6 +62,8 @@ class ThreadListViewModel extends ChangeNotifier {
 
   int page;
 
+  bool hasNextPage = false;
+
   bool isRefreshing = false;
 
   double boardScrollOffset(ThreadListBoard board) {
@@ -204,7 +206,8 @@ class ThreadListViewModel extends ChangeNotifier {
 
   Uri generateURL() {
     final int tabType = currentSortType.index;
-    final int? zoneID = (_currentBoard == ThreadListBoard.essence ||
+    final int? zoneID =
+        (_currentBoard == ThreadListBoard.essence ||
             currentZoneID == mainZoneID)
         ? null
         : currentZoneID;
@@ -236,10 +239,16 @@ class ThreadListViewModel extends ChangeNotifier {
   }
 
   Future<void> toPrevPage() async {
+    if (boardPaginationCurrentPage(_currentBoard) <= 1) {
+      return;
+    }
     await toPage(boardPaginationCurrentPage(_currentBoard) - 1);
   }
 
   Future<void> toNextPage() async {
+    if (!hasNextPage) {
+      return;
+    }
     await toPage(boardPaginationCurrentPage(_currentBoard) + 1);
   }
 
@@ -248,10 +257,13 @@ class ThreadListViewModel extends ChangeNotifier {
   }
 
   Future<List<SingleThreadTitle>> getNormalThreads() async {
-    final threadList = await _service.getNormalThreads(url: generateURL());
+    final (:threads, :hasNextPage) = await _service.getNormalThreads(
+      url: generateURL(),
+    );
+    this.hasNextPage = hasNextPage;
     final normalThreads = <SingleThreadTitle>[];
 
-    for (final newThread in threadList) {
+    for (final newThread in threads) {
       if (_currentBoard == ThreadListBoard.essence) {
         normalThreads.add(newThread);
       } else if (currentZoneID != theaterZoneID &&

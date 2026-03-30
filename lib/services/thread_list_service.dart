@@ -29,7 +29,6 @@ class ThreadListService {
     int page = 1,
   }) {
     final int normalizedPage = page < 1 ? 1 : page;
-    // TODO: Confirm API page range and clamp upper/lower bounds once contract is clear.
 
     final query = <String, String>{
       'topic_id': topicID.toString(),
@@ -47,14 +46,17 @@ class ThreadListService {
     ).replace(queryParameters: query);
   }
 
-  Future<List<SingleThreadTitle>> getPinnedThreads({required int topicID}) async {
+  Future<List<SingleThreadTitle>> getPinnedThreads({
+    required int topicID,
+  }) async {
     final response = await _client.get(pinnedThreadsUrl(topicID: topicID));
     if (response.statusCode != 200) {
       throw const HttpException('failed to load pinned threads.');
     }
 
     final mappedThreads = jsonDecode(response.body) as Map<String, dynamic>;
-    final pinnedList = mappedThreads['data']?['topicTopList'] as List? ?? const [];
+    final pinnedList =
+        mappedThreads['data']?['topicTopList'] as List? ?? const [];
 
     return [
       for (final thread in pinnedList)
@@ -65,20 +67,24 @@ class ThreadListService {
     ];
   }
 
-  Future<List<SingleThreadTitle>> getNormalThreads({required Uri url}) async {
+  Future<({List<SingleThreadTitle> threads, bool hasNextPage})>
+  getNormalThreads({required Uri url}) async {
     final response = await _client.get(url);
     if (response.statusCode != 200) {
       throw const HttpException('failed to load thread list.');
     }
 
     final mappedThreads = jsonDecode(response.body) as Map<String, dynamic>;
-    final threadList = mappedThreads['data']?['list'] as List? ?? const [];
+    final data = mappedThreads['data'] as Map?;
+    final threadList = data?['list'] as List? ?? const [];
+    final hasNextPage = data?['next_page'] as bool? ?? false;
 
-    return [
-      for (final thread in threadList)
-        SingleThreadTitle.fromJson(
-          Map<String, dynamic>.from(thread as Map),
-        ),
-    ];
+    return (
+      threads: [
+        for (final thread in threadList)
+          SingleThreadTitle.fromJson(Map<String, dynamic>.from(thread as Map)),
+      ],
+      hasNextPage: hasNextPage,
+    );
   }
 }

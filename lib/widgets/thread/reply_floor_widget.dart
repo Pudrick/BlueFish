@@ -119,7 +119,7 @@ class ReplyFloor extends StatelessWidget {
                   ),
                   _ActionPill(
                     icon: Icons.thumb_down_alt_outlined,
-                    label: '点踩',
+                    label: '',
                     onTap: () {},
                   ),
                 ],
@@ -401,14 +401,16 @@ class _ActionPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
