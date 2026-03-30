@@ -6,6 +6,7 @@ import 'package:bluefish/widgets/thread/page_pill.dart';
 import 'package:bluefish/widgets/thread/thread_reply_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ThreadPage extends StatefulWidget {
   final String tid;
@@ -33,6 +34,15 @@ class _ThreadPageState extends State<ThreadPage> {
   late ThreadDetail threadDetail;
   final ScrollController _scrollController = ScrollController();
   bool isLoading = true;
+
+  void _handleBack() {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    router.go('/');
+  }
 
   Future<void> _loadData() async {
     await threadDetail.refresh();
@@ -136,6 +146,7 @@ class _ThreadPageState extends State<ThreadPage> {
                                 title: threadDetail.mainFloor.title,
                                 currentPage: threadDetail.currentPage,
                                 totalPages: threadDetail.totalPagesNum,
+                                onBack: _handleBack,
                               ),
                             ),
                             pinned: true,

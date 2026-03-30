@@ -17,6 +17,7 @@ class SingleThreadTitleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final leadingBadges = _buildLeadingTitleBadges(colorScheme);
     final badges = _buildStatusBadges(colorScheme);
 
     return Card(
@@ -47,15 +48,30 @@ class SingleThreadTitleCard extends StatelessWidget {
                     ),
                   ],
                   Expanded(
-                    child: Text(
-                      threadTitle.title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (leadingBadges.isNotEmpty) ...[
+                          for (var i = 0; i < leadingBadges.length; i++) ...[
+                            leadingBadges[i],
+                            if (i != leadingBadges.length - 1)
+                              const SizedBox(width: 6),
+                          ],
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            threadTitle.title,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w700,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -118,7 +134,7 @@ class SingleThreadTitleCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildStatusBadges(ColorScheme colorScheme) {
+  List<Widget> _buildLeadingTitleBadges(ColorScheme colorScheme) {
     final badges = <Widget>[];
 
     if (showEssenceBadge) {
@@ -151,6 +167,12 @@ class SingleThreadTitleCard extends StatelessWidget {
         ),
       );
     }
+
+    return badges;
+  }
+
+  List<Widget> _buildStatusBadges(ColorScheme colorScheme) {
+    final badges = <Widget>[];
 
     if (threadTitle.isGif) {
       badges.add(

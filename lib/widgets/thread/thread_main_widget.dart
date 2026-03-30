@@ -10,12 +10,14 @@ class ThreadTitleWidget extends StatelessWidget {
   final String title;
   final int currentPage;
   final int totalPages;
+  final VoidCallback onBack;
 
   const ThreadTitleWidget({
     super.key,
     required this.title,
     required this.currentPage,
     required this.totalPages,
+    required this.onBack,
   });
 
   @override
@@ -27,7 +29,7 @@ class ThreadTitleWidget extends StatelessWidget {
       color: colorScheme.surface,
       child: Container(
         constraints: BoxConstraints(minHeight: totalPages > 1 ? 72 : 64),
-        padding: EdgeInsets.fromLTRB(16, totalPages > 1 ? 8 : 10, 16, 8),
+        padding: EdgeInsets.fromLTRB(8, totalPages > 1 ? 8 : 10, 16, 8),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -35,30 +37,44 @@ class ThreadTitleWidget extends StatelessWidget {
             ),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w700,
+            IconButton(
+              onPressed: onBack,
+              tooltip: '返回',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (totalPages > 1) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '第$currentPage页 / 共$totalPages页',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (totalPages > 1) ...[
-              const SizedBox(height: 2),
-              Text(
-                '第$currentPage页 / 共$totalPages页',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
           ],
         ),
       ),
