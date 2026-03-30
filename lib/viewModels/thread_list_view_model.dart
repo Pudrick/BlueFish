@@ -23,6 +23,18 @@ class ThreadListViewModel extends ChangeNotifier {
     ThreadListBoard.essence: 0,
   };
 
+  final Map<ThreadListBoard, int> _boardPaginationCurrentPages = {
+    ThreadListBoard.main: 1,
+    ThreadListBoard.theater: 1,
+    ThreadListBoard.essence: 1,
+  };
+
+  final Map<ThreadListBoard, int> _boardPaginationTotalPages = {
+    ThreadListBoard.main: 1,
+    ThreadListBoard.theater: 1,
+    ThreadListBoard.essence: 1,
+  };
+
   ThreadListBoard _currentBoard = ThreadListBoard.main;
   ThreadListBoard get currentBoard => _currentBoard;
 
@@ -60,6 +72,53 @@ class ThreadListViewModel extends ChangeNotifier {
     _boardScrollOffsets[board] = offset < 0 ? 0 : offset;
   }
 
+  int boardPaginationCurrentPage(ThreadListBoard board) {
+    return _boardPaginationCurrentPages[board] ?? 1;
+  }
+
+  int boardPaginationTotalPages(ThreadListBoard board) {
+    return _boardPaginationTotalPages[board] ?? 1;
+  }
+
+  int get currentBoardPaginationCurrentPage {
+    return boardPaginationCurrentPage(_currentBoard);
+  }
+
+  int get currentBoardPaginationTotalPages {
+    final int currentPage = boardPaginationCurrentPage(_currentBoard);
+    final int totalPages = boardPaginationTotalPages(_currentBoard);
+    return totalPages < currentPage ? currentPage : totalPages;
+  }
+
+  void setBoardPaginationPlaceholder(
+    ThreadListBoard board, {
+    int? currentPage,
+    int? totalPages,
+  }) {
+    // TODO: Replace this placeholder updater after real pagination API is wired.
+    bool hasChanged = false;
+
+    if (currentPage != null) {
+      final int normalizedPage = currentPage < 1 ? 1 : currentPage;
+      if (_boardPaginationCurrentPages[board] != normalizedPage) {
+        _boardPaginationCurrentPages[board] = normalizedPage;
+        hasChanged = true;
+      }
+    }
+
+    if (totalPages != null) {
+      final int normalizedTotalPages = totalPages < 1 ? 1 : totalPages;
+      if (_boardPaginationTotalPages[board] != normalizedTotalPages) {
+        _boardPaginationTotalPages[board] = normalizedTotalPages;
+        hasChanged = true;
+      }
+    }
+
+    if (hasChanged) {
+      notifyListeners();
+    }
+  }
+
   ThreadListViewModel.defaultList({ThreadListService? service})
     : _service = service ?? ThreadListService(),
       topicID = mainTopicID,
@@ -84,6 +143,9 @@ class ThreadListViewModel extends ChangeNotifier {
         initialSortType == SortType.newestReply) {
       _zoneSortMemory[currentZoneID] = initialSortType;
     }
+    final int normalizedInitialPage = page < 1 ? 1 : page;
+    page = normalizedInitialPage;
+    _boardPaginationCurrentPages[_currentBoard] = normalizedInitialPage;
     refresh();
   }
 
@@ -102,7 +164,7 @@ class ThreadListViewModel extends ChangeNotifier {
       return;
     }
     _currentBoard = newBoard;
-    page = 1;
+    page = boardPaginationCurrentPage(newBoard);
     refresh();
   }
 
@@ -126,6 +188,8 @@ class ThreadListViewModel extends ChangeNotifier {
       return;
     }
     _zoneSortMemory[currentZoneID] = newType;
+    _boardPaginationCurrentPages[_currentBoard] = 1;
+    _boardPaginationTotalPages[_currentBoard] = 1;
     page = 1;
     refresh();
   }
@@ -144,17 +208,39 @@ class ThreadListViewModel extends ChangeNotifier {
             currentZoneID == mainZoneID)
         ? null
         : currentZoneID;
+    final int requestedPage = boardPaginationCurrentPage(_currentBoard);
 
     return _service.threadListUrl(
       topicID: topicID,
       tabType: tabType,
       zoneID: zoneID,
+      page: requestedPage,
     );
   }
 
-  void toNextPage() {
-    page++;
-    notifyListeners();
+  Future<void> toPage(int targetPage) async {
+    if (isRefreshing) {
+      return;
+    }
+
+    // TODO: Confirm API-allowed page lower/upper bounds and update this clamp.
+    final int normalizedPage = targetPage < 1 ? 1 : targetPage;
+    final int currentPage = boardPaginationCurrentPage(_currentBoard);
+    if (normalizedPage == currentPage) {
+      return;
+    }
+
+    _boardPaginationCurrentPages[_currentBoard] = normalizedPage;
+    page = normalizedPage;
+    await refresh();
+  }
+
+  Future<void> toPrevPage() async {
+    await toPage(boardPaginationCurrentPage(_currentBoard) - 1);
+  }
+
+  Future<void> toNextPage() async {
+    await toPage(boardPaginationCurrentPage(_currentBoard) + 1);
   }
 
   Future<List<SingleThreadTitle>> getPinnedThreads() async {

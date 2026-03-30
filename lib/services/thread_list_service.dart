@@ -26,13 +26,20 @@ class ThreadListService {
     required int topicID,
     required int tabType,
     int? zoneID,
+    int page = 1,
   }) {
+    final int normalizedPage = page < 1 ? 1 : page;
+    // TODO: Confirm API page range and clamp upper/lower bounds once contract is clear.
+
     final query = <String, String>{
       'topic_id': topicID.toString(),
       'tab_type': tabType.toString(),
     };
     if (zoneID != null) {
       query['zoneId'] = zoneID.toString();
+    }
+    if (normalizedPage > 1) {
+      query['page'] = normalizedPage.toString();
     }
 
     return Uri.parse(

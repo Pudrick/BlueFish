@@ -1,6 +1,7 @@
 import 'package:bluefish/models/thread_list.dart';
 import 'package:bluefish/router/app_router.dart';
 import 'package:bluefish/viewModels/thread_list_view_model.dart';
+import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:bluefish/widgets/thread/single_thread_title_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -109,6 +110,7 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                 titleList.isRefreshing && titleList.threadTitleList.isEmpty;
             final isEmpty =
                 !titleList.isRefreshing && titleList.threadTitleList.isEmpty;
+            final bool canTriggerPageChange = !titleList.isRefreshing;
             final bool isEssenceBoard =
                 titleList.currentBoard == ThreadListBoard.essence;
             final String boardLabel = titleList.currentBoardLabel;
@@ -170,6 +172,23 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                           showEssenceBadge: isEssenceBoard,
                           onTap: () => _openThreadDetail(context, title.tid),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ThreadPaginationBar(
+                          currentPage: titleList.currentBoardPaginationCurrentPage,
+                          totalPages: titleList.currentBoardPaginationTotalPages,
+                          onPrev: canTriggerPageChange
+                              ? () {
+                                  titleList.toPrevPage();
+                                }
+                              : null,
+                          onNext: canTriggerPageChange
+                              ? () {
+                                  titleList.toNextPage();
+                                }
+                              : null,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                     ],
                   ],
