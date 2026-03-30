@@ -1,4 +1,5 @@
 import 'package:bluefish/models/thread_list.dart';
+import 'package:bluefish/viewModels/thread_list_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,7 +16,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(126),
-        child: Consumer<ThreadTitleList>(
+        child: Consumer<ThreadListViewModel>(
           builder: (context, titleList, child) {
             final currentBoardIndex = ThreadListBoard.values.indexOf(
               titleList.currentBoard,

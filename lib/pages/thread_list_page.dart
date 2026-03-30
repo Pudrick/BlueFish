@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:bluefish/models/thread_list.dart';
+import 'package:bluefish/viewModels/thread_list_view_model.dart';
 
 import 'package:bluefish/widgets/thread/thread_list_body.dart';
 import 'package:bluefish/widgets/thread/top_bar.dart';
@@ -11,9 +11,8 @@ class ThreadListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ThreadTitleList titleList = ThreadTitleList.defaultList();
-    return ChangeNotifierProvider(
-      create: (context) => ThreadTitleList.defaultList(),
+    return ChangeNotifierProvider<ThreadListViewModel>(
+      create: (context) => ThreadListViewModel.defaultList(),
       child: const Scaffold(
         body: SafeArea(child: TitleListPageBody()),
         appBar: TopBar(),

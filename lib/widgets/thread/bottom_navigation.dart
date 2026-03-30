@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bluefish/models/thread_list.dart';
+import 'package:bluefish/viewModels/thread_list_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:bluefish/models/internal_settings.dart';
 
@@ -16,7 +16,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Consumer<ThreadTitleList>(
+    return Consumer<ThreadListViewModel>(
       builder: (context, titleList, child) => NavigationBar(
         onDestinationSelected: (int index) {
           currentIndex = index;

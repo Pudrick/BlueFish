@@ -1,12 +1,37 @@
 import 'package:bluefish/models/thread_list.dart';
 import 'package:bluefish/router/app_router.dart';
+import 'package:bluefish/viewModels/thread_list_view_model.dart';
 import 'package:bluefish/widgets/thread/single_thread_title_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class TitleListPageBody extends StatelessWidget {
+class TitleListPageBody extends StatefulWidget {
   const TitleListPageBody({super.key});
+
+  @override
+  State<TitleListPageBody> createState() => _TitleListPageBodyState();
+}
+
+class _TitleListPageBodyState extends State<TitleListPageBody> {
+  final ScrollController _scrollController = ScrollController();
+
+  ThreadListBoard? _activeBoard;
+  bool _pendingRestore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_saveCurrentBoardOffset);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_saveCurrentBoardOffset)
+      ..dispose();
+    super.dispose();
+  }
 
   void _openThreadDetail(BuildContext context, int tid) {
     context.pushNamed(
@@ -15,14 +40,71 @@ class TitleListPageBody extends StatelessWidget {
     );
   }
 
+  void _saveCurrentBoardOffset() {
+    if (_pendingRestore ||
+        !mounted ||
+        _activeBoard == null ||
+        !_scrollController.hasClients) {
+      return;
+    }
+
+    context.read<ThreadListViewModel>().saveBoardScrollOffset(
+      _activeBoard!,
+      _scrollController.offset,
+    );
+  }
+
+  void _onBoardChanged(ThreadListViewModel viewModel) {
+    final nextBoard = viewModel.currentBoard;
+    if (_activeBoard == nextBoard) {
+      return;
+    }
+
+    if (_activeBoard != null && _scrollController.hasClients) {
+      viewModel.saveBoardScrollOffset(_activeBoard!, _scrollController.offset);
+    }
+
+    _activeBoard = nextBoard;
+    _pendingRestore = true;
+  }
+
+  void _restoreOffsetIfNeeded(
+    ThreadListViewModel viewModel, {
+    required bool canRestore,
+  }) {
+    if (!_pendingRestore) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients || !canRestore) {
+        return;
+      }
+
+      final targetOffset = viewModel.boardScrollOffset(viewModel.currentBoard);
+      final position = _scrollController.position;
+      final clampedOffset = targetOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+
+      if ((_scrollController.offset - clampedOffset).abs() > 0.5) {
+        _scrollController.jumpTo(clampedOffset);
+      }
+
+      _pendingRestore = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Consumer<ThreadTitleList>(
+        return Consumer<ThreadListViewModel>(
           builder: (context, titleList, child) {
+            _onBoardChanged(titleList);
+
             final isInitialLoading =
                 titleList.isRefreshing && titleList.threadTitleList.isEmpty;
             final isEmpty =
@@ -31,11 +113,17 @@ class TitleListPageBody extends StatelessWidget {
                 titleList.currentBoard == ThreadListBoard.essence;
             final String boardLabel = titleList.currentBoardLabel;
 
+            _restoreOffsetIfNeeded(
+              titleList,
+              canRestore: !isInitialLoading,
+            );
+
             return ColoredBox(
               color: theme.colorScheme.surface,
               child: RefreshIndicator(
                 onRefresh: titleList.refresh,
                 child: ListView(
+                  controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
