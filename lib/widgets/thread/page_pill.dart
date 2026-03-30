@@ -1,4 +1,4 @@
-import "package:flutter/material.dart";
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 
@@ -17,51 +17,47 @@ class PagePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double height = 40;
+    const double height = 42;
     final colorScheme = Theme.of(context).colorScheme;
-
-    final backgroundColor = colorScheme.inverseSurface;
-    final defaultContentColor = colorScheme.onInverseSurface;
+    final textTheme = Theme.of(context).textTheme;
 
     return Material(
-      color: backgroundColor,
-      shape: const StadiumBorder(),
-      elevation: 6,
-      shadowColor: Colors.black45,
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.96),
+      shape: StadiumBorder(
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.65)),
+      ),
+      elevation: 2,
+      shadowColor: Colors.black26,
       clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: height,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              indent: 12,
-              endIndent: 12,
-              color: defaultContentColor.withValues(alpha: 0.3),
-            ),
-            InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                onPageTap();
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(
-                  child: Text(
-                    "$currentPage / $totalPages",
-                    style: TextStyle(
-                      color: defaultContentColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onPageTap();
+        },
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.grid_view_rounded,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$currentPage / $totalPages',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -114,6 +110,7 @@ class _PageSheetState extends State<_PageSheet> {
 
   ScrollController? _scrollController;
   double? _gridWidth;
+  int _crossAxisCount = 5;
 
   @override
   void initState() {
@@ -127,11 +124,14 @@ class _PageSheetState extends State<_PageSheet> {
     widget.onPageSelected(page);
   }
 
-  double _calculateScrollOffset(int page, double gridWidth) {
-    const int crossAxisCount = 5;
+  double _calculateScrollOffset(
+    int page,
+    double gridWidth,
+    int crossAxisCount,
+  ) {
     const double crossAxisSpacing = 10.0;
     const double mainAxisSpacing = 10.0;
-    const double childAspectRatio = 1.1;
+    const double childAspectRatio = 1.0;
     const double containerHeight = 180.0;
 
     final double itemWidth =
@@ -158,7 +158,11 @@ class _PageSheetState extends State<_PageSheet> {
     if (_gridWidth != null &&
         _scrollController != null &&
         _scrollController!.hasClients) {
-      final offset = _calculateScrollOffset(value.toInt(), _gridWidth!);
+      final offset = _calculateScrollOffset(
+        value.toInt(),
+        _gridWidth!,
+        _crossAxisCount,
+      );
       _scrollController!.animateTo(
         offset,
         duration: const Duration(milliseconds: 350),
@@ -176,11 +180,14 @@ class _PageSheetState extends State<_PageSheet> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: const BoxConstraints(maxWidth: 520),
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(28),
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.15),
@@ -195,13 +202,36 @@ class _PageSheetState extends State<_PageSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  "共${widget.totalpages}页",
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.outline,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      '跳转到页码',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${_sliderValue.toInt()} / ${widget.totalpages}',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 // Slider bar
                 if (widget.totalpages > 1) ...[
@@ -211,7 +241,7 @@ class _PageSheetState extends State<_PageSheet> {
                         "1",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                       Expanded(
@@ -231,7 +261,7 @@ class _PageSheetState extends State<_PageSheet> {
                         "${widget.totalpages}",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -244,13 +274,19 @@ class _PageSheetState extends State<_PageSheet> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.onSecondaryContainer,
-                        borderRadius: BorderRadius.circular(12),
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text("woo"),
+                      child: Text(
+                        '当前第 ${_sliderValue.toInt()} 页',
+                        style: textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 10),
                 ],
@@ -260,11 +296,17 @@ class _PageSheetState extends State<_PageSheet> {
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         _gridWidth = constraints.maxWidth;
+                        _crossAxisCount = constraints.maxWidth < 360
+                            ? 4
+                            : constraints.maxWidth >= 480
+                            ? 6
+                            : 5;
 
                         if (_scrollController == null) {
                           final initialOffset = _calculateScrollOffset(
                             widget.currentPage,
                             constraints.maxWidth,
+                            _crossAxisCount,
                           );
                           _scrollController = ScrollController(
                             initialScrollOffset: initialOffset,
@@ -276,11 +318,11 @@ class _PageSheetState extends State<_PageSheet> {
                           padding: EdgeInsets.zero,
                           physics: const BouncingScrollPhysics(),
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 5,
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: _crossAxisCount,
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 10,
-                                childAspectRatio: 1.1,
+                                childAspectRatio: 1.0,
                               ),
                           itemCount: widget.totalpages,
                           itemBuilder: (ctx, index) {

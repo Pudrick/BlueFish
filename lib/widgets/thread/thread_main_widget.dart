@@ -8,35 +8,58 @@ import 'package:flutter/material.dart';
 
 class ThreadTitleWidget extends StatelessWidget {
   final String title;
+  final int currentPage;
+  final int totalPages;
 
-  const ThreadTitleWidget({super.key, required this.title});
+  const ThreadTitleWidget({
+    super.key,
+    required this.title,
+    required this.currentPage,
+    required this.totalPages,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 40),
-      child: Card(
-        // color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        // maybe enablet this will have some performance cost
-        // according to the document
-        clipBehavior: Clip.hardEdge,
-        child: InkWell(
-          onTap: () {},
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-            alignment: Alignment.centerLeft,
-            child: Text.rich(
-              TextSpan(
-                text: title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: colorScheme.surface,
+      child: Container(
+        constraints: BoxConstraints(minHeight: totalPages > 1 ? 72 : 64),
+        padding: EdgeInsets.fromLTRB(16, totalPages > 1 ? 8 : 10, 16, 8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
             ),
           ),
-          // maybe default color is enlugh.
-          // splashColor: theme.colorScheme.secondary,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (totalPages > 1) ...[
+              const SizedBox(height: 2),
+              Text(
+                '第$currentPage页 / 共$totalPages页',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -54,38 +77,106 @@ class ThreadMainFloorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Card(
-          // maybe enablet this will have some performance cost
-          // according to the document
-          clipBehavior: Clip.hardEdge,
-          child: Material(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            child: InkWell(
-              onTap: () {},
-              splashFactory: InkRipple.splashFactory,
-              child: Container(
-                margin: const EdgeInsets.all(5),
-                child: Column(
-                  children: [
-                    AuthorInfoWidget(content: mainFloor),
-                    const Divider(),
-                    BluefishHtmlWidget(
-                      // TODO: add html parser and connect it with video parser.
-                      mainFloor.contentHTML,
-                      textStyle: const TextStyle(fontWeight: FontWeight.w500),
-                      // TODO: add recommend and its number
-                    ),
-                  ],
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AuthorInfoWidget(content: mainFloor),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MainMetaPill(
+                  icon: Icons.thumb_up_outlined,
+                  label: '${mainFloor.recommendNum}推荐',
                 ),
+                _MainMetaPill(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: '${mainFloor.repliesNum}回复',
+                ),
+                _MainMetaPill(
+                  icon: Icons.visibility_outlined,
+                  label: '${mainFloor.readNum}浏览',
+                ),
+                if (mainFloor.hasVote)
+                  const _MainMetaPill(
+                    icon: Icons.bar_chart_rounded,
+                    label: '投票贴',
+                  ),
+                if (mainFloor.hasVideo)
+                  const _MainMetaPill(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: '视频贴',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 14),
+            BluefishHtmlWidget(
+              mainFloor.contentHTML,
+              textStyle: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurface,
+                height: 1.55,
               ),
-              // maybe default color is enlugh.
-              // splashColor: theme.colorScheme.secondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MainMetaPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MainMetaPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: textTheme.labelMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -94,7 +185,7 @@ class StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double height;
 
-  StickyHeaderDelegate({required this.child, this.height = 60.0});
+  StickyHeaderDelegate({required this.child, this.height = 64.0});
 
   @override
   Widget build(

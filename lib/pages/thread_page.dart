@@ -3,6 +3,7 @@ import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:bluefish/widgets/thread/page_pill.dart';
+import 'package:bluefish/widgets/thread/thread_reply_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -30,6 +31,7 @@ class ThreadPage extends StatefulWidget {
 
 class _ThreadPageState extends State<ThreadPage> {
   late ThreadDetail threadDetail;
+  final ScrollController _scrollController = ScrollController();
   bool isLoading = true;
 
   Future<void> _loadData() async {
@@ -42,21 +44,24 @@ class _ThreadPageState extends State<ThreadPage> {
   }
 
   void _jumpToPage(int page) {
+    if (page == threadDetail.currentPage) {
+      return;
+    }
+
     setState(() {
       threadDetail.currentPage = page;
       isLoading = true;
     });
-    _loadData();
-  }
 
-  int _repliesInPage(int page) {
-    if (threadDetail.totalRepliesNum <= 20) {
-      return threadDetail.totalPagesNum;
-    } else if (threadDetail.currentPage != threadDetail.totalPagesNum) {
-      return 20;
-    } else {
-      return threadDetail.totalRepliesNum % 20;
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
     }
+
+    _loadData();
   }
 
   @override
@@ -67,111 +72,202 @@ class _ThreadPageState extends State<ThreadPage> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  double _contentMaxWidth(double viewportWidth) {
+    if (viewportWidth >= 1200) {
+      return 960;
+    }
+    if (viewportWidth >= 920) {
+      return 860;
+    }
+    return viewportWidth;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // TODO: add reply FAB and OP only switch.
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: CircularProgressIndicator(color: colorScheme.primary),
+          ),
+        ),
+      );
     }
 
     final bool canPrev = threadDetail.currentPage > 1;
     final bool canNext = threadDetail.currentPage < threadDetail.totalPagesNum;
+
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                // TODO: make title widget independent so that can be sticked on the top.
-                SliverPersistentHeader(
-                  delegate: StickyHeaderDelegate(
-                    child: ThreadTitleWidget(
-                      title: threadDetail.mainFloor.title,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double horizontalPadding = constraints.maxWidth >= 720
+              ? 16
+              : 12;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: _contentMaxWidth(constraints.maxWidth),
+                    ),
+                    child: RefreshIndicator(
+                      onRefresh: _loadData,
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        slivers: [
+                          SliverPersistentHeader(
+                            delegate: StickyHeaderDelegate(
+                              height: threadDetail.totalPagesNum > 1 ? 76 : 64,
+                              child: ThreadTitleWidget(
+                                title: threadDetail.mainFloor.title,
+                                currentPage: threadDetail.currentPage,
+                                totalPages: threadDetail.totalPagesNum,
+                              ),
+                            ),
+                            pinned: true,
+                          ),
+
+                          if (threadDetail.totalPagesNum >= 1)
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                8,
+                                horizontalPadding,
+                                0,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: ThreadPaginationBar(
+                                  currentPage: threadDetail.currentPage,
+                                  totalPages: threadDetail.totalPagesNum,
+                                  onPrev: canPrev
+                                      ? () => _jumpToPage(
+                                          threadDetail.currentPage - 1,
+                                        )
+                                      : null,
+                                  onNext: canNext
+                                      ? () => _jumpToPage(
+                                          threadDetail.currentPage + 1,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
+
+                          if (threadDetail.currentPage == 1)
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                4,
+                                horizontalPadding,
+                                0,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: ThreadMainFloorWidget(
+                                  mainFloor: threadDetail.mainFloor,
+                                ),
+                              ),
+                            ),
+
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              8,
+                              horizontalPadding,
+                              0,
+                            ),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final int fallbackFloorNumber =
+                                    ((threadDetail.currentPage - 1) *
+                                        threadDetail.repliesPerPage) +
+                                    index +
+                                    1;
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: ReplyFloor(
+                                    replyFloor: threadDetail.replies[index],
+                                    isQuote: false,
+                                    floorNumber: fallbackFloorNumber,
+                                  ),
+                                );
+                              }, childCount: threadDetail.replies.length),
+                            ),
+                          ),
+
+                          if (threadDetail.totalPagesNum >= 1)
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                4,
+                                horizontalPadding,
+                                0,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: ThreadPaginationBar(
+                                  currentPage: threadDetail.currentPage,
+                                  totalPages: threadDetail.totalPagesNum,
+                                  onPrev: canPrev
+                                      ? () => _jumpToPage(
+                                          threadDetail.currentPage - 1,
+                                        )
+                                      : null,
+                                  onNext: canNext
+                                      ? () => _jumpToPage(
+                                          threadDetail.currentPage + 1,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
+
+                          const SliverToBoxAdapter(child: SizedBox(height: 68)),
+                        ],
+                      ),
                     ),
                   ),
-                  pinned: true,
                 ),
-
-                if (threadDetail.totalPagesNum >= 1)
-                  SliverToBoxAdapter(
-                    child: ThreadPaginationBar(
-                      currentPage: threadDetail.currentPage,
-                      totalPages: threadDetail.totalPagesNum,
-                      onPrev: canPrev
-                          ? () => _jumpToPage(threadDetail.currentPage - 1)
-                          : null,
-                      onNext: canNext
-                          ? () => _jumpToPage(threadDetail.currentPage + 1)
-                          : null,
-                    ),
-                  ),
-
-                if (threadDetail.currentPage == 1)
-                  SliverToBoxAdapter(
-                    child: ThreadMainFloorWidget(
-                      mainFloor: threadDetail.mainFloor,
-                    ),
-                  ),
-
-                SliverList(
-                  delegate: SliverChildBuilderDelegate((
-                    BuildContext context,
-                    int index,
-                  ) {
-                    return ReplyFloor(
-                      replyFloor: threadDetail.replies[index],
-                      isQuote: false,
-                    );
-                  }, childCount: _repliesInPage(threadDetail.currentPage)),
-                ),
-
-                // next page buttons.
-                if (threadDetail.totalPagesNum >= 1)
-                  SliverToBoxAdapter(
-                    child: ThreadPaginationBar(
-                      currentPage: threadDetail.currentPage,
-                      totalPages: threadDetail.totalPagesNum,
-                      onPrev: canPrev
-                          ? () => _jumpToPage(threadDetail.currentPage - 1)
-                          : null,
-                      onNext: canNext
-                          ? () => _jumpToPage(threadDetail.currentPage + 1)
-                          : null,
-                    ),
-                  ),
-
-                // preserve space for page select pill button, avoid the pill lap over the next/prev page button.
-                const SliverToBoxAdapter(child: SizedBox(height: 55)),
-              ],
-            ),
-          ),
-
-          // page select
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                bottom: 10.0,
-                left: 10.0,
-                right: 10.0,
               ),
-              child: PagePill(
-                currentPage: threadDetail.currentPage,
-                totalPages: threadDetail.totalPagesNum,
-                onPageTap: () {
-                  showPageMenu(
-                    context: context,
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: PagePill(
                     currentPage: threadDetail.currentPage,
                     totalPages: threadDetail.totalPagesNum,
-                    onPageSelected: (int selectedPage) {
-                      _jumpToPage(selectedPage);
+                    onPageTap: () {
+                      showPageMenu(
+                        context: context,
+                        currentPage: threadDetail.currentPage,
+                        totalPages: threadDetail.totalPagesNum,
+                        onPageSelected: (int selectedPage) {
+                          _jumpToPage(selectedPage);
+                        },
+                      );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
 
       bottomNavigationBar: const ThreadBottomBar(
@@ -179,9 +275,21 @@ class _ThreadPageState extends State<ThreadPage> {
         hasFavorated: false,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          showThreadReplySheet(
+            context: context,
+            title: '回复主题',
+            contextLabel: '当前帖子',
+            contextPreview: threadDetail.mainFloor.title,
+            onSubmit: (content) async {
+              if (content.trim().isEmpty) {
+                return;
+              }
+            },
+          );
+        },
         elevation: 0,
-        child: const Icon(Icons.edit_outlined),
+        child: const Icon(Icons.edit_outlined, size: 20),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
     );

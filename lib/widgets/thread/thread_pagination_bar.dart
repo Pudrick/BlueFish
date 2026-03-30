@@ -18,24 +18,44 @@ class ThreadPaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Padding(
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
+          FilledButton.tonalIcon(
+            onPressed: onPrev,
+            style: _commonButtonStyle(),
+            icon: const Icon(Icons.chevron_left_rounded),
+            label: const Text('上一页'),
+          ),
+          const SizedBox(width: 10),
           Expanded(
-            child: FilledButton.tonal(
-              onPressed: onPrev,
-              style: _commonButtonStyle(),
-              child: const Text("上一页"),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$currentPage / $totalPages',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: FilledButton.tonal(
-              onPressed: onNext,
-              style: _commonButtonStyle(),
-              child: const Text("下一页"),
-            ),
+          const SizedBox(width: 10),
+          FilledButton.tonalIcon(
+            onPressed: onNext,
+            style: _commonButtonStyle(),
+            icon: const Icon(Icons.chevron_right_rounded),
+            label: const Text('下一页'),
           ),
         ],
       ),
@@ -44,8 +64,10 @@ class ThreadPaginationBar extends StatelessWidget {
 
   ButtonStyle _commonButtonStyle() {
     return FilledButton.styleFrom(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      minimumSize: const Size(104, 42),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      visualDensity: VisualDensity.compact,
     );
   }
 }
