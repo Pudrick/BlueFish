@@ -70,3 +70,6 @@ lib/temp/*
 
 # executables
 *.exe
+
+# Copilot local instructions
+.github/copilot-instructions.md
