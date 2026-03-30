@@ -11,6 +11,8 @@ import 'package:bluefish/models/internal_settings.dart';
 /// as tab_type, 2 for newest reply, 1 for newest publish, 4 for 24h rank, 3 for essences
 enum SortType { sortType0Position, newestPublish, newestReply, essences, rank }
 
+enum ThreadListBoard { main, theater, essence }
+
 class ThreadTitleList extends ChangeNotifier {
   List<SingleThreadTitle> threadTitleList = List.empty(growable: true);
   final HttpwithUA _client = HttpwithUA();
@@ -18,21 +20,80 @@ class ThreadTitleList extends ChangeNotifier {
   int topicID = mainTopicID;
   int fid = 4875;
 
-  /// 0 => main topic
-  int zoneID = mainZoneID;
-  void setZoneID(int newZone) {
-    zoneID = newZone;
+  final Map<int, SortType> _zoneSortMemory = {
+    mainZoneID: SortType.newestReply,
+    theaterZoneID: SortType.newestReply,
+  };
+
+  ThreadListBoard _currentBoard = ThreadListBoard.main;
+  ThreadListBoard get currentBoard => _currentBoard;
+
+  bool get showSortSwitcher => _currentBoard != ThreadListBoard.essence;
+
+  int get currentZoneID => _zoneIdForBoard(_currentBoard);
+
+  String get currentBoardLabel {
+    switch (_currentBoard) {
+      case ThreadListBoard.main:
+        return '主版';
+      case ThreadListBoard.theater:
+        return '剧场';
+      case ThreadListBoard.essence:
+        return '精华';
+    }
+  }
+
+  SortType get currentSortType {
+    if (!showSortSwitcher) {
+      return SortType.essences;
+    }
+    return _zoneSortMemory[currentZoneID] ?? SortType.newestReply;
+  }
+
+  int _zoneIdForBoard(ThreadListBoard board) {
+    switch (board) {
+      case ThreadListBoard.main:
+      case ThreadListBoard.essence:
+        return mainZoneID;
+      case ThreadListBoard.theater:
+        return theaterZoneID;
+    }
+  }
+
+  void setBoard(ThreadListBoard newBoard) {
+    if (_currentBoard == newBoard) {
+      return;
+    }
+    _currentBoard = newBoard;
+    page = 1;
     refresh();
+  }
+
+  /// 0 => main topic
+  void setZoneID(int newZone) {
+    if (newZone == theaterZoneID) {
+      setBoard(ThreadListBoard.theater);
+      return;
+    }
+    setBoard(ThreadListBoard.main);
   }
 
   int page = 1;
 
   bool isRefreshing = false;
 
-  SortType sortType = SortType.newestReply;
-
   void setSortType(SortType newType) {
-    sortType = newType;
+    if (!showSortSwitcher) {
+      return;
+    }
+    if (newType != SortType.newestPublish && newType != SortType.newestReply) {
+      return;
+    }
+    if (_zoneSortMemory[currentZoneID] == newType) {
+      return;
+    }
+    _zoneSortMemory[currentZoneID] = newType;
+    page = 1;
     refresh();
   }
 
@@ -40,8 +101,20 @@ class ThreadTitleList extends ChangeNotifier {
   ThreadTitleList.defaultList() {
     refresh();
   }
-  ThreadTitleList(this.topicID, this.zoneID, this.page, this.sortType)
-    : assert(sortType.index != 0) {
+
+  ThreadTitleList(
+    this.topicID,
+    int initialZoneID,
+    this.page,
+    SortType initialSortType,
+  ) : assert(initialSortType.index != 0) {
+    _currentBoard = initialZoneID == theaterZoneID
+        ? ThreadListBoard.theater
+        : ThreadListBoard.main;
+    if (initialSortType == SortType.newestPublish ||
+        initialSortType == SortType.newestReply) {
+      _zoneSortMemory[currentZoneID] = initialSortType;
+    }
     refresh();
   }
 
@@ -60,14 +133,14 @@ class ThreadTitleList extends ChangeNotifier {
   }
 
   Uri generateURL() {
-    assert(sortType.index != 0);
     String baseurl = baseURL().toString();
-    int tabType = sortType.index;
+    int tabType = currentSortType.index;
     var res = "$baseurl&topic_id=$topicID&tab_type=$tabType";
-    if (zoneID == 0) {
+    if (_currentBoard == ThreadListBoard.essence ||
+        currentZoneID == mainZoneID) {
       return Uri.parse(res);
     }
-    return Uri.parse("$res&zoneId=$zoneID");
+    return Uri.parse("$res&zoneId=$currentZoneID");
   }
 
   void toNextPage() {
@@ -100,9 +173,13 @@ class ThreadTitleList extends ChangeNotifier {
       final newThread = SingleThreadTitle.fromJson(
         Map<String, dynamic>.from(thread as Map),
       );
-      if (zoneID != 253 && newThread.zoneId != 253) {
+      if (_currentBoard == ThreadListBoard.essence) {
         normalThreads.add(newThread);
-      } else if (zoneID == 253 && newThread.zoneId == 253) {
+      } else if (currentZoneID != theaterZoneID &&
+          newThread.zoneId != theaterZoneID) {
+        normalThreads.add(newThread);
+      } else if (currentZoneID == theaterZoneID &&
+          newThread.zoneId == theaterZoneID) {
         normalThreads.add(newThread);
       }
     }
@@ -115,7 +192,9 @@ class ThreadTitleList extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final pinnedThreads = await getPinnedThreads();
+      final pinnedThreads = _currentBoard == ThreadListBoard.essence
+          ? <SingleThreadTitle>[]
+          : await getPinnedThreads();
       final normalThreads = await getNormalThreads();
       threadTitleList
         ..clear()

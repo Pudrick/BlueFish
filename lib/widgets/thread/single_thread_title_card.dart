@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class SingleThreadTitleCard extends StatelessWidget {
   final SingleThreadTitle threadTitle;
   final VoidCallback? onTap;
+  final bool showEssenceBadge;
 
   const SingleThreadTitleCard({
     super.key,
     required this.threadTitle,
     this.onTap,
+    this.showEssenceBadge = false,
   });
 
   @override
@@ -103,12 +105,6 @@ class SingleThreadTitleCard extends StatelessWidget {
                             text: threadTitle.authorName,
                             maxWidth: 110,
                           ),
-                          _ThreadInfoItem(
-                            icon: Icons.grid_view_rounded,
-                            text:
-                                'ZoneID ${threadTitle.zoneId?.toString() ?? '--'}',
-                            maxWidth: 110,
-                          ),
                         ],
                       ),
                     ),
@@ -124,6 +120,17 @@ class SingleThreadTitleCard extends StatelessWidget {
 
   List<Widget> _buildStatusBadges(ColorScheme colorScheme) {
     final badges = <Widget>[];
+
+    if (showEssenceBadge) {
+      badges.add(
+        _ThreadStatusBadge(
+          icon: Icons.auto_awesome_rounded,
+          label: '精华',
+          backgroundColor: colorScheme.primaryContainer,
+          foregroundColor: colorScheme.onPrimaryContainer,
+        ),
+      );
+    }
 
     if (threadTitle.threadType == 'video') {
       badges.add(

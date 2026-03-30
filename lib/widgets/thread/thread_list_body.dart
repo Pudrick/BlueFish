@@ -27,6 +27,9 @@ class TitleListPageBody extends StatelessWidget {
                 titleList.isRefreshing && titleList.threadTitleList.isEmpty;
             final isEmpty =
                 !titleList.isRefreshing && titleList.threadTitleList.isEmpty;
+            final bool isEssenceBoard =
+                titleList.currentBoard == ThreadListBoard.essence;
+            final String boardLabel = titleList.currentBoardLabel;
 
             return ColoredBox(
               color: theme.colorScheme.surface,
@@ -43,7 +46,10 @@ class TitleListPageBody extends StatelessWidget {
                         constraints: BoxConstraints(
                           minHeight: constraints.maxHeight - 16,
                         ),
-                        child: const _ThreadListLoadingState(),
+                        child: _ThreadListLoadingState(
+                          boardLabel: boardLabel,
+                          isEssenceBoard: isEssenceBoard,
+                        ),
                       )
                     else if (isEmpty)
                       ConstrainedBox(
@@ -52,6 +58,12 @@ class TitleListPageBody extends StatelessWidget {
                         ),
                         child: _ThreadListEmptyState(
                           onRefresh: titleList.refresh,
+                          title: isEssenceBoard
+                              ? '暂无精华帖'
+                              : '这里暂时没有$boardLabel帖子',
+                          description: isEssenceBoard
+                              ? '稍后再来看看，或者下拉刷新试试'
+                              : '可以下拉刷新，或者点下面再试一次',
                         ),
                       )
                     else ...[
@@ -67,6 +79,7 @@ class TitleListPageBody extends StatelessWidget {
                       for (final title in titleList.threadTitleList)
                         SingleThreadTitleCard(
                           threadTitle: title,
+                          showEssenceBadge: isEssenceBoard,
                           onTap: () => _openThreadDetail(context, title.tid),
                         ),
                       const SizedBox(height: 8),
@@ -83,7 +96,13 @@ class TitleListPageBody extends StatelessWidget {
 }
 
 class _ThreadListLoadingState extends StatelessWidget {
-  const _ThreadListLoadingState();
+  final String boardLabel;
+  final bool isEssenceBoard;
+
+  const _ThreadListLoadingState({
+    required this.boardLabel,
+    required this.isEssenceBoard,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +122,7 @@ class _ThreadListLoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '正在加载帖子列表',
+              '正在加载$boardLabel帖子列表',
               style: textTheme.titleSmall?.copyWith(
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
@@ -111,7 +130,7 @@ class _ThreadListLoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '下拉也可以手动刷新',
+              isEssenceBoard ? '下拉可以刷新精华列表' : '下拉也可以手动刷新',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -125,8 +144,14 @@ class _ThreadListLoadingState extends StatelessWidget {
 
 class _ThreadListEmptyState extends StatelessWidget {
   final Future<void> Function() onRefresh;
+  final String title;
+  final String description;
 
-  const _ThreadListEmptyState({required this.onRefresh});
+  const _ThreadListEmptyState({
+    required this.onRefresh,
+    required this.title,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +179,7 @@ class _ThreadListEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '这里暂时没有帖子',
+              title,
               style: textTheme.titleSmall?.copyWith(
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
@@ -162,7 +187,7 @@ class _ThreadListEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '可以下拉刷新，或者点下面再试一次',
+              description,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

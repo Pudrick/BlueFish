@@ -199,16 +199,23 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
     final colorScheme = Theme.of(context).colorScheme;
 
     if (!_needsExpansion) {
-      return Container(key: _contentKey, child: widget.quoteWidget);
+      return SizedBox(
+        key: _contentKey,
+        width: double.infinity,
+        child: widget.quoteWidget,
+      );
     }
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),
       curve: Curves.fastOutSlowIn,
-      alignment: Alignment.topCenter,
-      child: _isExpanded
-          ? _buildExpandedView(colorScheme)
-          : _buildCollapsedView(colorScheme),
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: double.infinity,
+        child: _isExpanded
+            ? _buildExpandedView(colorScheme)
+            : _buildCollapsedView(colorScheme),
+      ),
     );
   }
 
@@ -216,7 +223,11 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(key: _contentKey, child: widget.quoteWidget),
+        SizedBox(
+          key: _contentKey,
+          width: double.infinity,
+          child: widget.quoteWidget,
+        ),
         InkWell(
           onTap: () => setState(() => _isExpanded = false),
           child: SizedBox(
@@ -237,17 +248,24 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
       onTap: () => setState(() => _isExpanded = true),
       behavior: HitTestBehavior.opaque,
       child: Stack(
-        alignment: Alignment.bottomCenter,
+        alignment: Alignment.bottomLeft,
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxHeight: _QuoteWidget.maxHeight,
-            ),
-            child: ClipRect(
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: AbsorbPointer(
-                  child: Container(key: _contentKey, child: widget.quoteWidget),
+          SizedBox(
+            width: double.infinity,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: _QuoteWidget.maxHeight,
+              ),
+              child: ClipRect(
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: AbsorbPointer(
+                    child: SizedBox(
+                      key: _contentKey,
+                      width: double.infinity,
+                      child: widget.quoteWidget,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import 'package:bluefish/models/thread_list.dart';
 
-import 'package:bluefish/widgets/thread/bottom_navigation.dart';
 import 'package:bluefish/widgets/thread/thread_list_body.dart';
 import 'package:bluefish/widgets/thread/top_bar.dart';
 
@@ -16,7 +15,6 @@ class ThreadListPage extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => ThreadTitleList.defaultList(),
       child: const Scaffold(
-        bottomNavigationBar: BottomNavigation(),
         body: SafeArea(child: TitleListPageBody()),
         appBar: TopBar(),
         //TODO: add a drawer
