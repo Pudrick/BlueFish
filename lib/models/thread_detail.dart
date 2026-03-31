@@ -1,63 +1,25 @@
 import 'package:bluefish/models/thread_main.dart';
-
 import 'package:bluefish/models/single_reply_floor.dart';
-import 'package:bluefish/utils/get_thread_info.dart';
 
-// TODO: refactor.
+/// Data container for thread detail page.
 class ThreadDetail {
-  late String tid;
+  final String tid;
+  final int currentPage;
+  final int totalRepliesNum;
+  final int repliesPerPage;
+  final ThreadMain mainFloor;
+  final List<SingleReplyFloor> lightedReplies;
+  final List<SingleReplyFloor> replies;
 
-  late bool hasLiked;
+  ThreadDetail({
+    required this.tid,
+    required this.currentPage,
+    required this.totalRepliesNum,
+    required this.repliesPerPage,
+    required this.mainFloor,
+    required this.lightedReplies,
+    required this.replies,
+  });
 
-  late ThreadMain mainFloor;
-  late List<SingleReplyFloor> lightedReplies;
-  late List<SingleReplyFloor> replies;
-  bool mainFloorInited = false;
-
-  int currentPage = 1;
-  int totalRepliesNum = 0;
-  final repliesPerPage = 20;
-  late int totalPagesNum;
-
-  ThreadDetail(dynamic tid, {int page = 1}) {
-    currentPage = page;
-    // mainFloor.hasVote = hasVote;
-    if (tid is int) {
-      this.tid = tid.toString();
-    } else {
-      this.tid = tid;
-    }
-  }
-
-  Future<void> refresh() async {
-    // TODO: change to get json from TID
-    var threadInfo = await getThreadInfoMapFromTid(tid, currentPage);
-    if (mainFloorInited == false) {
-      mainFloor = ThreadMain(threadInfo["thread"]);
-      mainFloorInited = true;
-    }
-
-    totalRepliesNum = threadInfo["replies"]["count"];
-    totalPagesNum = (totalRepliesNum / repliesPerPage).ceil();
-    lightedReplies = getReplyListFromWholeMap("lights", threadInfo);
-    replies = getReplyListFromWholeMap("replies", threadInfo);
-  }
-
-  //TODO: Handle reply floor video
-
-  void likeThread() {}
-
-  void editThread() {}
-
-  void deleteThread() {}
-
-  void commentToThread() {}
-
-  void collectThread() {}
-
-  void shareThread() {}
-
-  void reportThread() {}
-
-  void onlyAuthor() {}
+  int get totalPagesNum => (totalRepliesNum / repliesPerPage).ceil().clamp(1, 999);
 }
