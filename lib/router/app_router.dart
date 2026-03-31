@@ -1,12 +1,13 @@
 import 'package:bluefish/pages/thread_list_page.dart';
-import 'package:bluefish/pages/thread_page.dart';
-import 'package:bluefish/pages/user_home_page.dart';
+import 'package:bluefish/router/routes/media_routes.dart';
+import 'package:bluefish/router/routes/mention_routes.dart';
+import 'package:bluefish/router/routes/message_routes.dart';
+import 'package:bluefish/router/routes/thread_routes.dart';
+import 'package:bluefish/router/routes/user_routes.dart';
 import 'package:go_router/go_router.dart';
 
-class AppRouteNames {
-  static const String threadDetail = 'threadDetail';
-  static const String userHome = 'userHome';
-}
+// Re-export route names for convenient imports
+export 'package:bluefish/router/route_names.dart';
 
 final GoRouter appRouter = GoRouter(
   routes: [
@@ -14,24 +15,11 @@ final GoRouter appRouter = GoRouter(
       path: '/',
       builder: (context, state) => const ThreadListPage(),
       routes: [
-        GoRoute(
-          path: 'thread/:tid',
-          name: AppRouteNames.threadDetail,
-          builder: (context, state) {
-            final tid = state.pathParameters['tid']!;
-            final page =
-                int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1;
-            return ThreadPage(tid: tid, page: page);
-          },
-        ),
-        GoRoute(
-          path: 'user/:euid',
-          name: AppRouteNames.userHome,
-          builder: (context, state) {
-            final euid = int.parse(state.pathParameters['euid']!);
-            return UserHomePage(euid: euid);
-          },
-        ),
+        ...threadRoutes,
+        ...userRoutes,
+        ...mentionRoutes,
+        ...messageRoutes,
+        ...mediaRoutes,
       ],
     ),
   ],
