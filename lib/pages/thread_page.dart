@@ -87,14 +87,24 @@ class _ThreadPageState extends State<ThreadPage> {
     super.dispose();
   }
 
-  double _contentMaxWidth(double viewportWidth) {
-    if (viewportWidth >= 1200) {
-      return 960;
+  double _pageMaxWidth(double viewportWidth) {
+    if (viewportWidth >= 1440) {
+      return 1240;
     }
-    if (viewportWidth >= 920) {
-      return 860;
+    if (viewportWidth >= 1024) {
+      return 1120;
     }
     return viewportWidth;
+  }
+
+  double _contentBodyMaxWidth(double viewportWidth) {
+    if (viewportWidth >= 1440) {
+      return 880;
+    }
+    if (viewportWidth >= 1024) {
+      return 840;
+    }
+    return double.infinity;
   }
 
   @override
@@ -120,6 +130,9 @@ class _ThreadPageState extends State<ThreadPage> {
           final double horizontalPadding = constraints.maxWidth >= 720
               ? 16
               : 12;
+          final double contentBodyMaxWidth = _contentBodyMaxWidth(
+            constraints.maxWidth,
+          );
 
           return Stack(
             fit: StackFit.expand,
@@ -129,7 +142,7 @@ class _ThreadPageState extends State<ThreadPage> {
                   alignment: Alignment.topCenter,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: _contentMaxWidth(constraints.maxWidth),
+                      maxWidth: _pageMaxWidth(constraints.maxWidth),
                     ),
                     child: RefreshIndicator(
                       onRefresh: _loadData,
@@ -189,6 +202,7 @@ class _ThreadPageState extends State<ThreadPage> {
                               sliver: SliverToBoxAdapter(
                                 child: ThreadMainFloorWidget(
                                   mainFloor: threadDetail.mainFloor,
+                                  contentMaxWidth: contentBodyMaxWidth,
                                 ),
                               ),
                             ),
@@ -217,6 +231,7 @@ class _ThreadPageState extends State<ThreadPage> {
                                     replyFloor: threadDetail.replies[index],
                                     isQuote: false,
                                     floorNumber: fallbackFloorNumber,
+                                    contentMaxWidth: contentBodyMaxWidth,
                                   ),
                                 );
                               }, childCount: threadDetail.replies.length),

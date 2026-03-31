@@ -4,12 +4,14 @@ import 'package:photo_view/photo_view_gallery.dart';
 
 class PhotoGalleryPage extends StatefulWidget {
   final List<String> imageUrls;
+  final List<Object>? heroTags;
   final int initialIndex;
 
   const PhotoGalleryPage({
     super.key,
     required this.imageUrls,
     required this.initialIndex,
+    this.heroTags,
   });
 
   @override
@@ -19,6 +21,15 @@ class PhotoGalleryPage extends StatefulWidget {
 class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
   late PageController _pageController;
   late int _currentIndex;
+
+  Object _heroTagAt(int index) {
+    final heroTags = widget.heroTags;
+    if (heroTags != null && index >= 0 && index < heroTags.length) {
+      return heroTags[index];
+    }
+
+    return widget.imageUrls[index];
+  }
 
   @override
   void initState() {
@@ -42,7 +53,7 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
                 initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 2,
-                heroAttributes: PhotoViewHeroAttributes(tag: url),
+                heroAttributes: PhotoViewHeroAttributes(tag: _heroTagAt(index)),
               );
             },
             itemCount: widget.imageUrls.length,

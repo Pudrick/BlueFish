@@ -85,10 +85,13 @@ class ThreadTitleWidget extends StatelessWidget {
 class ThreadMainFloorWidget extends StatelessWidget {
   final bool hasVote;
   final ThreadMain mainFloor;
+  final double contentMaxWidth;
+
   const ThreadMainFloorWidget({
     super.key,
     this.hasVote = false,
     required this.mainFloor,
+    this.contentMaxWidth = double.infinity,
   });
 
   @override
@@ -148,11 +151,19 @@ class ThreadMainFloorWidget extends StatelessWidget {
               color: colorScheme.outlineVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 14),
-            BluefishHtmlWidget(
-              mainFloor.contentHTML,
-              textStyle: textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
-                height: 1.55,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: BluefishHtmlWidget(
+                  mainFloor.contentHTML,
+                  enableImageGallery: true,
+                  imageHeroScope: 'thread-main:${mainFloor.tid}',
+                  textStyle: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                    height: 1.55,
+                  ),
+                ),
               ),
             ),
           ],

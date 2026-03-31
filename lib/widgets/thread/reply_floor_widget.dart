@@ -8,12 +8,16 @@ class ReplyFloor extends StatelessWidget {
   final SingleReplyFloor replyFloor;
   final bool isQuote;
   final int? floorNumber;
+  final double contentMaxWidth;
+  final String? imageHeroScope;
 
   const ReplyFloor({
     super.key,
     required this.replyFloor,
     required this.isQuote,
     this.floorNumber,
+    this.contentMaxWidth = double.infinity,
+    this.imageHeroScope,
   });
 
   @override
@@ -51,6 +55,85 @@ class ReplyFloor extends StatelessWidget {
     final int displayFloorNumber = resolvedFloorNumber > 0
         ? resolvedFloorNumber
         : 1;
+    final resolvedImageHeroScope =
+        imageHeroScope ?? 'thread-reply:${replyFloor.pid}';
+
+    Widget bodyContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isQuote && replyFloor.hasQuote) ...[
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.45,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                left: BorderSide(color: colorScheme.outlineVariant, width: 4),
+              ),
+            ),
+            padding: const EdgeInsets.all(10),
+            child: _QuoteWidget(
+              quoteWidget: ReplyFloor(
+                replyFloor: replyFloor.quote!,
+                isQuote: true,
+                contentMaxWidth: contentMaxWidth,
+                imageHeroScope: '$resolvedImageHeroScope:quote',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (notDisplay)
+          _NotDisplayBanner(
+            text: isQuote ? notDisplayReasonText! : notDisplayText!,
+          ),
+        if (!isQuote || !notDisplay)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: BluefishHtmlWidget(
+              replyFloor.contentHTML,
+              enableImageGallery: true,
+              imageHeroScope: resolvedImageHeroScope,
+              textStyle: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+                height: 1.5,
+              ),
+            ),
+          ),
+        if (!isQuote)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ActionPill(
+                  icon: Icons.wb_incandescent_outlined,
+                  label: '${replyFloor.lightCount}',
+                  onTap: () {},
+                ),
+                _ActionPill(
+                  icon: Icons.thumb_down_alt_outlined,
+                  label: '',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+
+    if (contentMaxWidth.isFinite) {
+      bodyContent = Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: contentMaxWidth),
+          child: bodyContent,
+        ),
+      );
+    }
 
     final Widget floorContent = Padding(
       padding: EdgeInsets.fromLTRB(12, 12, 12, isQuote ? 10 : 12),
@@ -68,63 +151,7 @@ class ReplyFloor extends StatelessWidget {
             ],
           ),
           SizedBox(height: isQuote ? 10 : 12),
-          if (!isQuote && replyFloor.hasQuote) ...[
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.45,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border(
-                  left: BorderSide(color: colorScheme.outlineVariant, width: 4),
-                ),
-              ),
-              padding: const EdgeInsets.all(10),
-              child: _QuoteWidget(
-                quoteWidget: ReplyFloor(
-                  replyFloor: replyFloor.quote!,
-                  isQuote: true,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (notDisplay)
-            _NotDisplayBanner(
-              text: isQuote ? notDisplayReasonText! : notDisplayText!,
-            ),
-          if (!isQuote || !notDisplay)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: BluefishHtmlWidget(
-                replyFloor.contentHTML,
-                textStyle: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  height: 1.5,
-                ),
-              ),
-            ),
-          if (!isQuote)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _ActionPill(
-                    icon: Icons.wb_incandescent_outlined,
-                    label: '${replyFloor.lightCount}',
-                    onTap: () {},
-                  ),
-                  _ActionPill(
-                    icon: Icons.thumb_down_alt_outlined,
-                    label: '',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
+          bodyContent,
         ],
       ),
     );
