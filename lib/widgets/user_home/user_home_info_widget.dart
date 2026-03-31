@@ -1,4 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/pages/photo_gallery_page.dart';
 import 'package:flutter/material.dart';
 
 class UserHomeInfoWidget extends StatelessWidget {
@@ -44,28 +45,54 @@ class UserHomeInfoWidget extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context, {required bool isCompact}) {
     final avatarSize = isCompact ? 92.0 : 108.0;
+    final avatarUrl = userHome.avatarUrl.toString();
+    final heroTag = 'user_avatar_${userHome.puid}';
 
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            spreadRadius: -2,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            opaque: false,
+            barrierColor: Colors.black87,
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return PhotoGalleryPage(
+                imageUrls: [avatarUrl],
+                initialIndex: 0,
+                heroTags: [heroTag],
+              );
+            },
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          userHome.avatarUrl.toString(),
-          fit: BoxFit.cover,
-          width: avatarSize,
-          height: avatarSize,
+        );
+      },
+      child: Hero(
+        tag: heroTag,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+                spreadRadius: -2,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.network(
+              avatarUrl,
+              fit: BoxFit.cover,
+              width: avatarSize,
+              height: avatarSize,
+            ),
+          ),
         ),
       ),
     );

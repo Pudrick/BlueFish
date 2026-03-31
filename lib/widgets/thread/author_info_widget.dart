@@ -1,11 +1,20 @@
 import 'package:bluefish/models/abstract_floor_content.dart';
 import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/router/app_router.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class AuthorInfoWidget extends StatelessWidget {
   final FloorContent content;
   const AuthorInfoWidget({super.key, required this.content});
+
+  void _navigateToUserHome(BuildContext context) {
+    context.pushNamed(
+      AppRouteNames.userHome,
+      pathParameters: {'euid': content.author.euid},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,30 +39,33 @@ class AuthorInfoWidget extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        GestureDetector(
+          onTap: () => _navigateToUserHome(context),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(9),
-            child: Image.network(
-              content.author.avatarURL.toString(),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return ColoredBox(
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.person_outline_rounded,
-                    color: colorScheme.onSurfaceVariant,
-                    size: 18,
-                  ),
-                );
-              },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(9),
+              child: Image.network(
+                content.author.avatarURL.toString(),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return ColoredBox(
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 18,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -67,15 +79,18 @@ class AuthorInfoWidget extends StatelessWidget {
                 runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Text(
-                      content.author.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleSmall?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
+                  GestureDetector(
+                    onTap: () => _navigateToUserHome(context),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Text(
+                        content.author.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

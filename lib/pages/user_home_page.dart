@@ -7,6 +7,7 @@ import 'package:bluefish/widgets/user_home/user_home_info_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_reply_list_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_thread_list_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class UserHomePage extends StatelessWidget {
@@ -112,6 +113,15 @@ class _UserHomePageViewState extends State<UserHomePageView> {
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
+            SliverAppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
+              floating: true,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+            ),
             SliverPadding(
               padding: const EdgeInsets.all(16),
               sliver: SliverToBoxAdapter(

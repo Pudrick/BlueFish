@@ -1,9 +1,11 @@
 import 'package:bluefish/pages/thread_list_page.dart';
 import 'package:bluefish/pages/thread_page.dart';
+import 'package:bluefish/pages/user_home_page.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouteNames {
   static const String threadDetail = 'threadDetail';
+  static const String userHome = 'userHome';
 }
 
 final GoRouter appRouter = GoRouter(
@@ -20,6 +22,14 @@ final GoRouter appRouter = GoRouter(
             final page =
                 int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1;
             return ThreadPage(tid: tid, page: page);
+          },
+        ),
+        GoRoute(
+          path: 'user/:euid',
+          name: AppRouteNames.userHome,
+          builder: (context, state) {
+            final euid = int.parse(state.pathParameters['euid']!);
+            return UserHomePage(euid: euid);
           },
         ),
       ],
