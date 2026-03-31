@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/models/user_homepage/user_home_reply.dart';
 import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
 import 'package:html/dom.dart';
-
-// TODO: change it to w/o coke.
-import 'package:bluefish/utils/http_with_ua_coke.dart';
 import 'package:html/parser.dart';
 
 class UserHomeService {
@@ -33,7 +31,7 @@ class UserHomeService {
   Future<UserHome> getAuthorHomeByEuid(dynamic euid) async {
     if (euid is int) euid = euid.toString();
     Uri homepageUrl = Uri.parse("https://my.hupu.com/$euid");
-    var response = await HttpwithUA().get(homepageUrl);
+    var response = await httpClient.get(homepageUrl);
     if (response.statusCode != 200) {
       throw const HttpException("Failed to get http response.");
     }
@@ -79,7 +77,7 @@ class UserHomeService {
       },
     );
 
-    final response = await HttpwithUA().get(threadAPI);
+    final response = await httpClient.get(threadAPI);
     if (response.statusCode != 200) {
       throw const HttpException('failed to load threads.');
     }
@@ -115,7 +113,7 @@ class UserHomeService {
       },
     );
 
-    final response = await HttpwithUA().get(threadAPI);
+    final response = await httpClient.get(threadAPI);
     if (response.statusCode != 200) {
       throw const HttpException('failed to load replies.');
     }

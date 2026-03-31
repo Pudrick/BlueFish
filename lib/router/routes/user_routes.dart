@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 final userRoutes = <RouteBase>[
   GoRoute(
-    path: 'user/:euid',
+    path: '/user/:euid',
     name: AppRouteNames.userHome,
     builder: (context, state) {
       final euid = int.parse(state.pathParameters['euid']!);

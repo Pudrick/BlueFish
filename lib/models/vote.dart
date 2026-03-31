@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:bluefish/utils/http_with_ua.dart';
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/userdata/user_settings.dart';
 
 enum VoteType { dualImage, noImage }
@@ -52,7 +52,7 @@ class Vote {
   Future<void> refresh() async {
     var voteUrl = Uri.parse(
         "https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteID");
-    var voteJsonStr = await HttpwithUA().get(voteUrl);
+    var voteJsonStr = await httpClient.get(voteUrl);
 
     var voteJson = jsonDecode(voteJsonStr.body);
     if (voteJson["code"] != 200) {

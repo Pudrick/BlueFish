@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 final mediaRoutes = <RouteBase>[
   GoRoute(
-    path: 'gallery',
+    path: '/gallery',
     name: AppRouteNames.photoGallery,
     pageBuilder: (context, state) {
       final extra = state.extra as Map<String, dynamic>?;

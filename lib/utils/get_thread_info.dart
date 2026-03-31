@@ -2,16 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/models/single_reply_floor.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 
-import './http_with_ua.dart';
-
 Future<Map> getThreadInfoMapFromTid(dynamic tid, int page) async {
   if (tid is int) tid = tid.toString();
   Uri threadURL = Uri.parse("https://bbs.hupu.com/$tid-$page.html");
-  var response = await HttpwithUA().get(threadURL);
+  var response = await httpClient.get(threadURL);
   if (response.statusCode == 200) {
     var threadHTML = parse(response.body);
     return getThreadInfoMapFromDOM(threadHTML);

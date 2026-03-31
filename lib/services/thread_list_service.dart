@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/models/single_thread_title.dart';
 import 'package:bluefish/userdata/user_settings.dart';
-import 'package:bluefish/utils/http_with_ua_coke.dart';
+import 'package:http/http.dart' as http;
 
 class ThreadListService {
-  final HttpwithUA _client;
+  final http.Client _client;
 
-  ThreadListService({HttpwithUA? client}) : _client = client ?? HttpwithUA();
+  ThreadListService({http.Client? client}) : _client = client ?? httpClient;
 
   Uri topicThreadsBaseUrl() {
     return Uri.parse(

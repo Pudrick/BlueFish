@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/utils/http_with_ua_coke.dart';
+import 'package:http/http.dart' as http;
 
 const Map<String, String> privateMessageJsonHeaders = {
   'content-type': 'application/json;charset=UTF-8',
 };
 
 Future<Map<String, dynamic>> postPrivateMessageData({
-  required HttpwithUA client,
+  required http.Client client,
   required Uri url,
   required Map<String, dynamic> body,
   required String requestErrorMessage,

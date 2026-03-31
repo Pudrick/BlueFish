@@ -73,3 +73,6 @@ lib/temp/*
 
 # Copilot local instructions
 .github/copilot-instructions.md
+
+# Development cookie manager with hardcoded test cookies
+lib/infrastructure/auth/cookie_manager_dev.dart

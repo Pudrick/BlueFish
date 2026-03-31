@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 final mentionRoutes = <RouteBase>[
   GoRoute(
-    path: 'mention',
+    path: '/mention',
     name: AppRouteNames.mention,
     builder: (context, state) {
       final tabParam = state.uri.queryParameters['tab'];

@@ -2,8 +2,12 @@
 class AppRouteNames {
   AppRouteNames._();
 
-  // Thread routes
+  // Main navigation routes
   static const String threadList = 'threadList';
+  static const String messages = 'messages';
+  static const String me = 'me';
+
+  // Thread routes
   static const String threadDetail = 'threadDetail';
 
   // User routes

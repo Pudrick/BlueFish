@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 final threadRoutes = <RouteBase>[
   GoRoute(
-    path: 'thread/:tid',
+    path: '/thread/:tid',
     name: AppRouteNames.threadDetail,
     builder: (context, state) {
       final tid = state.pathParameters['tid']!;

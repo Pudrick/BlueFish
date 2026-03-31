@@ -1,16 +1,17 @@
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/models/private_message_detail.dart';
 import 'package:bluefish/services/private_message_service_helper.dart';
-import 'package:bluefish/utils/http_with_ua_coke.dart';
+import 'package:http/http.dart' as http;
 
 class PrivateMessageDetailService {
   static final Uri _baseUrl = Uri.parse(
     'https://my.hupu.com/pcmapi/pc/space/v1/pm/getPmDetail',
   );
 
-  final HttpwithUA _client;
+  final http.Client _client;
 
-  PrivateMessageDetailService({HttpwithUA? client})
-    : _client = client ?? HttpwithUA();
+  PrivateMessageDetailService({http.Client? client})
+    : _client = client ?? httpClient;
 
   Future<PrivateMessageDetail> getDetail({
     required int puid,

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/utils/http_with_ua_coke.dart';
+import 'package:bluefish/infrastructure/network/http_client.dart';
 
 class MentionService<T> {
   final String apiPath;
@@ -32,7 +32,7 @@ class MentionService<T> {
         if (currentPageStr != null) 'pageStr': currentPageStr,
       },
     );
-    var response = await HttpwithUA().get(url);
+    var response = await httpClient.get(url);
     if (response.statusCode != 200) {
       throw const HttpException("Failed to get http response.");
     }

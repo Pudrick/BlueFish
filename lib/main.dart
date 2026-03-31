@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:bluefish/infrastructure/network/http_client.dart';
 import 'package:bluefish/router/app_router.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 
@@ -7,8 +8,11 @@ void main() {
   launchApp();
 }
 
-void launchApp() {
+Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize HTTP client with cookie manager
+  await initializeHttpClient();
 
   runApp(
     MaterialApp.router(

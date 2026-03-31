@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 final messageRoutes = <RouteBase>[
   GoRoute(
-    path: 'message/:puid',
+    path: '/message/:puid',
     name: AppRouteNames.privateMessageDetail,
     builder: (context, state) {
       final puid = int.parse(state.pathParameters['puid']!);
