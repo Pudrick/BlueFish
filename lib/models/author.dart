@@ -1,7 +1,9 @@
+import 'package:bluefish/models/model_parsing.dart';
+
 class Author {
   final String name;
   final String puid;
-  final String euid; 
+  final String euid;
   final Uri avatarURL;
   final Uri profileURL;
 
@@ -20,28 +22,33 @@ class Author {
     this.adminsInfo,
   });
 
-  factory Author.forReply(Map<String, dynamic> json) {
+  factory Author.forReply(
+    Map<String, dynamic> json, {
+    bool isBlacked = false,
+    bool isAdmin = false,
+  }) {
     return Author._(
-      puid: json['puid'].toString(),
-      name: json['puname'].toString(),
-      euid: json['euid'].toString(),
-      profileURL: Uri.parse(json['url']),
-      avatarURL: Uri.parse(json['header']),
+      puid: parseString(json['puid']),
+      name: parseString(json['puname']),
+      euid: parseString(json['euid']),
+      profileURL: Uri.parse(parseString(json['url'])),
+      avatarURL: Uri.parse(parseString(json['header'])),
       adminsInfo: json['adminsInfo'],
+      isBlacked: isBlacked,
+      isAdmin: isAdmin,
     );
   }
 
-
   factory Author.forThread(Map<String, dynamic> json) {
     return Author._(
-      puid: json['puid'].toString(),
-      name: json['puname'].toString(),
-      euid: json['euid'].toString(),
-      profileURL: Uri.parse(json['url']),
-      avatarURL: Uri.parse(json['header']),
+      puid: parseString(json['puid']),
+      name: parseString(json['puname']),
+      euid: parseString(json['euid']),
+      profileURL: Uri.parse(parseString(json['url'])),
+      avatarURL: Uri.parse(parseString(json['header'])),
       adminsInfo: json['adminsInfo'],
-      isBlacked: json['isBlacked'] == true, 
-      isAdmin: json['isAdmin'] == true,
+      isBlacked: parseBool(json['isBlacked']),
+      isAdmin: parseBool(json['isAdmin']),
     );
   }
 }

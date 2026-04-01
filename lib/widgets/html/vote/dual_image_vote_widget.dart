@@ -2,29 +2,27 @@ import 'package:bluefish/models/vote.dart';
 import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
 import 'package:flutter/material.dart';
 
-class DualImageVoteWidget extends StatefulWidget {
+class DualImageVoteWidget extends StatelessWidget {
   final Vote vote;
 
   static const double outerBorderRoundRadius = 12;
   static const double innerBorderRoundRadius = 10;
   static const double buttonVerticalMargin = 24;
 
-  const DualImageVoteWidget({super.key, required this.vote});
+  DualImageVoteWidget({super.key, required this.vote})
+    : assert(vote.isDualImageLayout);
 
-  @override
-  State<DualImageVoteWidget> createState() => _DualImageVoteWidgetState();
-}
+  VoteOption get _leftOption => vote.options[0];
 
-class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
-  late Vote vote;
+  VoteOption get _rightOption => vote.options[1];
 
-  @override
-  void initState() {
-    super.initState();
-    vote = widget.vote;
-  }
+  bool get _leftSelected => vote.isOptionSelected(_leftOption.sort);
 
-  Widget canVoteButtonWidget() {
+  bool get _rightSelected => vote.isOptionSelected(_rightOption.sort);
+
+  int _resolvedFlex(int value) => value > 0 ? value : 1;
+
+  Widget _canVoteButtonWidget() {
     const double buttonVerticalMargin = 25;
     const double buttonTextSize = 27;
     return Row(
@@ -45,7 +43,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               ),
             ),
             child: Text(
-              widget.vote.voteDetailList[0].content,
+              _leftOption.content,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: buttonTextSize,
@@ -69,7 +67,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               ),
             ),
             child: Text(
-              widget.vote.voteDetailList[1].content,
+              _rightOption.content,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: buttonTextSize,
@@ -81,7 +79,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
     );
   }
 
-  Widget cannotVoteButtonWidget() {
+  Widget _cannotVoteButtonWidget(BuildContext context) {
     const double buttonTextSize = 17;
     const double buttonHeight = 70;
     final leftColorOfNumberVotes = Theme.of(
@@ -116,7 +114,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '${(widget.vote.voteDetailList[0].percentage * 100).toStringAsFixed(2)}%',
+                          '${(_leftOption.percentage * 100).toStringAsFixed(2)}%',
                           style: TextStyle(
                             color: leftColorOfNumberVotes,
                             fontSize: 20,
@@ -124,16 +122,11 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                         ),
                         Column(
                           children: [
-                            if (widget.vote.userVoteRecordList != null)
-                              if (widget.vote.userVoteRecordList![0] == 1)
-                                Icon(
-                                  Icons.check,
-                                  color: leftColorOfNumberVotes,
-                                ),
+                            if (_leftSelected)
+                              Icon(Icons.check, color: leftColorOfNumberVotes),
                             const SizedBox(width: 5),
                             Text(
-                              widget.vote.voteDetailList[0].optionVoteCount
-                                  .toString(),
+                              _leftOption.optionVoteCount.toString(),
                               style: TextStyle(
                                 color: leftColorOfNumberVotes,
                                 fontSize: 18,
@@ -148,7 +141,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               ),
               const SizedBox(width: 5),
               Expanded(
-                flex: widget.vote.voteDetailList[0].optionVoteCount,
+                flex: _resolvedFlex(_leftOption.optionVoteCount),
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 3),
                   decoration: BoxDecoration(
@@ -163,7 +156,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               ),
               const SizedBox(width: 5),
               Expanded(
-                flex: widget.vote.voteDetailList[1].optionVoteCount,
+                flex: _resolvedFlex(_rightOption.optionVoteCount),
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 3),
                   decoration: BoxDecoration(
@@ -194,7 +187,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '${(widget.vote.voteDetailList[1].percentage * 100).toStringAsFixed(2)}%',
+                          '${(_rightOption.percentage * 100).toStringAsFixed(2)}%',
                           style: TextStyle(
                             color: rightColorOfNumberVotes,
                             fontSize: 20,
@@ -202,16 +195,14 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                         ),
                         Row(
                           children: [
-                            if (widget.vote.userVoteRecordList != null)
-                              if (widget.vote.userVoteRecordList![0] == 2)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: rightColorOfNumberVotes,
-                                ),
+                            if (_rightSelected)
+                              Icon(
+                                Icons.check_circle,
+                                color: rightColorOfNumberVotes,
+                              ),
                             const SizedBox(width: 5),
                             Text(
-                              widget.vote.voteDetailList[1].optionVoteCount
-                                  .toString(),
+                              _rightOption.optionVoteCount.toString(),
                               style: TextStyle(
                                 color: rightColorOfNumberVotes,
                                 fontSize: 18,
@@ -249,17 +240,16 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (widget.vote.userVoteRecordList != null)
-                      if (widget.vote.userVoteRecordList![0] == 1)
-                        Icon(
-                          Icons.check,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.38),
-                          size: buttonTextSize,
-                        ),
+                    if (_leftSelected)
+                      Icon(
+                        Icons.check,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.38),
+                        size: buttonTextSize,
+                      ),
                     Text(
-                      widget.vote.voteDetailList[0].content,
+                      _leftOption.content,
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -272,30 +262,27 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               ),
             ),
             const SizedBox(width: 7),
-            if (widget.vote.userVoteRecordList != null &&
-                widget.vote.end == false)
+            if (vote.canCancelVote)
               SizedBox(
                 height: 55,
-                child: Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(
-                            DualImageVoteWidget.innerBorderRoundRadius,
-                          ),
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(
+                          DualImageVoteWidget.innerBorderRoundRadius,
                         ),
                       ),
                     ),
-                    child: const Text(
-                      "取消投票",
-                      style: TextStyle(fontSize: buttonTextSize),
-                    ),
+                  ),
+                  child: const Text(
+                    '取消投票',
+                    style: TextStyle(fontSize: buttonTextSize),
                   ),
                 ),
               ),
-            const SizedBox(width: 7),
+            if (vote.canCancelVote) const SizedBox(width: 7),
             Expanded(
               child: ElevatedButton(
                 onPressed: null,
@@ -314,18 +301,17 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (widget.vote.userVoteRecordList != null)
-                      if (widget.vote.userVoteRecordList![0] == 2)
-                        Icon(
-                          Icons.check_circle,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.38),
-                          size: buttonTextSize,
-                        ),
+                    if (_rightSelected)
+                      Icon(
+                        Icons.check_circle,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.38),
+                        size: buttonTextSize,
+                      ),
                     const SizedBox(width: 10),
                     Text(
-                      widget.vote.voteDetailList[1].content,
+                      _rightOption.content,
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -343,7 +329,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
     );
   }
 
-  Widget voteImageWidget() {
+  Widget _voteImageWidget() {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -354,7 +340,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
             ),
             child: Image.network(
-              widget.vote.voteDetailList[0].attachment.toString(),
+              _leftOption.attachment.toString(),
               fit: BoxFit.fill,
             ),
           ),
@@ -367,7 +353,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
               Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
             ),
             child: Image.network(
-              widget.vote.voteDetailList[1].attachment.toString(),
+              _rightOption.attachment.toString(),
               fit: BoxFit.fill,
             ),
           ),
@@ -387,12 +373,12 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
           children: [
             VoteInfoWidget(vote: vote),
             const SizedBox(height: 10),
-            voteImageWidget(),
+            _voteImageWidget(),
             const SizedBox(height: 10),
-            if (vote.canVote == true)
-              canVoteButtonWidget()
+            if (vote.canVote)
+              _canVoteButtonWidget()
             else
-              cannotVoteButtonWidget(),
+              _cannotVoteButtonWidget(context),
           ],
         ),
       ),

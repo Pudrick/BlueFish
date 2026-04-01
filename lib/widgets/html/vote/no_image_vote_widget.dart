@@ -17,16 +17,16 @@ class _NoImageVoteButtonState extends State<NoImageVoteButton> {
   @override
   void initState() {
     super.initState();
-    if (widget.vote.userVoteRecordList != null) {
-      selectedOptions = widget.vote.userVoteRecordList!;
-    }
+    selectedOptions = List<int>.from(
+      widget.vote.userSelectedOptionSorts ?? const <int>[],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (var option in widget.vote.voteDetailList)
+        for (final option in widget.vote.options)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 70),
             child: ChoiceChip.elevated(
@@ -52,6 +52,11 @@ class _NoImageVoteButtonState extends State<NoImageVoteButton> {
                   : null,
             ),
           ),
+        if (widget.vote.options.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('暂无投票选项'),
+          ),
       ],
     );
   }
@@ -75,7 +80,7 @@ class NoImageVoteWidget extends StatelessWidget {
             const SizedBox(height: 10),
             NoImageVoteButton(vote: vote),
             const SizedBox(height: 10),
-            if (vote.userVoteRecordList != null && vote.end == false)
+            if (vote.canCancelVote)
               ElevatedButton(child: const Text("取消投票"), onPressed: () {}),
           ],
         ),

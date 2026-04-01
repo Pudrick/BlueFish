@@ -112,7 +112,9 @@ class ThreadDetailService {
     if (page > 1 && _mainFloorCache.containsKey(tid)) {
       mainFloor = _mainFloorCache[tid]!;
     } else {
-      mainFloor = ThreadMain(threadInfo['thread']);
+      mainFloor = ThreadMain.fromJson(
+        threadInfo['thread'] as Map<String, dynamic>,
+      );
     }
 
     final repliesInfo = threadInfo['replies'] as Map<String, dynamic>;
@@ -183,7 +185,7 @@ class ThreadDetailService {
 
     return [
       for (final replyMap in repliesMap)
-        SingleReplyFloor.fromReplyMap(replyMap),
+        SingleReplyFloor.fromJson(Map<String, dynamic>.from(replyMap as Map)),
     ];
   }
 }

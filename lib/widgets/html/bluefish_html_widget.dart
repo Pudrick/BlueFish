@@ -55,7 +55,7 @@ class BluefishHtmlWidget extends StatelessWidget {
         element.attributes['data-type'] == 'vote') {
       final voteId = int.tryParse(element.attributes['data-vote-id'] ?? '');
       if (voteId != null) {
-        return VoteWidget(voteID: voteId);
+        return VoteWidget(voteId: voteId);
       }
     }
 

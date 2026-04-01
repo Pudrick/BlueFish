@@ -1,18 +1,23 @@
-import 'package:bluefish/models/abstract_floor_content.dart';
-import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/models/floor_meta.dart';
 import 'package:bluefish/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class AuthorInfoWidget extends StatelessWidget {
-  final FloorContent content;
-  const AuthorInfoWidget({super.key, required this.content});
+  final FloorMeta meta;
+  final bool showOpBadge;
+
+  const AuthorInfoWidget({
+    super.key,
+    required this.meta,
+    this.showOpBadge = false,
+  });
 
   void _navigateToUserHome(BuildContext context) {
     context.pushNamed(
       AppRouteNames.userHome,
-      pathParameters: {'euid': content.author.euid},
+      pathParameters: {'euid': meta.author.euid},
     );
   }
 
@@ -23,17 +28,17 @@ class AuthorInfoWidget extends StatelessWidget {
 
     final String dateText = DateFormat(
       'yyyy-MM-dd HH:mm:ss',
-    ).format(content.postTime);
+    ).format(meta.postTime);
     final List<String> metaTexts = [
-      '$dateText (${content.postTimeReadable})',
-      if (content.postLocation.trim().isNotEmpty) 'IP:${content.postLocation}',
+      '$dateText (${meta.postTimeReadable})',
+      if (meta.postLocation.trim().isNotEmpty) 'IP:${meta.postLocation}',
     ];
 
-    final IconData? clientIcon = switch (content.client) {
-      'ANDROID' => Icons.android,
-      'IPHONE' => Icons.apple,
-      'PC' => Icons.desktop_windows_outlined,
-      String() => null,
+    final IconData? clientIcon = switch (meta.client) {
+      PostClient.android => Icons.android,
+      PostClient.iphone => Icons.apple,
+      PostClient.pc => Icons.desktop_windows_outlined,
+      PostClient.unknown => null,
     };
 
     return Row(
@@ -53,7 +58,7 @@ class AuthorInfoWidget extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(9),
               child: Image.network(
-                content.author.avatarURL.toString(),
+                meta.author.avatarURL.toString(),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return ColoredBox(
@@ -84,7 +89,7 @@ class AuthorInfoWidget extends StatelessWidget {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 220),
                       child: Text(
-                        content.author.name,
+                        meta.author.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleSmall?.copyWith(
@@ -94,19 +99,18 @@ class AuthorInfoWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (content.author.adminsInfo != null)
+                  if (meta.author.adminsInfo != null)
                     _MetaBadge(
-                      label: content.author.adminsInfo!,
+                      label: meta.author.adminsInfo!,
                       backgroundColor: colorScheme.surfaceContainerHighest,
                       foregroundColor: colorScheme.onSurfaceVariant,
                     ),
-                  if (content case SingleReplyFloor replyContent)
-                    if (replyContent.isOP)
-                      _MetaBadge(
-                        label: '楼主',
-                        backgroundColor: colorScheme.primaryContainer,
-                        foregroundColor: colorScheme.onPrimaryContainer,
-                      ),
+                  if (showOpBadge)
+                    _MetaBadge(
+                      label: '楼主',
+                      backgroundColor: colorScheme.primaryContainer,
+                      foregroundColor: colorScheme.onPrimaryContainer,
+                    ),
                 ],
               ),
               const SizedBox(height: 4),

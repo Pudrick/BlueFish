@@ -1,125 +1,179 @@
-import 'dart:convert';
+import 'package:bluefish/models/model_parsing.dart';
 
-import 'package:bluefish/network/http_client.dart';
-import 'package:bluefish/userdata/user_settings.dart';
+enum VoteType {
+  dualImage,
+  noImage;
 
-enum VoteType { dualImage, noImage }
+  // Current known usage: 1 for image vote, 0 or null for text vote.
+  static VoteType fromVotingType(int? votingType) {
+    return votingType == 1 ? VoteType.dualImage : VoteType.noImage;
+  }
+}
 
 class UserVoteRecord {
-  late int sort;
-  late int voteCount;
+  final int sort;
+  final int voteCount;
+
+  const UserVoteRecord({required this.sort, required this.voteCount});
+
+  factory UserVoteRecord.fromJson(Map<String, dynamic> json) {
+    return UserVoteRecord(
+      sort: parseInt(json['sort']),
+      voteCount: parseInt(json['voteCount']),
+    );
+  }
 }
 
-//TODO: add initializer
-class VoteItem {
-  late int sort;
-  late String content;
-  late int optionVoteCount;
-  late Uri attachment; // usually image url.
-  late double percentage;
+class VoteOption {
+  final int sort;
+  final String content;
+  final int optionVoteCount;
+  final Uri? attachment;
+  // Usually an image URL.
+  final double percentage;
+
+  const VoteOption({
+    required this.sort,
+    required this.content,
+    required this.optionVoteCount,
+    required this.attachment,
+    required this.percentage,
+  });
+
+  factory VoteOption.fromJson(
+    Map<String, dynamic> json, {
+    required VoteType voteType,
+    required int totalVoteCount,
+  }) {
+    final optionVoteCount = parseInt(json['optionVoteCount']);
+    final attachmentStr = parseNullableString(json['attachment']);
+
+    return VoteOption(
+      sort: parseInt(json['sort']),
+      content: parseString(json['content']),
+      optionVoteCount: optionVoteCount,
+      // We do not inspect each option separately; the overall vote type is the source of truth.
+      attachment:
+          voteType == VoteType.dualImage &&
+              attachmentStr != null &&
+              attachmentStr != 'null'
+          ? Uri.tryParse(attachmentStr)
+          : null,
+      percentage: totalVoteCount > 0 ? optionVoteCount / totalVoteCount : 0,
+    );
+  }
 }
 
-//TODO: add initializer
 class Vote {
-  late dynamic voteID;
-  late String title;
-  late int userOptionLimit;
-  late int userCount;
-  late int voteCount;
-  late bool canVote;
-  late int puid;
-  late List<VoteItem> voteDetailList;
-  late List<int>? userVoteRecordList;
-  late int?
-      votingType; //current known usage: 1 for image vote, 0 or null for text vote
-  int? deadline; // days remaining
-  late String endTimeStr;
-  late List<UserVoteRecord> userVoteRecordMap;
-  late int voteNum; //maybe always 0?
-  String? votingForm; // maybe always null?
-  late bool end; // if the vote expired
-  late VoteType type;
+  final int voteId;
+  final String title;
+  final int userOptionLimit;
+  final int userCount;
+  final int voteCount;
+  final bool canVote;
+  final int puid;
+  final List<VoteOption> options;
+  final List<int>? userSelectedOptionSorts;
+  // Current known usage: 1 for image vote, 0 or null for text vote.
+  final int? votingType;
+  // Days remaining.
+  final int? deadline;
+  final String endTimeStr;
+  final List<UserVoteRecord> userVoteRecords;
+  // Maybe always 0?
+  final int voteNum;
+  // Maybe always null?
+  final String? votingForm;
+  // Whether the vote has expired.
+  final bool end;
+  final VoteType type;
 
-  Vote(dynamic voteID) {
-    if (voteID is String) {
-      this.voteID = int.parse(voteID);
-    } else {
-      this.voteID = voteID;
-    }
+  const Vote({
+    required this.voteId,
+    required this.title,
+    required this.userOptionLimit,
+    required this.userCount,
+    required this.voteCount,
+    required this.canVote,
+    required this.puid,
+    required this.options,
+    required this.userSelectedOptionSorts,
+    required this.votingType,
+    required this.deadline,
+    required this.endTimeStr,
+    required this.userVoteRecords,
+    required this.voteNum,
+    required this.votingForm,
+    required this.end,
+    required this.type,
+  });
+
+  bool get hasUserSelection => userSelectedOptionSorts?.isNotEmpty == true;
+
+  bool get canCancelVote => hasUserSelection && !end;
+
+  bool get isDualImageLayout =>
+      type == VoteType.dualImage &&
+      options.length == 2 &&
+      options.every((option) => option.attachment != null);
+
+  bool isOptionSelected(int sort) {
+    return userSelectedOptionSorts?.contains(sort) ?? false;
   }
 
-  // req example: https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11124697
-  Future<void> refresh() async {
-    var voteUrl = Uri.parse(
-        "https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteID");
-    var voteJsonStr = await httpClient.get(voteUrl);
+  factory Vote.fromJson(Map<String, dynamic> json, {required int voteId}) {
+    final votingType = parseNullableInt(json['votingType']);
+    final type = VoteType.fromVotingType(votingType);
+    final voteCount = parseInt(json['voteCount']);
+    final optionsJson = _asJsonList(json['voteDetailList']);
 
-    var voteJson = jsonDecode(voteJsonStr.body);
-    if (voteJson["code"] != 200) {
-      throw Exception("Failed to get vote info: ${voteJson["msg"]}");
-      // TODO: handle exception.
-    }
-    var voteData = voteJson["data"];
-    title = voteData["title"];
-    userOptionLimit = voteData["userOptionLimit"];
-    userCount = voteData["userCount"];
-    voteCount = voteData["voteCount"];
-    canVote = voteData["canVote"];
-    puid = voteData["puid"];
+    return Vote(
+      voteId: voteId,
+      title: parseString(json['title']),
+      userOptionLimit: parseInt(json['userOptionLimit']),
+      userCount: parseInt(json['userCount']),
+      voteCount: voteCount,
+      canVote: parseBool(json['canVote']),
+      puid: parseInt(json['puid']),
+      options: List.unmodifiable(
+        optionsJson.map(
+          (item) => VoteOption.fromJson(
+            item,
+            voteType: type,
+            totalVoteCount: voteCount,
+          ),
+        ),
+      ),
+      userSelectedOptionSorts: _parseSelectedOptions(
+        json['userVoteRecordList'],
+      ),
+      votingType: votingType,
+      deadline: parseNullableInt(json['deadline']),
+      endTimeStr: parseString(json['endTimeStr']),
+      // If the user has not voted, the server returns [] instead of null.
+      userVoteRecords: List.unmodifiable(
+        _asJsonList(json['userVoteRecordMap']).map(UserVoteRecord.fromJson),
+      ),
+      voteNum: parseInt(json['voteNum']),
+      votingForm: parseNullableString(json['votingForm']),
+      end: parseBool(json['end']),
+      type: type,
+    );
+  }
+}
 
-    votingType = voteData["votingType"];
-    if (votingType == 1) {
-      type = VoteType.dualImage;
-    } else {
-      type = VoteType.noImage;
-    }
-
-    voteDetailList = [];
-    userVoteRecordList = [];
-    userVoteRecordMap = [];
-    for (var item in voteData["voteDetailList"]) {
-      VoteItem voteItem = VoteItem();
-      voteItem.sort = item["sort"];
-      voteItem.content = item["content"];
-      voteItem.optionVoteCount = item["optionVoteCount"];
-      voteItem.percentage = voteItem.optionVoteCount / voteCount;
-
-      // abandon check in every option, using voteType check instead.
-      // if (item["attachment"] != null && item["attachment"] != "null")
-      if (type == VoteType.dualImage) {
-        voteItem.attachment = Uri.parse(item["attachment"]);
-      }
-      voteDetailList.add(voteItem);
-    }
-    // if (voteData["userVoteRecordList"] != null) {
-    //   userVoteRecordList = [];
-    //   for (var item in voteData["userVoteRecordList"]) {
-    //     userVoteRecordList.add(item);
-    //   }
-    // }
-    if (voteData["userVoteRecordList"] != null) {
-      userVoteRecordList = voteData["userVoteRecordList"].cast<int>();
-    } else {
-      userVoteRecordList = null;
-    }
-    deadline = voteData["deadline"];
-    endTimeStr = voteData["endTimeStr"];
-
-    // if didn't vote, userVoteRecordMap will be [] instead of null.
-    for (var item in voteData["userVoteRecordMap"]) {
-      UserVoteRecord userVoteRecordItem = UserVoteRecord();
-      userVoteRecordItem.sort = item["sort"];
-      userVoteRecordItem.voteCount = item["voteCount"];
-      userVoteRecordMap.add(userVoteRecordItem);
-    }
-    voteNum = voteData["voteNum"];
-    votingForm = voteData["votingForm"];
-    end = voteData["end"];
+List<int>? _parseSelectedOptions(Object? value) {
+  if (value is! List) {
+    return null;
   }
 
-  // req example: https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/vote?voteId=11124697&option=1
-  // copilot generated url, don't know if it's correct.
+  return List.unmodifiable(value.map(parseInt));
+}
 
-  // TODO
-  Future<void> voteFor() async {}
+List<Map<String, dynamic>> _asJsonList(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return value.map(parseMap).toList(growable: false);
 }

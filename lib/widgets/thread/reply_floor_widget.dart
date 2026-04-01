@@ -22,46 +22,63 @@ class ReplyFloor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _ReplyFloorContent(
+      content: replyFloor,
+      isQuote: isQuote,
+      floorNumber: floorNumber ?? replyFloor.replyNum,
+      lightCount: replyFloor.lightCount,
+      showOpBadge: replyFloor.isOp,
+      contentMaxWidth: contentMaxWidth,
+      imageHeroScope: imageHeroScope,
+    );
+  }
+}
+
+class _ReplyFloorContent extends StatelessWidget {
+  final ReplyContent content;
+  final bool isQuote;
+  final int? floorNumber;
+  final int? lightCount;
+  final bool showOpBadge;
+  final double contentMaxWidth;
+  final String? imageHeroScope;
+
+  const _ReplyFloorContent({
+    required this.content,
+    required this.isQuote,
+    required this.floorNumber,
+    required this.lightCount,
+    required this.showOpBadge,
+    required this.contentMaxWidth,
+    required this.imageHeroScope,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = theme.textTheme;
 
-    final bool notDisplay =
-        replyFloor.isAudit ||
-        replyFloor.isDelete ||
-        replyFloor.isHidden ||
-        replyFloor.isSelfDelete;
-
+    final bool notDisplay = !content.visibility.canDisplay;
     final String? notDisplayReasonText = notDisplay
-        ? switch ((
-            replyFloor.isDelete,
-            replyFloor.isSelfDelete,
-            replyFloor.isAudit,
-            replyFloor.isHidden,
-          )) {
-            (true, false, _, _) => '该内容已被删除',
-            (true, true, _, _) => '该内容已被作者删除',
-            (_, _, true, _) => '该内容正在卡审核',
-            (_, _, _, true) => '该内容已被隐藏',
-            _ => '该内容不知道为什么不可显示',
-          }
+        ? content.visibility.hiddenReasonText
         : null;
-
     final String? notDisplayText = notDisplayReasonText == null
         ? null
+        : isQuote
+        ? notDisplayReasonText
         : '其他用户当前无法显示该内容。原因：$notDisplayReasonText';
 
-    final int resolvedFloorNumber = floorNumber ?? replyFloor.replyNum;
-    final int displayFloorNumber = resolvedFloorNumber > 0
-        ? resolvedFloorNumber
+    final int displayFloorNumber = floorNumber != null && floorNumber! > 0
+        ? floorNumber!
         : 1;
     final resolvedImageHeroScope =
-        imageHeroScope ?? 'thread-reply:${replyFloor.pid}';
+        imageHeroScope ?? 'thread-reply:${content.pid}';
 
     Widget bodyContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!isQuote && replyFloor.hasQuote) ...[
+        if (!isQuote && content.quote != null) ...[
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -75,9 +92,12 @@ class ReplyFloor extends StatelessWidget {
             ),
             padding: const EdgeInsets.all(10),
             child: _QuoteWidget(
-              quoteWidget: ReplyFloor(
-                replyFloor: replyFloor.quote!,
+              quoteWidget: _ReplyFloorContent(
+                content: content.quote!,
                 isQuote: true,
+                floorNumber: null,
+                lightCount: null,
+                showOpBadge: false,
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
               ),
@@ -85,15 +105,12 @@ class ReplyFloor extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        if (notDisplay)
-          _NotDisplayBanner(
-            text: isQuote ? notDisplayReasonText! : notDisplayText!,
-          ),
+        if (notDisplay) _NotDisplayBanner(text: notDisplayText!),
         if (!isQuote || !notDisplay)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: BluefishHtmlWidget(
-              replyFloor.contentHTML,
+              content.contentHtml,
               enableImageGallery: true,
               imageHeroScope: resolvedImageHeroScope,
               textStyle: textTheme.bodyMedium?.copyWith(
@@ -102,7 +119,7 @@ class ReplyFloor extends StatelessWidget {
               ),
             ),
           ),
-        if (!isQuote)
+        if (!isQuote && lightCount != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Wrap(
@@ -111,7 +128,7 @@ class ReplyFloor extends StatelessWidget {
               children: [
                 _ActionPill(
                   icon: Icons.wb_incandescent_outlined,
-                  label: '${replyFloor.lightCount}',
+                  label: '$lightCount',
                   onTap: () {},
                 ),
                 _ActionPill(
@@ -143,7 +160,12 @@ class ReplyFloor extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: AuthorInfoWidget(content: replyFloor)),
+              Expanded(
+                child: AuthorInfoWidget(
+                  meta: content.meta,
+                  showOpBadge: showOpBadge && !isQuote,
+                ),
+              ),
               if (!isQuote) ...[
                 const SizedBox(width: 8),
                 _FloorNumberPill(floor: displayFloorNumber),

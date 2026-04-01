@@ -1,87 +1,92 @@
 import 'package:bluefish/models/author.dart';
-import 'package:bluefish/models/abstract_floor_content.dart';
+import 'package:bluefish/models/floor_meta.dart';
+import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/vote.dart';
 import 'package:html/parser.dart';
 
-class ThreadMain extends FloorContent {
-  late String tid;
-  late String title;
-  Vote? vote;
+class ThreadMain {
+  final String tid;
+  final String title;
+  final Vote? vote;
+  // TODO: make sure the type of these in video thread.
+  final String? videoCover;
+  final String? video;
+  final String urlSuffix;
+  final int lightsNum;
+  final int repliesNum;
+  final int recommendNum;
+  final int readNum;
+  final bool hasVideo;
+  final bool hasVote;
+  final bool isRecommended;
+  final DateTime lastReplyTime;
+  // What's this? Maybe locked/deleted/normal?
+  final int status;
+  // Maybe text/video/vote or something like that?
+  final int contentType;
+  final int isLock;
+  final String rawContent;
+  final String contentHtml;
+  final FloorMeta meta;
 
-  // TODO: make sure the type of these in video thread
-  late String videoCover;
-  String? video;
+  const ThreadMain({
+    required this.tid,
+    required this.title,
+    required this.vote,
+    required this.videoCover,
+    required this.video,
+    required this.urlSuffix,
+    required this.lightsNum,
+    required this.repliesNum,
+    required this.recommendNum,
+    required this.readNum,
+    required this.hasVideo,
+    required this.hasVote,
+    required this.isRecommended,
+    required this.lastReplyTime,
+    required this.status,
+    required this.contentType,
+    required this.isLock,
+    required this.rawContent,
+    required this.contentHtml,
+    required this.meta,
+  });
 
-  late String urlSuffix;
-  late int lightsNum;
-  late int repliesNum;
-  late int recommendNum;
-  late int readNum;
-  // late String client;
-  late bool hasVideo;
-  late bool hasVote;
-  late bool isRecommended;
+  factory ThreadMain.fromJson(Map<String, dynamic> json) {
+    final contentHtml = parseString(json['content']);
 
-  late DateTime lastReplyTime;
-
-  // what's this? maybe locked/deleted/normal?
-  late int status;
-
-  // maybe text/video/vote or something like that?
-  late int contentType;
-
-  late int isLock;
-  late String rawContent;
-  // late String postLocation;
-
-  // TODO: add vote detect and initilization
-  ThreadMain(Map threadJsonMap) {
-    tid = threadJsonMap["tid"];
-    title = threadJsonMap["title"];
-    contentHTML = threadJsonMap["content"];
-    videoCover = threadJsonMap["videoCover"];
-    video = threadJsonMap["video"];
-    urlSuffix = threadJsonMap["url"];
-    lightsNum = threadJsonMap["lights"];
-    repliesNum = threadJsonMap["replies"];
-    recommendNum = threadJsonMap["recommend"];
-    isRecommended = threadJsonMap["isRecommended"];
-    readNum = threadJsonMap["read"];
-    client = threadJsonMap["client"];
-    postTime = DateTime.fromMillisecondsSinceEpoch(threadJsonMap["createdAt"]);
-    postTimeReadable = threadJsonMap["createdAtFormat"];
-    lastReplyTime =
-        DateTime.fromMillisecondsSinceEpoch(threadJsonMap["repliedAt"]);
-    hasVideo = threadJsonMap["hasVideo"];
-    author = Author.forThread(threadJsonMap["author"]);
-    status = threadJsonMap["status"];
-    isLock = threadJsonMap["isLock"];
-    contentType = threadJsonMap["contentType"];
-    rawContent = threadJsonMap["format"];
-    postLocation = threadJsonMap["location"];
-    _checkVoteExist();
+    return ThreadMain(
+      tid: parseString(json['tid']),
+      title: parseString(json['title']),
+      vote: null,
+      videoCover: parseNullableString(json['videoCover']),
+      video: parseNullableString(json['video']),
+      urlSuffix: parseString(json['url']),
+      lightsNum: parseInt(json['lights']),
+      repliesNum: parseInt(json['replies']),
+      recommendNum: parseInt(json['recommend']),
+      readNum: parseInt(json['read']),
+      hasVideo: parseBool(json['hasVideo']),
+      hasVote: _detectVote(contentHtml),
+      isRecommended: parseBool(json['isRecommended']),
+      lastReplyTime: parseDateTimeFromMilliseconds(json['repliedAt']),
+      status: parseInt(json['status']),
+      contentType: parseInt(json['contentType']),
+      isLock: parseInt(json['isLock']),
+      rawContent: parseString(json['format']),
+      contentHtml: contentHtml,
+      meta: FloorMeta.fromJson(
+        json,
+        author: Author.forThread(parseMap(json['author'])),
+      ),
+    );
   }
 
-  void _checkVoteExist() {
-    var htmldoc = parse(contentHTML);
-    var voteElement = htmldoc.querySelector('[data-type="vote"]');
-    if (voteElement != null) {
-      hasVote = true;
-    } else {
-      hasVote = false;
-    }
+  static bool _detectVote(String contentHtml) {
+    final htmlDoc = parse(contentHtml);
+    return htmlDoc.querySelector('[data-type="vote"]') != null;
   }
 
-  // TODO: check Video exist
-  // void _checkVideoExist() {
-  //   var htmldoc = parse(contentHTML);
-  //   var voteElement = htmldoc.querySelector('[data-type="vote"]');
-  //   if (voteElement != null) {
-  //     hasVote = true;
-  //   } else {
-  //     hasVote = false;
-  //   }
-  // }
-
-  //TODO: parse vote link, detected vote is done by main.
+  // TODO: check video existence via HTML when the API payload is not reliable.
+  // TODO: parse vote link; vote detection is currently handled by the main post itself.
 }

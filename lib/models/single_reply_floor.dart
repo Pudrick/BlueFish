@@ -1,92 +1,179 @@
 import 'package:bluefish/models/author.dart';
-import 'package:bluefish/models/abstract_floor_content.dart';
+import 'package:bluefish/models/floor_meta.dart';
+import 'package:bluefish/models/model_parsing.dart';
 
-class SingleReplyFloor extends FloorContent {
-  late String pid;
-  late String authorId;
+enum ReplyVisibility {
+  visible,
+  deleted,
+  selfDeleted,
+  hidden,
+  auditing;
 
-  late int lightCount;
-  // late String client;
+  factory ReplyVisibility.fromJson(Map<String, dynamic> json) {
+    final isDelete = parseBool(json['isDelete']);
+    final isSelfDelete = parseBool(json['isSelfDelete']);
+    final isAudit = parseBool(json['isAudit']);
+    final isHidden = parseBool(json['isHidden']);
 
-  String? replyVideo;
-  String? replyVideoCover;
-
-  late bool isOP; // json 'isStarter' means OP.
-
-  late bool isDelete;
-  late bool isSelfDelete;
-  late bool isHidden;
-  late bool isAudit;
-
-  // TODO: make use of this arg.
-  // only appear in Quote part.
-  late bool? isBlacked;
-  late bool? isAdmin;
-
-  // late DateTime postTime;
-  // late String postTimeReadable; // can be infer from postTime
-  // late Author replyAuthor;
-
-  // Quote? quote;
-  SingleReplyFloor? quote;
-  bool hasQuote = false;
-
-  late int replyNum;
-
-  // null in lights list
-  late int? userBanned; // what's this?
-
-  late int? hidePost;
-  // String? postLocation;
-
-  SingleReplyFloor.fromReplyMap(Map jsonReplyMap) {
-    pid = jsonReplyMap["pid"];
-    authorId = jsonReplyMap["authorId"];
-    contentHTML = jsonReplyMap["content"];
-    lightCount = jsonReplyMap["count"];
-    client = jsonReplyMap["client"];
-    isAudit = jsonReplyMap["isAudit"];
-    isHidden = jsonReplyMap["isHidden"];
-    isDelete = jsonReplyMap["isDelete"];
-    isSelfDelete = jsonReplyMap["isSelfDelete"];
-    isOP = jsonReplyMap["isStarter"];
-    postTime = DateTime.fromMillisecondsSinceEpoch(jsonReplyMap["createdAt"]);
-    postTimeReadable = jsonReplyMap["createdAtFormat"];
-    author = Author.forReply(jsonReplyMap["author"]);
-    if (jsonReplyMap.containsKey("quote") &&
-        jsonReplyMap["quote"].containsKey("pid")) {
-      quote = SingleReplyFloor.fromReplyMap(jsonReplyMap["quote"]);
-      hasQuote = true;
-    } else {
-      quote = null;
+    if (isDelete) {
+      return isSelfDelete
+          ? ReplyVisibility.selfDeleted
+          : ReplyVisibility.deleted;
     }
-    replyNum = jsonReplyMap["replyNum"];
 
-    // these field may be null: jsonReplyMap may not contains these keys.
-      userBanned = jsonReplyMap["userBanned"];
-      hidePost = jsonReplyMap["hidePost"];
-      replyVideo = jsonReplyMap["video"];
-      replyVideoCover = jsonReplyMap["videoCover"];
-      isBlacked = jsonReplyMap["isBlacked"];
-      isAdmin = jsonReplyMap["isAdmin"];
+    if (isAudit) {
+      return ReplyVisibility.auditing;
+    }
 
-    postLocation = jsonReplyMap["location"];
+    if (isHidden) {
+      return ReplyVisibility.hidden;
+    }
+
+    return ReplyVisibility.visible;
   }
 
-  /// need to send fid pid puid tid to server.
-  /// PC API target address : https://bbs.hupu.com/pcmapi/pc/bbs/v1/reply/light
-  /// due to lack of cookie, will be instanced later.
-  void likeFloor() {
-    //TODO:
+  bool get canDisplay => this == ReplyVisibility.visible;
+
+  String get hiddenReasonText => switch (this) {
+    ReplyVisibility.deleted => '该内容已被删除',
+    ReplyVisibility.selfDeleted => '该内容已被作者删除',
+    ReplyVisibility.hidden => '该内容已被隐藏',
+    ReplyVisibility.auditing => '该内容正在卡审核',
+    ReplyVisibility.visible => '该内容不知道为什么不可显示',
+  };
+}
+
+abstract interface class ReplyContent {
+  String get pid;
+  String get contentHtml;
+  FloorMeta get meta;
+  ReplyVisibility get visibility;
+  ReplyQuote? get quote;
+}
+
+class ReplyQuote implements ReplyContent {
+  @override
+  final String pid;
+
+  @override
+  final String contentHtml;
+
+  @override
+  final FloorMeta meta;
+
+  @override
+  final ReplyVisibility visibility;
+
+  @override
+  final ReplyQuote? quote;
+
+  const ReplyQuote({
+    required this.pid,
+    required this.contentHtml,
+    required this.meta,
+    required this.visibility,
+    this.quote,
+  });
+
+  bool get hasQuote => quote != null;
+
+  factory ReplyQuote.fromJson(Map<String, dynamic> json) {
+    return ReplyQuote(
+      pid: parseString(json['pid']),
+      contentHtml: parseString(json['content']),
+      meta: FloorMeta.fromJson(json, author: _parseReplyAuthor(json)),
+      visibility: ReplyVisibility.fromJson(json),
+      quote: _parseQuote(json['quote']),
+    );
+  }
+}
+
+class SingleReplyFloor implements ReplyContent {
+  @override
+  final String pid;
+  final String authorId;
+  final int lightCount;
+  // The source JSON uses `isStarter` to indicate whether the reply author is the OP.
+  final bool isOp;
+  final int replyNum;
+  // Often null in the lights list; exact semantics still need confirmation.
+  final int? userBanned;
+  final int? hidePost;
+
+  @override
+  final String contentHtml;
+
+  final String? replyVideo;
+  final String? replyVideoCover;
+
+  @override
+  final FloorMeta meta;
+
+  @override
+  final ReplyVisibility visibility;
+
+  @override
+  final ReplyQuote? quote;
+
+  const SingleReplyFloor({
+    required this.pid,
+    required this.authorId,
+    required this.lightCount,
+    required this.isOp,
+    required this.replyNum,
+    required this.userBanned,
+    required this.hidePost,
+    required this.contentHtml,
+    required this.replyVideo,
+    required this.replyVideoCover,
+    required this.meta,
+    required this.visibility,
+    required this.quote,
+  });
+
+  bool get hasQuote => quote != null;
+
+  bool get canDisplay => visibility.canDisplay;
+
+  factory SingleReplyFloor.fromJson(Map<String, dynamic> json) {
+    return SingleReplyFloor(
+      pid: parseString(json['pid']),
+      authorId: parseString(json['authorId']),
+      lightCount: parseInt(json['count']),
+      isOp: parseBool(json['isStarter']),
+      replyNum: parseInt(json['replyNum']),
+      // These fields may be absent in some reply payloads.
+      userBanned: parseNullableInt(json['userBanned']),
+      hidePost: parseNullableInt(json['hidePost']),
+      contentHtml: parseString(json['content']),
+      replyVideo: parseNullableString(json['video']),
+      replyVideoCover: parseNullableString(json['videoCover']),
+      meta: FloorMeta.fromJson(json, author: _parseReplyAuthor(json)),
+      visibility: ReplyVisibility.fromJson(json),
+      quote: _parseQuote(json['quote']),
+    );
+  }
+}
+
+Author _parseReplyAuthor(Map<String, dynamic> json) {
+  // These flags were historically observed on quoted reply payloads,
+  // but we keep parsing them here so Author stays structurally consistent.
+  return Author.forReply(
+    parseMap(json['author']),
+    isBlacked: parseBool(json['isBlacked']),
+    isAdmin: parseBool(json['isAdmin']),
+  );
+}
+
+ReplyQuote? _parseQuote(Object? value) {
+  if (value is! Map) {
+    return null;
   }
 
-  void commentTo(String replyContent) {}
+  final quoteJson = Map<String, dynamic>.from(value);
+  if (!quoteJson.containsKey('pid')) {
+    return null;
+  }
 
-  void getComments() {}
-
-  void dislike() {}
-
-  void onlyAuthor() {}
-
-  void reportReply() {}
+  return ReplyQuote.fromJson(quoteJson);
 }

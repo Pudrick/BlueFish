@@ -83,13 +83,11 @@ class ThreadTitleWidget extends StatelessWidget {
 }
 
 class ThreadMainFloorWidget extends StatelessWidget {
-  final bool hasVote;
   final ThreadMain mainFloor;
   final double contentMaxWidth;
 
   const ThreadMainFloorWidget({
     super.key,
-    this.hasVote = false,
     required this.mainFloor,
     this.contentMaxWidth = double.infinity,
   });
@@ -115,7 +113,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AuthorInfoWidget(content: mainFloor),
+            AuthorInfoWidget(meta: mainFloor.meta),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -156,7 +154,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: contentMaxWidth),
                 child: BluefishHtmlWidget(
-                  mainFloor.contentHTML,
+                  mainFloor.contentHtml,
                   enableImageGallery: true,
                   imageHeroScope: 'thread-main:${mainFloor.tid}',
                   textStyle: textTheme.bodyLarge?.copyWith(
