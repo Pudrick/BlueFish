@@ -1,6 +1,6 @@
-import 'package:bluefish/infrastructure/auth/cookie_manager_dev.dart';
-import 'package:bluefish/infrastructure/network/api_config.dart';
-import 'package:bluefish/infrastructure/network/interceptors/request_interceptor.dart';
+import 'package:bluefish/auth/cookie_manager_dev.dart';
+import 'package:bluefish/network/api_config.dart';
+import 'package:bluefish/network/interceptors/request_interceptor.dart';
 import 'package:http/http.dart' as http;
 
 /// Interceptor that adds User-Agent and Cookie headers to requests.

@@ -92,6 +92,16 @@ class _UserHomePageViewState extends State<UserHomePageView> {
     );
   }
 
+  void _handleBack() {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+
+    router.go('/');
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -116,7 +126,7 @@ class _UserHomePageViewState extends State<UserHomePageView> {
             SliverAppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
+                onPressed: _handleBack,
               ),
               floating: true,
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,

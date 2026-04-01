@@ -1,6 +1,6 @@
-import 'package:bluefish/infrastructure/auth/cookie_manager_dev.dart';
-import 'package:bluefish/infrastructure/network/interceptors/auth_interceptor.dart';
-import 'package:bluefish/infrastructure/network/interceptors/request_interceptor.dart';
+import 'package:bluefish/auth/cookie_manager_dev.dart';
+import 'package:bluefish/network/interceptors/auth_interceptor.dart';
+import 'package:bluefish/network/interceptors/request_interceptor.dart';
 import 'package:http/http.dart' as http;
 
 /// Unified HTTP client with interceptor support.

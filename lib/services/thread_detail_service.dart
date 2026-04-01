@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
+import 'package:bluefish/models/single_reply_floor.dart';
 import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/models/thread_main.dart';
-import 'package:bluefish/utils/get_thread_info.dart';
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/utils/result.dart';
+import 'package:html/dom.dart';
+import 'package:html/parser.dart';
 
 /// Service for fetching thread detail data with LRU caching.
 class ThreadDetailService {
@@ -100,19 +105,20 @@ class ThreadDetailService {
   }
 
   Future<ThreadDetail> _fetchFromNetwork(String tid, int page) async {
-    final threadInfo = await getThreadInfoMapFromTid(tid, page);
+    final threadInfo = await _fetchThreadInfoMap(tid, page);
 
     // Use cached main floor if available and not first page
     ThreadMain mainFloor;
     if (page > 1 && _mainFloorCache.containsKey(tid)) {
       mainFloor = _mainFloorCache[tid]!;
     } else {
-      mainFloor = ThreadMain(threadInfo["thread"]);
+      mainFloor = ThreadMain(threadInfo['thread']);
     }
 
-    final int totalRepliesNum = threadInfo["replies"]["count"];
-    final lightedReplies = getReplyListFromWholeMap("lights", threadInfo);
-    final replies = getReplyListFromWholeMap("replies", threadInfo);
+    final repliesInfo = threadInfo['replies'] as Map<String, dynamic>;
+    final int totalRepliesNum = repliesInfo['count'] as int;
+    final lightedReplies = _parseReplyList('lights', threadInfo);
+    final replies = _parseReplyList('replies', threadInfo);
 
     return ThreadDetail(
       tid: tid,
@@ -123,5 +129,61 @@ class ThreadDetailService {
       lightedReplies: lightedReplies,
       replies: replies,
     );
+  }
+
+  Future<Map<String, dynamic>> _fetchThreadInfoMap(String tid, int page) async {
+    final threadUrl = Uri.parse('https://bbs.hupu.com/$tid-$page.html');
+    final response = await httpClient.get(threadUrl);
+
+    if (response.statusCode != 200) {
+      throw TimeoutException('Failed to get http response.');
+    }
+
+    final threadHtml = parse(response.body);
+    return _extractThreadInfoMap(threadHtml);
+  }
+
+  Map<String, dynamic> _extractThreadInfoMap(Document rawHttp) {
+    final threadJsonStr = rawHttp.getElementById('__NEXT_DATA__')!.innerHtml;
+    final threadObject = jsonDecode(threadJsonStr) as Map<String, dynamic>;
+    final props = threadObject['props'] as Map<String, dynamic>;
+    final pageProps = props['pageProps'] as Map<String, dynamic>;
+    final detailInfo = pageProps['detail'] as Map<String, dynamic>;
+
+    // TODO: add collect check
+    // example API:
+    // https://bbs.mobileapi.hupu.com/1/8.0.30/threads/getThreadCollectStatus?tid=628217371
+
+    final thread = Map<String, dynamic>.from(
+      detailInfo['thread'] as Map<dynamic, dynamic>,
+    );
+    // TODO: add isrec check instead of this
+    thread['isRecommended'] = detailInfo['isRecommended'];
+
+    return {
+      'thread': thread,
+      'lights': detailInfo['lights'],
+      'replies': detailInfo['replies'],
+    };
+  }
+
+  List<SingleReplyFloor> _parseReplyList(
+    String requireType,
+    Map<String, dynamic> threadInfoMap,
+  ) {
+    late final List<dynamic> repliesMap;
+    if (requireType == 'lights') {
+      repliesMap = threadInfoMap[requireType] as List<dynamic>;
+    } else if (requireType == 'replies') {
+      final replies = threadInfoMap['replies'] as Map<String, dynamic>;
+      repliesMap = replies['list'] as List<dynamic>;
+    } else {
+      throw ArgumentError.value(requireType, 'requireType', 'Unsupported type');
+    }
+
+    return [
+      for (final replyMap in repliesMap)
+        SingleReplyFloor.fromReplyMap(replyMap),
+    ];
   }
 }

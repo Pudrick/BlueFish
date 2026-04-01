@@ -22,27 +22,30 @@ class BluefishHtmlWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrls = enableImageGallery
-        ? _extractImageUrls()
-        : const <String>[];
-    final heroTags = _buildHeroTags(imageUrls);
+    final galleryData = enableImageGallery
+        ? _prepareImageGalleryHtml()
+        : const _PreparedImageGalleryHtml(
+            html: null,
+            imageUrls: <String>[],
+            heroTags: null,
+          );
+    final renderedHtml = galleryData.html ?? html;
 
     return SelectionArea(
       child: HtmlWidget(
-        html,
+        renderedHtml,
         textStyle: textStyle,
         factoryBuilder: () => BluefishHtmlWidgetFactory(
-          imageHeroTagsByUrl: _groupHeroTagsByUrl(imageUrls, heroTags),
+          onTapImageAtIndex: enableImageGallery
+              ? (context, galleryIndex) => _openPhotoGallery(
+                  context,
+                  imageUrls: galleryData.imageUrls,
+                  heroTags: galleryData.heroTags,
+                  initialIndex: galleryIndex,
+                )
+              : null,
         ),
         customWidgetBuilder: _buildCustomWidget,
-        onTapImage: enableImageGallery
-            ? (imageMetadata) => _openPhotoGallery(
-                context,
-                imageUrls: imageUrls,
-                heroTags: heroTags,
-                imageMetadata: imageMetadata,
-              )
-            : null,
       ),
     );
   }
@@ -59,54 +62,43 @@ class BluefishHtmlWidget extends StatelessWidget {
     return null;
   }
 
-  List<Object>? _buildHeroTags(List<String> imageUrls) {
-    final imageHeroScope = this.imageHeroScope;
-    if (imageHeroScope == null || imageUrls.isEmpty) {
-      return null;
-    }
-
-    return List<Object>.generate(
-      imageUrls.length,
-      (index) => '$imageHeroScope:image:$index',
-      growable: false,
-    );
-  }
-
-  Map<String, List<Object>> _groupHeroTagsByUrl(
-    List<String> imageUrls,
-    List<Object>? heroTags,
-  ) {
-    if (heroTags == null || imageUrls.isEmpty) {
-      return const {};
-    }
-
-    final groupedTags = <String, List<Object>>{};
-    for (var i = 0; i < imageUrls.length; i++) {
-      groupedTags.putIfAbsent(imageUrls[i], () => <Object>[]).add(heroTags[i]);
-    }
-
-    return groupedTags;
-  }
-
-  List<String> _extractImageUrls() {
+  _PreparedImageGalleryHtml _prepareImageGalleryHtml() {
     final fragment = html_parser.parseFragment(html);
+    final imageUrls = <String>[];
+    final imageHeroScope = this.imageHeroScope;
+    final heroTags = imageHeroScope == null ? null : <Object>[];
 
-    return fragment
-        .querySelectorAll('img')
-        .map((element) => _normalizeImageUrl(element.attributes['src']))
-        .whereType<String>()
-        .toList(growable: false);
-  }
+    for (final element in fragment.querySelectorAll('img')) {
+      final normalizedUrl = _normalizeImageUrl(element.attributes['src']);
+      if (normalizedUrl == null) {
+        continue;
+      }
 
-  String? _firstImageUrl(ImageMetadata imageMetadata) {
-    for (final source in imageMetadata.sources) {
-      final normalizedUrl = _normalizeImageUrl(source.url);
-      if (normalizedUrl != null) {
-        return normalizedUrl;
+      final galleryIndex = imageUrls.length;
+      imageUrls.add(normalizedUrl);
+      element.attributes[bluefishGalleryIndexAttribute] = galleryIndex
+          .toString();
+
+      if (imageHeroScope != null) {
+        final heroTag = '$imageHeroScope:image:$galleryIndex';
+        element.attributes[bluefishHeroTagAttribute] = heroTag;
+        heroTags!.add(heroTag);
       }
     }
 
-    return null;
+    if (imageUrls.isEmpty) {
+      return const _PreparedImageGalleryHtml(
+        html: null,
+        imageUrls: <String>[],
+        heroTags: null,
+      );
+    }
+
+    return _PreparedImageGalleryHtml(
+      html: fragment.outerHtml,
+      imageUrls: List.unmodifiable(imageUrls),
+      heroTags: heroTags == null ? null : List.unmodifiable(heroTags),
+    );
   }
 
   String? _normalizeImageUrl(String? rawUrl) {
@@ -126,26 +118,34 @@ class BluefishHtmlWidget extends StatelessWidget {
     BuildContext context, {
     required List<String> imageUrls,
     required List<Object>? heroTags,
-    required ImageMetadata imageMetadata,
+    required int initialIndex,
   }) {
-    final tappedUrl = _firstImageUrl(imageMetadata);
-    final galleryUrls = imageUrls.isNotEmpty
-        ? imageUrls
-        : <String>[if (tappedUrl != null) tappedUrl];
-    if (galleryUrls.isEmpty) {
+    if (imageUrls.isEmpty ||
+        initialIndex < 0 ||
+        initialIndex >= imageUrls.length) {
       return;
     }
-
-    final initialIndex = tappedUrl == null ? 0 : galleryUrls.indexOf(tappedUrl);
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PhotoGalleryPage(
-          imageUrls: galleryUrls,
+          imageUrls: imageUrls,
           heroTags: heroTags,
-          initialIndex: initialIndex >= 0 ? initialIndex : 0,
+          initialIndex: initialIndex,
         ),
       ),
     );
   }
+}
+
+class _PreparedImageGalleryHtml {
+  final String? html;
+  final List<String> imageUrls;
+  final List<Object>? heroTags;
+
+  const _PreparedImageGalleryHtml({
+    required this.html,
+    required this.imageUrls,
+    required this.heroTags,
+  });
 }

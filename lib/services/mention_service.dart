@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/infrastructure/network/http_client.dart';
+import 'package:bluefish/network/http_client.dart';
 
 class MentionService<T> {
   final String apiPath;

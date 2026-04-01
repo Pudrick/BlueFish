@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/infrastructure/network/http_client.dart';
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/single_thread_title.dart';
 import 'package:bluefish/userdata/user_settings.dart';
 import 'package:http/http.dart' as http;

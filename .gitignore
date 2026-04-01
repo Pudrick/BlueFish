@@ -52,6 +52,7 @@ test/
 
 lib/utils/http_with_ua_coke.dart
 playground/
+dependencies/
 
 # Flutter README
 Flutter-README.md
@@ -75,4 +76,4 @@ lib/temp/*
 .github/copilot-instructions.md
 
 # Development cookie manager with hardcoded test cookies
-lib/infrastructure/auth/cookie_manager_dev.dart
+lib/auth/cookie_manager_dev.dart

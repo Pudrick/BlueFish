@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:bluefish/infrastructure/network/http_client.dart';
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/userdata/user_settings.dart';
 
 enum VoteType { dualImage, noImage }

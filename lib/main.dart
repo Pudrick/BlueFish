@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:bluefish/infrastructure/network/http_client.dart';
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/router/app_router.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 

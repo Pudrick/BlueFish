@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/infrastructure/network/http_client.dart';
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/models/user_homepage/user_home_reply.dart';
 import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
