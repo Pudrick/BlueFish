@@ -48,6 +48,8 @@ abstract interface class ReplyContent {
   String get contentHtml;
   FloorMeta get meta;
   ReplyVisibility get visibility;
+  // Quoted replies can also be authored by the OP, so the UI still needs this flag.
+  bool get isOp;
   ReplyQuote? get quote;
 }
 
@@ -65,6 +67,9 @@ class ReplyQuote implements ReplyContent {
   final ReplyVisibility visibility;
 
   @override
+  final bool isOp;
+
+  @override
   final ReplyQuote? quote;
 
   const ReplyQuote({
@@ -72,6 +77,7 @@ class ReplyQuote implements ReplyContent {
     required this.contentHtml,
     required this.meta,
     required this.visibility,
+    required this.isOp,
     this.quote,
   });
 
@@ -83,6 +89,7 @@ class ReplyQuote implements ReplyContent {
       contentHtml: parseString(json['content']),
       meta: FloorMeta.fromJson(json, author: _parseReplyAuthor(json)),
       visibility: ReplyVisibility.fromJson(json),
+      isOp: parseBool(json['isStarter']),
       quote: _parseQuote(json['quote']),
     );
   }
@@ -94,6 +101,7 @@ class SingleReplyFloor implements ReplyContent {
   final String authorId;
   final int lightCount;
   // The source JSON uses `isStarter` to indicate whether the reply author is the OP.
+  @override
   final bool isOp;
   final int replyNum;
   // Often null in the lights list; exact semantics still need confirmation.

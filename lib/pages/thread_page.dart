@@ -33,8 +33,8 @@ class ThreadPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ThreadDetailViewModel(tid: tid, initialPage: page)
-        ..loadInitial(),
+      create: (_) =>
+          ThreadDetailViewModel(tid: tid, initialPage: page)..loadInitial(),
       child: const _ThreadPageContent(),
     );
   }
@@ -128,7 +128,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: colorScheme.error,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       viewModel.errorMessage ?? '加载失败',
@@ -204,6 +208,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                     child: ThreadPaginationBar(
                                       currentPage: viewModel.currentPage,
                                       totalPages: viewModel.totalPages,
+                                      firstButtonLabel: '跳至首页',
+                                      lastButtonLabel: '跳至末页',
+                                      onFirst: canPrev
+                                          ? () => _jumpToPage(1)
+                                          : null,
                                       onPrev: canPrev
                                           ? () => _jumpToPage(
                                               viewModel.currentPage - 1,
@@ -212,6 +221,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                       onNext: canNext
                                           ? () => _jumpToPage(
                                               viewModel.currentPage + 1,
+                                            )
+                                          : null,
+                                      onLast: canNext
+                                          ? () => _jumpToPage(
+                                              viewModel.totalPages,
                                             )
                                           : null,
                                     ),
@@ -253,7 +267,9 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                         1;
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
                                       child: ReplyFloor(
                                         replyFloor: data.replies[index],
                                         isQuote: false,
@@ -277,6 +293,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                     child: ThreadPaginationBar(
                                       currentPage: viewModel.currentPage,
                                       totalPages: viewModel.totalPages,
+                                      firstButtonLabel: '跳至首页',
+                                      lastButtonLabel: '跳至末页',
+                                      onFirst: canPrev
+                                          ? () => _jumpToPage(1)
+                                          : null,
                                       onPrev: canPrev
                                           ? () => _jumpToPage(
                                               viewModel.currentPage - 1,
@@ -287,11 +308,18 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                               viewModel.currentPage + 1,
                                             )
                                           : null,
+                                      onLast: canNext
+                                          ? () => _jumpToPage(
+                                              viewModel.totalPages,
+                                            )
+                                          : null,
                                     ),
                                   ),
                                 ),
 
-                              const SliverToBoxAdapter(child: SizedBox(height: 68)),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 68),
+                              ),
                             ],
                           ),
                         ),
@@ -323,7 +351,9 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                     Container(
                       color: colorScheme.surface.withAlpha(180),
                       child: Center(
-                        child: CircularProgressIndicator(color: colorScheme.primary),
+                        child: CircularProgressIndicator(
+                          color: colorScheme.primary,
+                        ),
                       ),
                     ),
                 ],
@@ -356,7 +386,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
             elevation: 0,
             child: const Icon(Icons.edit_outlined, size: 20),
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.endContained,
         );
       },
     );

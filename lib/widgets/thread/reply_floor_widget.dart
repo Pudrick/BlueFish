@@ -97,7 +97,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 isQuote: true,
                 floorNumber: null,
                 lightCount: null,
-                showOpBadge: false,
+                showOpBadge: content.quote!.isOp,
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
               ),
@@ -163,7 +163,7 @@ class _ReplyFloorContent extends StatelessWidget {
               Expanded(
                 child: AuthorInfoWidget(
                   meta: content.meta,
-                  showOpBadge: showOpBadge && !isQuote,
+                  showOpBadge: showOpBadge,
                 ),
               ),
               if (!isQuote) ...[

@@ -196,6 +196,14 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                         child: ThreadPaginationBar(
                           currentPage: currentPage,
                           totalPages: totalPages,
+                          firstButtonLabel: '回到首页',
+                          onFirst: canPrev
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    () => titleList.toPage(1),
+                                  );
+                                }
+                              : null,
                           onPrev: canPrev
                               ? () async {
                                   await _changePageAndScrollToTop(
@@ -223,6 +231,14 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
                         child: ThreadPaginationBar(
                           currentPage: currentPage,
                           totalPages: totalPages,
+                          firstButtonLabel: '回到首页',
+                          onFirst: canPrev
+                              ? () async {
+                                  await _changePageAndScrollToTop(
+                                    () => titleList.toPage(1),
+                                  );
+                                }
+                              : null,
                           onPrev: canPrev
                               ? () async {
                                   await _changePageAndScrollToTop(
