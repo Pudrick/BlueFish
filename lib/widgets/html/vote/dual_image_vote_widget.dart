@@ -1,387 +1,615 @@
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/widgets/html/vote/vote_action_bar.dart';
+import 'package:bluefish/widgets/html/vote/vote_card_shell.dart';
 import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
 import 'package:flutter/material.dart';
 
-class DualImageVoteWidget extends StatelessWidget {
+class DualImageVoteWidget extends StatefulWidget {
   final Vote vote;
-
-  static const double outerBorderRoundRadius = 12;
-  static const double innerBorderRoundRadius = 10;
-  static const double buttonVerticalMargin = 24;
 
   DualImageVoteWidget({super.key, required this.vote})
     : assert(vote.isDualImageLayout);
 
-  VoteOption get _leftOption => vote.options[0];
+  @override
+  State<DualImageVoteWidget> createState() => _DualImageVoteWidgetState();
+}
 
-  VoteOption get _rightOption => vote.options[1];
+class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
+  late List<int> _selectedOptionSorts;
 
-  bool get _leftSelected => vote.isOptionSelected(_leftOption.sort);
+  Vote get _vote => widget.vote;
 
-  bool get _rightSelected => vote.isOptionSelected(_rightOption.sort);
+  VoteOption get _leftOption => _vote.options[0];
 
-  int _resolvedFlex(int value) => value > 0 ? value : 1;
+  VoteOption get _rightOption => _vote.options[1];
 
-  Widget _canVoteButtonWidget() {
-    const double buttonVerticalMargin = 25;
-    const double buttonTextSize = 27;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                vertical: buttonVerticalMargin,
-              ),
-              backgroundColor: Colors.redAccent,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(
-                  Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
-                ),
-              ),
-            ),
-            child: Text(
-              _leftOption.content,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: buttonTextSize,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                vertical: buttonVerticalMargin,
-              ),
-              backgroundColor: Colors.blue,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(
-                  Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
-                ),
-              ),
-            ),
-            child: Text(
-              _rightOption.content,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: buttonTextSize,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _cannotVoteButtonWidget(BuildContext context) {
-    const double buttonTextSize = 17;
-    const double buttonHeight = 70;
-    final leftColorOfNumberVotes = Theme.of(
-      context,
-    ).colorScheme.onTertiaryContainer;
-    final rightColorOfNumberVotes = Theme.of(
-      context,
-    ).colorScheme.onSecondaryContainer;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          height: buttonHeight,
-          child: Row(
-            children: [
-              Card(
-                elevation: 2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.tertiaryContainer,
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${(_leftOption.percentage * 100).toStringAsFixed(2)}%',
-                          style: TextStyle(
-                            color: leftColorOfNumberVotes,
-                            fontSize: 20,
-                          ),
-                        ),
-                        Column(
-                          children: [
-                            if (_leftSelected)
-                              Icon(Icons.check, color: leftColorOfNumberVotes),
-                            const SizedBox(width: 5),
-                            Text(
-                              _leftOption.optionVoteCount.toString(),
-                              style: TextStyle(
-                                color: leftColorOfNumberVotes,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                flex: _resolvedFlex(_leftOption.optionVoteCount),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 3),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                    color: Theme.of(context).colorScheme.tertiaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                flex: _resolvedFlex(_rightOption.optionVoteCount),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 3),
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              Card(
-                elevation: 2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${(_rightOption.percentage * 100).toStringAsFixed(2)}%',
-                          style: TextStyle(
-                            color: rightColorOfNumberVotes,
-                            fontSize: 20,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            if (_rightSelected)
-                              Icon(
-                                Icons.check_circle,
-                                color: rightColorOfNumberVotes,
-                              ),
-                            const SizedBox(width: 5),
-                            Text(
-                              _rightOption.optionVoteCount.toString(),
-                              style: TextStyle(
-                                color: rightColorOfNumberVotes,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: null,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: DualImageVoteWidget.buttonVerticalMargin,
-                  ),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_leftSelected)
-                      Icon(
-                        Icons.check,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.38),
-                        size: buttonTextSize,
-                      ),
-                    Text(
-                      _leftOption.content,
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.38),
-                        fontSize: buttonTextSize,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 7),
-            if (vote.canCancelVote)
-              SizedBox(
-                height: 55,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(
-                          DualImageVoteWidget.innerBorderRoundRadius,
-                        ),
-                      ),
-                    ),
-                  ),
-                  child: const Text(
-                    '取消投票',
-                    style: TextStyle(fontSize: buttonTextSize),
-                  ),
-                ),
-              ),
-            if (vote.canCancelVote) const SizedBox(width: 7),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: null,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: DualImageVoteWidget.buttonVerticalMargin,
-                  ),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(
-                        DualImageVoteWidget.outerBorderRoundRadius,
-                      ),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_rightSelected)
-                      Icon(
-                        Icons.check_circle,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.38),
-                        size: buttonTextSize,
-                      ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _rightOption.content,
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.38),
-                        fontSize: buttonTextSize,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _voteImageWidget() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(
-          flex: 1,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(
-              Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
-            ),
-            child: Image.network(
-              _leftOption.attachment.toString(),
-              fit: BoxFit.fill,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 1,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(
-              Radius.circular(DualImageVoteWidget.outerBorderRoundRadius),
-            ),
-            child: Image.network(
-              _rightOption.attachment.toString(),
-              fit: BoxFit.fill,
-            ),
-          ),
-        ),
-      ],
+  @override
+  void initState() {
+    super.initState();
+    _selectedOptionSorts = List<int>.from(
+      _vote.userSelectedOptionSorts ?? const <int>[],
     );
   }
 
   @override
+  void didUpdateWidget(covariant DualImageVoteWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.vote != widget.vote) {
+      _selectedOptionSorts = List<int>.from(
+        _vote.userSelectedOptionSorts ?? const <int>[],
+      );
+    }
+  }
+
+  bool _isSelected(VoteOption option) {
+    return _selectedOptionSorts.contains(option.sort);
+  }
+
+  bool _canToggle(VoteOption option) {
+    if (!_vote.canVote) {
+      return false;
+    }
+
+    return _isSelected(option) ||
+        _vote.userOptionLimit <= 1 ||
+        _selectedOptionSorts.length < _vote.userOptionLimit;
+  }
+
+  void _toggle(VoteOption option) {
+    if (!_vote.canVote) {
+      return;
+    }
+
+    setState(() {
+      if (_isSelected(option)) {
+        _selectedOptionSorts.remove(option.sort);
+        return;
+      }
+
+      if (_vote.userOptionLimit <= 1) {
+        _selectedOptionSorts = <int>[option.sort];
+        return;
+      }
+
+      if (_selectedOptionSorts.length < _vote.userOptionLimit) {
+        _selectedOptionSorts.add(option.sort);
+      }
+    });
+  }
+
+  int _resolvedFlex(int value) => value > 0 ? value : 1;
+
+  void _showPendingSnackBar(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 6,
-      margin: const EdgeInsets.all(7),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        child: Column(
-          children: [
-            VoteInfoWidget(vote: vote),
-            const SizedBox(height: 10),
-            _voteImageWidget(),
-            const SizedBox(height: 10),
-            if (vote.canVote)
-              _canVoteButtonWidget()
-            else
-              _cannotVoteButtonWidget(context),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return VoteCardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          VoteInfoWidget(vote: _vote),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final useColumn = constraints.maxWidth < 440;
+
+              if (useColumn) {
+                return Column(
+                  children: [
+                    _DualImageVoteOptionCard(
+                      option: _leftOption,
+                      selected: _isSelected(_leftOption),
+                      enabled: _canToggle(_leftOption),
+                      showResults: !_vote.canVote,
+                      accentColor: colorScheme.tertiary,
+                      onTap: _canToggle(_leftOption)
+                          ? () => _toggle(_leftOption)
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _DualImageVoteOptionCard(
+                      option: _rightOption,
+                      selected: _isSelected(_rightOption),
+                      enabled: _canToggle(_rightOption),
+                      showResults: !_vote.canVote,
+                      accentColor: colorScheme.secondary,
+                      onTap: _canToggle(_rightOption)
+                          ? () => _toggle(_rightOption)
+                          : null,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _DualImageVoteOptionCard(
+                      option: _leftOption,
+                      selected: _isSelected(_leftOption),
+                      enabled: _canToggle(_leftOption),
+                      showResults: !_vote.canVote,
+                      accentColor: colorScheme.tertiary,
+                      onTap: _canToggle(_leftOption)
+                          ? () => _toggle(_leftOption)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _DualImageVoteOptionCard(
+                      option: _rightOption,
+                      selected: _isSelected(_rightOption),
+                      enabled: _canToggle(_rightOption),
+                      showResults: !_vote.canVote,
+                      accentColor: colorScheme.secondary,
+                      onTap: _canToggle(_rightOption)
+                          ? () => _toggle(_rightOption)
+                          : null,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          if (!_vote.canVote) ...[
+            const SizedBox(height: 16),
+            _VoteComparisonBar(
+              leftOption: _leftOption,
+              rightOption: _rightOption,
+              leftSelected: _isSelected(_leftOption),
+              rightSelected: _isSelected(_rightOption),
+              leftFlex: _resolvedFlex(_leftOption.optionVoteCount),
+              rightFlex: _resolvedFlex(_rightOption.optionVoteCount),
+            ),
           ],
+          if (_vote.canVote) ...[
+            const SizedBox(height: 16),
+            VoteActionBar(
+              selectedCount: _selectedOptionSorts.length,
+              optionLimit: _vote.userOptionLimit,
+              onSubmit: _selectedOptionSorts.isEmpty
+                  ? null
+                  : () => _showPendingSnackBar('投票提交尚未接入'),
+            ),
+          ],
+          if (_vote.canCancelVote) ...[
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _showPendingSnackBar('取消投票尚未接入'),
+              icon: const Icon(Icons.undo_rounded),
+              label: const Text('取消投票'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DualImageVoteOptionCard extends StatelessWidget {
+  final VoteOption option;
+  final bool selected;
+  final bool enabled;
+  final bool showResults;
+  final Color accentColor;
+  final VoidCallback? onTap;
+
+  const _DualImageVoteOptionCard({
+    required this.option,
+    required this.selected,
+    required this.enabled,
+    required this.showResults,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final borderRadius = BorderRadius.circular(18);
+    final imageBorderRadius = BorderRadius.circular(15);
+    final borderColor = selected
+        ? colorScheme.primary
+        : colorScheme.outlineVariant.withValues(alpha: 0.7);
+    final backgroundColor = showResults
+        ? (selected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.4)
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.78))
+        : (selected
+              ? colorScheme.secondaryContainer.withValues(alpha: 0.95)
+              : colorScheme.surface.withValues(alpha: 0.75));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          ),
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(3),
+                  child: ClipRRect(
+                    borderRadius: imageBorderRadius,
+                    child: AspectRatio(
+                      aspectRatio: 4 / 5,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _VoteImage(url: option.attachment.toString()),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.02),
+                                  Colors.black.withValues(alpha: 0.38),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.18,
+                                      ),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            left: 12,
+                            right: 12,
+                            bottom: 12,
+                            child: Text(
+                              option.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (!showResults && !enabled && !selected)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    child: Text(
+                      '已达到选择上限',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.55),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _VoteImage extends StatelessWidget {
+  final String url;
+
+  const _VoteImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+
+        return DecoratedBox(
+          decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes == null
+                  ? null
+                  : loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return DecoratedBox(
+          decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest),
+          child: Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              size: 36,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _VoteComparisonBar extends StatelessWidget {
+  final VoteOption leftOption;
+  final VoteOption rightOption;
+  final bool leftSelected;
+  final bool rightSelected;
+  final int leftFlex;
+  final int rightFlex;
+
+  const _VoteComparisonBar({
+    required this.leftOption,
+    required this.rightOption,
+    required this.leftSelected,
+    required this.rightSelected,
+    required this.leftFlex,
+    required this.rightFlex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final leftColor = leftSelected ? colorScheme.primary : colorScheme.tertiary;
+    final rightColor = rightSelected
+        ? colorScheme.primary
+        : colorScheme.secondary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '投票结果',
+            style: textTheme.titleSmall?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _VoteScore(
+                  alignment: CrossAxisAlignment.start,
+                  percentage: leftOption.percentage,
+                  voteCount: leftOption.optionVoteCount,
+                  accentColor: leftColor,
+                  emphasized: leftSelected,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _VoteScore(
+                  alignment: CrossAxisAlignment.end,
+                  percentage: rightOption.percentage,
+                  voteCount: rightOption.optionVoteCount,
+                  accentColor: rightColor,
+                  emphasized: rightSelected,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: SizedBox(
+              height: 28,
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: leftFlex,
+                        child: Container(
+                          color: leftColor.withValues(alpha: 0.88),
+                        ),
+                      ),
+                      Expanded(
+                        flex: rightFlex,
+                        child: Container(
+                          color: rightColor.withValues(alpha: 0.88),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _VoteLegend(
+                  label: leftOption.content,
+                  voteCount: leftOption.optionVoteCount,
+                  percentage: leftOption.percentage,
+                  accentColor: leftColor,
+                  selected: leftSelected,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _VoteLegend(
+                  label: rightOption.content,
+                  voteCount: rightOption.optionVoteCount,
+                  percentage: rightOption.percentage,
+                  accentColor: rightColor,
+                  selected: rightSelected,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoteScore extends StatelessWidget {
+  final CrossAxisAlignment alignment;
+  final double percentage;
+  final int voteCount;
+  final Color accentColor;
+  final bool emphasized;
+
+  const _VoteScore({
+    required this.alignment,
+    required this.percentage,
+    required this.voteCount,
+    required this.accentColor,
+    required this.emphasized,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: alignment,
+      children: [
+        Text(
+          '${(percentage * 100).toStringAsFixed(0)}%',
+          style: textTheme.headlineSmall?.copyWith(
+            color: accentColor,
+            fontWeight: emphasized ? FontWeight.w900 : FontWeight.w800,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$voteCount票',
+          style: textTheme.labelMedium?.copyWith(
+            color: accentColor.withValues(alpha: 0.88),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VoteLegend extends StatelessWidget {
+  final String label;
+  final int voteCount;
+  final double percentage;
+  final Color accentColor;
+  final bool selected;
+
+  const _VoteLegend({
+    required this.label,
+    required this.voteCount,
+    required this.percentage,
+    required this.accentColor,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          margin: const EdgeInsets.only(top: 4),
+          decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$voteCount票 · ${(percentage * 100).toStringAsFixed(0)}%',
+                style: textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (selected)
+                Text(
+                  '我的选择',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
