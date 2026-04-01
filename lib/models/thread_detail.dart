@@ -21,5 +21,8 @@ class ThreadDetail {
     required this.replies,
   });
 
-  int get totalPagesNum => (totalRepliesNum / repliesPerPage).ceil().clamp(1, 999);
+  int get totalPagesNum {
+    final pages = (totalRepliesNum / repliesPerPage).ceil();
+    return pages < 1 ? 1 : pages;
+  }
 }
