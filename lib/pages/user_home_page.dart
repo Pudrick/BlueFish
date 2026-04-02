@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/user_home/user_home_display_select_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_info_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_reply_list_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_thread_list_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class UserHomePage extends StatelessWidget {
@@ -93,13 +93,7 @@ class _UserHomePageViewState extends State<UserHomePageView> {
   }
 
   void _handleBack() {
-    final router = GoRouter.of(context);
-    if (router.canPop()) {
-      router.pop();
-      return;
-    }
-
-    router.go('/');
+    context.popOrGoThreadList();
   }
 
   @override

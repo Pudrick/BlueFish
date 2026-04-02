@@ -1,10 +1,9 @@
 import 'package:bluefish/models/thread_list.dart';
-import 'package:bluefish/router/app_router.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_list_view_model.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:bluefish/widgets/thread/single_thread_title_card.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class TitleListPageBody extends StatefulWidget {
@@ -35,10 +34,7 @@ class _TitleListPageBodyState extends State<TitleListPageBody> {
   }
 
   void _openThreadDetail(BuildContext context, int tid) {
-    context.pushNamed(
-      AppRouteNames.threadDetail,
-      pathParameters: {'tid': tid.toString()},
-    );
+    context.pushThreadDetail(tid: tid);
   }
 
   void _saveCurrentBoardOffset() {

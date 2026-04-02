@@ -1,11 +1,10 @@
 import 'package:bluefish/pages/mention_list_page_base.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/mention_light_view_model.dart';
 import 'package:bluefish/viewModels/mention_reply_view_model.dart';
 import 'package:bluefish/widgets/mention/mention_light_widget.dart';
 import 'package:bluefish/widgets/mention/mention_reply_widget.dart';
 import 'package:flutter/material.dart';
-
-enum MentionTab { reply, light }
 
 class MentionPage extends StatefulWidget {
   final MentionTab initialTab;
@@ -25,6 +24,7 @@ class _MentionPageState extends State<MentionPage> {
   static const int _lightUnreadPlaceholder = 3;
 
   late MentionTab _currentTab;
+  String? _lastSyncedLocation;
 
   @override
   void initState() {
@@ -33,7 +33,41 @@ class _MentionPageState extends State<MentionPage> {
   }
 
   @override
+  void didUpdateWidget(covariant MentionPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab &&
+        widget.initialTab != _currentTab) {
+      _currentTab = widget.initialTab;
+    }
+  }
+
+  void _syncRouteIfNeeded() {
+    final targetLocation = AppRoutes.mentionLocation(tab: _currentTab);
+    if (_lastSyncedLocation == targetLocation) {
+      return;
+    }
+
+    _lastSyncedLocation = targetLocation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final currentLocation = context.maybeGoRouterUri?.toString();
+      if (currentLocation == null) {
+        return;
+      }
+
+      if (currentLocation != targetLocation) {
+        context.replaceMention(tab: _currentTab);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _syncRouteIfNeeded();
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,

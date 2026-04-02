@@ -1,7 +1,7 @@
 // this widget is fully from vibe. so is it reliable?
 
 import 'package:bluefish/models/mention_reply.dart';
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
@@ -310,16 +310,11 @@ class _MentionReplyImageStripState extends State<_MentionReplyImageStrip> {
                     width: imageWidth,
                     child: GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PhotoGalleryPage(
-                              imageUrls: widget.reply.imagesList
-                                  .map((e) => e.url.toString())
-                                  .toList(),
-                              initialIndex: index,
-                            ),
-                          ),
+                        context.pushPhotoGallery(
+                          imageUrls: widget.reply.imagesList
+                              .map((e) => e.url.toString())
+                              .toList(growable: false),
+                          initialIndex: index,
                         );
                       },
                       child: Hero(

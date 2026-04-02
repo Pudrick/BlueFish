@@ -1,5 +1,5 @@
 import 'package:bluefish/models/private_message_detail.dart';
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 
 class PrivateMessageCardAttachment extends StatelessWidget {
@@ -171,16 +171,11 @@ class _PrivateMessageCardImageStripState
                     width: imageWidth,
                     child: GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PhotoGalleryPage(
-                              imageUrls: widget.images
-                                  .map((item) => item.imageUrl.toString())
-                                  .toList(),
-                              initialIndex: index,
-                            ),
-                          ),
+                        context.pushPhotoGallery(
+                          imageUrls: widget.images
+                              .map((item) => item.imageUrl.toString())
+                              .toList(growable: false),
+                          initialIndex: index,
                         );
                       },
                       child: ClipRRect(

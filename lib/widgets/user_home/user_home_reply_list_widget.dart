@@ -1,5 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home_reply.dart';
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/utils/remove_string_tag_suffix.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -185,18 +185,14 @@ class UserHomeReplyWidget extends StatelessWidget {
                       final int imageIndex = hasVideo ? index - 1 : index;
                       final imageUrl = reply.replyPics[imageIndex].url
                           .toString();
+                      final galleryImageUrls = reply.replyPics
+                          .map((e) => e.url.toString())
+                          .toList(growable: false);
                       return GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PhotoGalleryPage(
-                                imageUrls: reply.replyPics
-                                    .map((e) => e.url.toString())
-                                    .toList(),
-                                initialIndex: imageIndex,
-                              ),
-                            ),
+                          context.pushPhotoGallery(
+                            imageUrls: galleryImageUrls,
+                            initialIndex: imageIndex,
                           );
                         },
                         child: Hero(

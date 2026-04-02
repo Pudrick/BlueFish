@@ -1,5 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home.dart';
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 
 class UserHomeInfoWidget extends StatelessWidget {
@@ -50,22 +50,10 @@ class UserHomeInfoWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          PageRouteBuilder(
-            opaque: false,
-            barrierColor: Colors.black87,
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return PhotoGalleryPage(
-                imageUrls: [avatarUrl],
-                initialIndex: 0,
-                heroTags: [heroTag],
-              );
-            },
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
+        context.pushPhotoGallery(
+          imageUrls: <String>[avatarUrl],
+          initialIndex: 0,
+          heroTags: <Object>[heroTag],
         );
       },
       child: Hero(

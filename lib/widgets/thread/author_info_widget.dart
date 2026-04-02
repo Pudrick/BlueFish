@@ -1,7 +1,6 @@
 import 'package:bluefish/models/floor_meta.dart';
-import 'package:bluefish/router/app_router.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class AuthorInfoWidget extends StatelessWidget {
@@ -15,10 +14,7 @@ class AuthorInfoWidget extends StatelessWidget {
   });
 
   void _navigateToUserHome(BuildContext context) {
-    context.pushNamed(
-      AppRouteNames.userHome,
-      pathParameters: {'euid': meta.author.euid},
-    );
+    context.pushUserHome(euid: meta.author.euid);
   }
 
   @override

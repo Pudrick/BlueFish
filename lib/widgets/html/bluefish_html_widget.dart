@@ -1,4 +1,4 @@
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget_factory.dart';
 import 'package:bluefish/widgets/html/vote/vote_widget.dart';
 import 'package:flutter/material.dart';
@@ -126,14 +126,10 @@ class BluefishHtmlWidget extends StatelessWidget {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PhotoGalleryPage(
-          imageUrls: imageUrls,
-          heroTags: heroTags,
-          initialIndex: initialIndex,
-        ),
-      ),
+    context.pushPhotoGallery(
+      imageUrls: imageUrls,
+      heroTags: heroTags,
+      initialIndex: initialIndex,
     );
   }
 }

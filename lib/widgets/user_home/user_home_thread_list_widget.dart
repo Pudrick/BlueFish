@@ -1,4 +1,5 @@
 import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -14,6 +15,10 @@ class UserHomeThreadListWidget extends StatelessWidget {
     required this.isLoading,
     required this.isLastPage,
   });
+
+  void _openThreadDetail(BuildContext context, int tid) {
+    context.pushThreadDetail(tid: tid);
+  }
 
   Widget _buildStatItem(BuildContext context, IconData icon, String text) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -44,7 +49,7 @@ class UserHomeThreadListWidget extends StatelessWidget {
       elevation: 0,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
-        onTap: () {},
+        onTap: () => _openThreadDetail(context, threadTitle.tid),
         splashColor: colorScheme.primary.withValues(alpha: 0.1),
         child: Padding(
           padding: const EdgeInsets.all(16),

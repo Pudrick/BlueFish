@@ -1,3 +1,4 @@
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
@@ -6,7 +7,6 @@ import 'package:bluefish/widgets/thread/page_pill.dart';
 import 'package:bluefish/widgets/thread/thread_reply_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 /// Thread detail page entry point.
@@ -50,14 +50,10 @@ class _ThreadPageContent extends StatefulWidget {
 
 class _ThreadPageContentState extends State<_ThreadPageContent> {
   final ScrollController _scrollController = ScrollController();
+  String? _lastSyncedLocation;
 
   void _handleBack() {
-    final router = GoRouter.of(context);
-    if (router.canPop()) {
-      router.pop();
-      return;
-    }
-    router.go('/');
+    context.popOrGoThreadList();
   }
 
   void _jumpToPage(int page) {
@@ -75,6 +71,35 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     }
 
     viewModel.jumpToPage(page);
+  }
+
+  void _syncRouteIfNeeded(ThreadDetailViewModel viewModel) {
+    final targetLocation = AppRoutes.threadDetailLocation(
+      tid: viewModel.tid,
+      page: viewModel.currentPage,
+    );
+    if (_lastSyncedLocation == targetLocation) {
+      return;
+    }
+
+    _lastSyncedLocation = targetLocation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final currentLocation = context.maybeGoRouterUri?.toString();
+      if (currentLocation == null) {
+        return;
+      }
+
+      if (currentLocation != targetLocation) {
+        context.replaceThreadDetail(
+          tid: viewModel.tid,
+          page: viewModel.currentPage,
+        );
+      }
+    });
   }
 
   @override
@@ -109,6 +134,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
+        _syncRouteIfNeeded(viewModel);
+
         // Loading state
         if (viewModel.isLoading && viewModel.data == null) {
           return Scaffold(
