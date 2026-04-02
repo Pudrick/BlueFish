@@ -42,11 +42,7 @@ class UserHomeReply {
   @JsonKey(name: 'username')
   final String userName;
 
-  @JsonKey(
-    name: 'header',
-    fromJson: _uriFromJson,
-    toJson: _uriToJson,
-  )
+  @JsonKey(name: 'header', fromJson: _uriFromJson, toJson: _uriToJson)
   final Uri avatarUrl;
 
   // what's this?
@@ -122,8 +118,8 @@ class UserHomeReply {
     required this.formatTime,
     required this.topicId,
   }) : parsedPHPAttr = Map<String, dynamic>.from(
-          phpDeserialize(rawPHPAttr) as Map,
-        );
+         phpDeserialize(rawPHPAttr) as Map,
+       );
 
   factory UserHomeReply.fromJson(Map<String, dynamic> json) =>
       _$UserHomeReplyFromJson(json);

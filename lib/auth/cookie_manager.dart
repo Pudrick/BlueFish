@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Manages cookie storage for authentication.
-/// 
+///
 /// Users must provide their own cookies via [saveCookies] or the app
 /// will prompt for cookie input.
 class CookieManager {

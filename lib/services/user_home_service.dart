@@ -97,9 +97,8 @@ class UserHomeService {
     };
     final parsedThreads = threadsData
         .map(
-          (e) => UserHomeThreadTitle.fromJson(
-            Map<String, dynamic>.from(e as Map),
-          ),
+          (e) =>
+              UserHomeThreadTitle.fromJson(Map<String, dynamic>.from(e as Map)),
         )
         .toList();
 
@@ -141,10 +140,7 @@ class UserHomeService {
         json['data']['replyWithQuoteDtoList'] as List<dynamic>? ?? [];
     final String maxTime = json['data']['maxTime'].toString();
     final parsedReplies = repliesData
-        .map(
-          (e) =>
-              UserHomeReply.fromJson(Map<String, dynamic>.from(e as Map)),
-        )
+        .map((e) => UserHomeReply.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
 
     return (

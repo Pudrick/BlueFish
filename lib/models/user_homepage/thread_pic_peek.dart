@@ -19,11 +19,10 @@ class ThreadPicPeek {
     required this.height,
   });
 
-  factory ThreadPicPeek.fromJson(Map<String, dynamic> json)
-      => _$ThreadPicPeekFromJson(json);
+  factory ThreadPicPeek.fromJson(Map<String, dynamic> json) =>
+      _$ThreadPicPeekFromJson(json);
 
-  Map<String, dynamic> toJson()
-      => _$ThreadPicPeekToJson(this);
+  Map<String, dynamic> toJson() => _$ThreadPicPeekToJson(this);
 
   static bool _intToBool(dynamic value) => value == 1;
   static int _boolToInt(bool value) => value ? 1 : 0;

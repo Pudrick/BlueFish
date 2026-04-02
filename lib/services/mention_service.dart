@@ -16,14 +16,7 @@ class MentionService<T> {
 
   String get _baseUrl => "https://bbs.hupu.com/pcmapi/pc/space/v1/$apiPath";
 
-  Future<
-    ({
-      List<T> newList,
-      List<T> oldList,
-      String pageStr,
-      bool hasNextPage,
-    })
-  >
+  Future<({List<T> newList, List<T> oldList, String pageStr, bool hasNextPage})>
   getList({String? currentPageStr}) async {
     final baseUri = Uri.parse(_baseUrl);
     final url = baseUri.replace(

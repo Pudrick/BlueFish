@@ -22,12 +22,8 @@ abstract class MentionViewModel<T> extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final (
-        newList: newItems,
-        oldList: oldItems,
-        :pageStr,
-        :hasNextPage,
-      ) = await _service.getList();
+      final (newList: newItems, oldList: oldItems, :pageStr, :hasNextPage) =
+          await _service.getList();
       _newList = newItems;
       _oldList = oldItems;
       this.pageStr = pageStr;
@@ -44,14 +40,8 @@ abstract class MentionViewModel<T> extends ChangeNotifier {
     notifyListeners();
     if (pageStr != null) {
       try {
-        final (
-          newList: newItems,
-          oldList: oldItems,
-          :pageStr,
-          :hasNextPage,
-        ) = await _service.getList(
-          currentPageStr: this.pageStr,
-        );
+        final (newList: newItems, oldList: oldItems, :pageStr, :hasNextPage) =
+            await _service.getList(currentPageStr: this.pageStr);
         this.pageStr = pageStr;
         this.hasNextPage = hasNextPage;
         if (newItems.isNotEmpty) {

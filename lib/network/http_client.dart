@@ -11,8 +11,8 @@ class AppHttpClient extends http.BaseClient {
   AppHttpClient._({
     required http.Client inner,
     required List<RequestInterceptor> interceptors,
-  })  : _inner = inner,
-        _interceptors = interceptors;
+  }) : _inner = inner,
+       _interceptors = interceptors;
 
   /// Creates a client with default auth interceptor.
   factory AppHttpClient.withAuth(CookieManager cookieManager) {
@@ -24,19 +24,14 @@ class AppHttpClient extends http.BaseClient {
 
   /// Creates a client with custom interceptors.
   factory AppHttpClient.withInterceptors(
-      List<RequestInterceptor> interceptors) {
-    return AppHttpClient._(
-      inner: http.Client(),
-      interceptors: interceptors,
-    );
+    List<RequestInterceptor> interceptors,
+  ) {
+    return AppHttpClient._(inner: http.Client(), interceptors: interceptors);
   }
 
   /// Creates a bare client without interceptors (for non-authenticated requests).
   factory AppHttpClient.bare() {
-    return AppHttpClient._(
-      inner: http.Client(),
-      interceptors: [],
-    );
+    return AppHttpClient._(inner: http.Client(), interceptors: []);
   }
 
   @override

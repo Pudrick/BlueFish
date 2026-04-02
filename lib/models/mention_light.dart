@@ -3,14 +3,14 @@ import 'package:json_annotation/json_annotation.dart';
 part 'mention_light.g.dart';
 
 @JsonSerializable()
-class MentionLight
-{
+class MentionLight {
   // looks like 'pid' in other places.
   final int id;
 
   @JsonKey(name: 'updateTime')
   final int updateTimeStamp;
-  DateTime get updateTime => DateTime.fromMillisecondsSinceEpoch(updateTimeStamp * 1000);
+  DateTime get updateTime =>
+      DateTime.fromMillisecondsSinceEpoch(updateTimeStamp * 1000);
 
   final int dataType;
   final int puid;
@@ -37,7 +37,8 @@ class MentionLight
 
   @JsonKey(name: 'lastTime')
   final int lastTimeStamp;
-  DateTime get lastTime => DateTime.fromMillisecondsSinceEpoch(lastTimeStamp * 1000);
+  DateTime get lastTime =>
+      DateTime.fromMillisecondsSinceEpoch(lastTimeStamp * 1000);
   @JsonKey(name: 'title')
   final String threadTitle;
   final int optUid;
@@ -87,14 +88,13 @@ class MentionLight
     required this.createTimeString,
   });
 
-  factory MentionLight.fromJson(Map<String, dynamic> json) => _$MentionLightFromJson(json);
+  factory MentionLight.fromJson(Map<String, dynamic> json) =>
+      _$MentionLightFromJson(json);
   Map<String, dynamic> toJson() => _$MentionLightToJson(this);
-
 }
 
 @JsonSerializable()
-class LightPost
-{
+class LightPost {
   final int pid;
   final int tid;
   final String? aid;
@@ -109,9 +109,10 @@ class LightPost
 
   @JsonKey(name: 'createTime')
   final int createTimeStamp;
-  DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(createTimeStamp * 1000);
+  DateTime get createTime =>
+      DateTime.fromMillisecondsSinceEpoch(createTimeStamp * 1000);
   final String updateInfo;
-  
+
   @JsonKey(name: 'attr')
   final String rawPHPAttr;
 
@@ -193,13 +194,13 @@ class LightPost
     this.mergeTitle,
   });
 
-  factory LightPost.fromJson(Map<String, dynamic> json) => _$LightPostFromJson(json);
+  factory LightPost.fromJson(Map<String, dynamic> json) =>
+      _$LightPostFromJson(json);
   Map<String, dynamic> toJson() => _$LightPostToJson(this);
 }
 
 @JsonSerializable()
-class Operator
-{
+class Operator {
   final int? uid;
   final String username;
   @JsonKey(name: 'spaceUrl')
@@ -220,6 +221,7 @@ class Operator
     this.certTitle,
   });
 
-  factory Operator.fromJson(Map<String, dynamic> json) => _$OperatorFromJson(json);
+  factory Operator.fromJson(Map<String, dynamic> json) =>
+      _$OperatorFromJson(json);
   Map<String, dynamic> toJson() => _$OperatorToJson(this);
 }

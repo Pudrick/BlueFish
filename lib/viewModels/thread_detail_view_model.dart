@@ -3,12 +3,7 @@ import 'package:bluefish/services/thread_detail_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// State of the thread detail page.
-enum ThreadDetailState {
-  initial,
-  loading,
-  loaded,
-  error,
-}
+enum ThreadDetailState { initial, loading, loaded, error }
 
 /// ViewModel for thread detail page.
 ///

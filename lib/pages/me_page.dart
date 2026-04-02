@@ -10,10 +10,7 @@ class MePage extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('我'), centerTitle: true),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -27,8 +24,8 @@ class MePage extends StatelessWidget {
             Text(
               '个人中心',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

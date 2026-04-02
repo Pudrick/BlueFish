@@ -30,11 +30,10 @@ sealed class Result<T> {
   R when<R>({
     required R Function(T data) success,
     required R Function(String message, Exception? exception) failure,
-  }) =>
-      switch (this) {
-        Success(:final data) => success(data),
-        Failure(:final message, :final exception) => failure(message, exception),
-      };
+  }) => switch (this) {
+    Success(:final data) => success(data),
+    Failure(:final message, :final exception) => failure(message, exception),
+  };
 }
 
 /// Represents a successful result containing data.
@@ -75,5 +74,6 @@ class Failure<T> extends Result<T> {
   int get hashCode => message.hashCode;
 
   @override
-  String toString() => 'Failure($message${exception != null ? ', $exception' : ''})';
+  String toString() =>
+      'Failure($message${exception != null ? ', $exception' : ''})';
 }

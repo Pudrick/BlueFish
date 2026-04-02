@@ -3,8 +3,5 @@ import 'package:bluefish/services/mention_service.dart';
 
 class MentionReplyService extends MentionService<MentionReply> {
   MentionReplyService()
-      : super(
-          apiPath: "getMentionedRemindList",
-          fromJson: MentionReply.fromJson,
-        );
+    : super(apiPath: "getMentionedRemindList", fromJson: MentionReply.fromJson);
 }
