@@ -1,5 +1,6 @@
 import 'package:bluefish/pages/me_page.dart';
 import 'package:bluefish/pages/messages_page.dart';
+import 'package:bluefish/pages/create_thread_page.dart';
 import 'package:bluefish/pages/thread_list_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/route_error_page.dart';
@@ -81,6 +82,11 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
     // Independent routes (without navigation shell)
+    GoRoute(
+      path: AppRoutes.createThreadPath,
+      name: AppRouteNames.createThread,
+      builder: (context, state) => const CreateThreadPage(),
+    ),
     ...threadRoutes,
     ...userRoutes,
     ...mentionRoutes,

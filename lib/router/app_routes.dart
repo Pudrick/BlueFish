@@ -26,6 +26,7 @@ class AppRouteNames {
   AppRouteNames._();
 
   static const String threadList = 'threadList';
+  static const String createThread = 'createThread';
   static const String messages = 'messages';
   static const String me = 'me';
   static const String threadDetail = 'threadDetail';
@@ -40,6 +41,7 @@ class AppRoutes {
   AppRoutes._();
 
   static const String threadListPath = '/';
+  static const String createThreadPath = '/compose/thread';
   static const String messagesPath = '/messages';
   static const String mePath = '/me';
 
@@ -87,6 +89,10 @@ class AppRoutes {
       path: '/thread/${tid.trim()}',
       queryParameters: _threadQueryParameters(page),
     ).toString();
+  }
+
+  static String createThreadLocation() {
+    return createThreadPath;
   }
 
   static String userHomeLocation({required String euid}) {
@@ -277,6 +283,15 @@ extension AppNavigationExtensions on BuildContext {
     }
 
     goThreadList();
+  }
+
+  Future<T?> pushCreateThread<T>() {
+    final router = maybeGoRouter;
+    if (router == null) {
+      return Future<T?>.value(null);
+    }
+
+    return router.push<T>(AppRoutes.createThreadLocation());
   }
 
   Future<T?> pushThreadDetail<T>({required Object tid, int page = 1}) {
