@@ -6,9 +6,9 @@ import '../models/composer/thread_draft.dart';
 import '../router/app_routes.dart';
 import '../viewModels/thread_compose_view_model.dart';
 import '../widgets/composer/composer_accessory_panel.dart';
-import '../widgets/composer/composer_editor.dart';
-import '../widgets/composer/composer_preview.dart';
 import '../widgets/composer/composer_toolbar.dart';
+import '../widgets/composer/quill_composer_editor.dart';
+import '../widgets/composer/quill_composer_toolbar.dart';
 
 class CreateThreadPage extends StatelessWidget {
   final ThreadComposeViewModel? viewModel;
@@ -47,7 +47,6 @@ class _CreateThreadPageScaffold extends StatefulWidget {
 
 class _CreateThreadPageScaffoldState extends State<_CreateThreadPageScaffold> {
   final TextEditingController _titleController = TextEditingController();
-  bool _showPreview = true;
 
   @override
   void dispose() {
@@ -172,21 +171,6 @@ class _CreateThreadPageScaffoldState extends State<_CreateThreadPageScaffold> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 124),
               children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    '当前是独立部署阶段：只搭建 composer 骨架、主贴双模式和回复弹层壳子，不接入现有路由、接口或其他模块。',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 TextField(
                   key: const ValueKey('create_thread_title_field'),
                   controller: _titleController,
@@ -215,12 +199,6 @@ class _CreateThreadPageScaffoldState extends State<_CreateThreadPageScaffold> {
                       ? _RichTextModeSection(
                           key: const ValueKey('rich-text-mode'),
                           draft: richTextDraft,
-                          showPreview: _showPreview,
-                          onPreviewChanged: (value) {
-                            setState(() {
-                              _showPreview = value;
-                            });
-                          },
                         )
                       : _VideoModeSection(
                           key: const ValueKey('video-only-mode'),
@@ -287,15 +265,8 @@ class _ModeSelector extends StatelessWidget {
 
 class _RichTextModeSection extends StatelessWidget {
   final RichTextThreadDraft draft;
-  final bool showPreview;
-  final ValueChanged<bool> onPreviewChanged;
 
-  const _RichTextModeSection({
-    super.key,
-    required this.draft,
-    required this.showPreview,
-    required this.onPreviewChanged,
-  });
+  const _RichTextModeSection({super.key, required this.draft});
 
   @override
   Widget build(BuildContext context) {
@@ -310,38 +281,26 @@ class _RichTextModeSection extends StatelessWidget {
           style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        ComposerToolbar(
-          onAddParagraph: viewModel.addParagraphBlock,
-          onAddDetails: viewModel.addDetailsBlock,
-          onAddImage: viewModel.addImagePlaceholder,
+        QuillComposerToolbar(
+          controller: viewModel.richTextController,
+          onInsertDetails: viewModel.insertDetailsEmbed,
+          onInsertImagePlaceholder: viewModel.insertImagePlaceholder,
         ),
         const SizedBox(height: 12),
-        ComposerEditor(
-          document: draft.document,
-          onParagraphChanged: viewModel.updateParagraphText,
-          onDetailsSummaryChanged: viewModel.updateDetailsSummaryText,
-          onDetailsBodyChanged: viewModel.updateDetailsBodyText,
-          onImageCaptionChanged: viewModel.updateImageCaption,
-          onRemoveBlock: viewModel.removeRichTextBlock,
+        QuillComposerEditor(
+          controller: viewModel.richTextController,
+          placeholder: '开始输入主贴正文',
+          onDetailsEmbedChanged: viewModel.updateDetailsEmbed,
+          onImagePlaceholderChanged: viewModel.updateImagePlaceholderEmbed,
+          onEmbedRemoved: viewModel.removeRichTextEmbed,
         ),
         const SizedBox(height: 12),
         ComposerAccessoryPanel(
           title: '附件与后续扩展',
-          description: '这里先保留图片附件占位；视频能力先只开放给视频主贴，但附件层已经按后续“回贴发视频”预留。',
+          description: '已插入的图片附件会显示在这里，后续接入真实选择与上传时会继续复用这层附件能力。',
           attachments: draft.attachments,
           onRemoveAttachment: viewModel.removeRichTextAttachment,
         ),
-        const SizedBox(height: 8),
-        SwitchListTile.adaptive(
-          value: showPreview,
-          onChanged: onPreviewChanged,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('显示 HTML 预览'),
-        ),
-        if (showPreview) ...[
-          const SizedBox(height: 8),
-          ComposerPreview(title: draft.title, document: draft.document),
-        ],
       ],
     );
   }
@@ -422,8 +381,7 @@ class _VideoModeSection extends StatelessWidget {
         const SizedBox(height: 12),
         ComposerAccessoryPanel(
           title: '模式规则',
-          description:
-              '视频主贴当前只允许“标题 + 单视频”。这里不接入正文编辑器，后续如果要支持回贴发视频，会复用同一套视频附件层。',
+          description: '视频主贴当前只允许“标题 + 单视频”，不包含正文内容。',
           attachments: attachment == null
               ? const <ComposerAttachment>[]
               : <ComposerAttachment>[attachment],

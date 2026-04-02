@@ -1,33 +1,49 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import '../models/composer/composer_attachment.dart';
-import '../models/composer/composer_document.dart';
+import '../models/composer/quill_embed_models.dart';
 import '../models/composer/thread_draft.dart';
+import '../services/composer/html_export_service.dart';
 import '../services/thread_publish_service.dart';
 import '../services/thread_video_upload_service.dart';
 
 class ThreadComposeViewModel extends ChangeNotifier {
   final ThreadPublishService _publishService;
   final ThreadVideoUploadService _videoUploadService;
+  final HtmlExportService _htmlExportService;
 
   ThreadComposeMode _mode = ThreadComposeMode.richText;
   RichTextThreadDraft _richTextDraft = RichTextThreadDraft.empty();
   VideoThreadDraft _videoDraft = VideoThreadDraft.empty();
   bool _isSubmitting = false;
   String? _statusMessage;
+  bool _isApplyingProgrammaticRichTextUpdate = false;
+
+  late final quill.QuillController _richTextController;
 
   ThreadComposeViewModel({
     ThreadPublishService? publishService,
     ThreadVideoUploadService? videoUploadService,
+    HtmlExportService? htmlExportService,
   }) : _publishService = publishService ?? const StubThreadPublishService(),
        _videoUploadService =
-           videoUploadService ?? const StubThreadVideoUploadService();
+           videoUploadService ?? const StubThreadVideoUploadService(),
+       _htmlExportService = htmlExportService ?? const HtmlExportService() {
+    _richTextController = quill.QuillController(
+      document: _documentFromDeltaJson(_richTextDraft.deltaJson),
+      selection: const TextSelection.collapsed(offset: 0),
+    )..addListener(_handleRichTextChanged);
+  }
 
   ThreadComposeMode get mode => _mode;
   RichTextThreadDraft get richTextDraft => _richTextDraft;
   VideoThreadDraft get videoDraft => _videoDraft;
   bool get isSubmitting => _isSubmitting;
   String? get statusMessage => _statusMessage;
+  quill.QuillController get richTextController => _richTextController;
 
   bool get canPublish {
     if (_isSubmitting) {
@@ -49,14 +65,15 @@ class ThreadComposeViewModel extends ChangeNotifier {
       ? _richTextDraft.title
       : _videoDraft.title;
 
-  String get richTextPreviewHtml => _richTextDraft.document.toHtml();
+  String get richTextPreviewHtml =>
+      _htmlExportService.exportRichText(_richTextDraft.deltaJson);
 
   void updateTitle(String value) {
     if (_richTextDraft.title == value && _videoDraft.title == value) {
       return;
     }
 
-    _richTextDraft = _richTextDraft.copyWith(title: value);
+    _richTextDraft = _richTextDraft.copyWith(title: value, clearBodyHtml: true);
     _videoDraft = _videoDraft.copyWith(title: value);
     notifyListeners();
   }
@@ -90,6 +107,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
 
     if (nextMode == ThreadComposeMode.videoOnly && warning != null) {
       _richTextDraft = _richTextDraft.clearedBodyPreservingTitle();
+      _reloadRichTextController();
     }
 
     if (nextMode == ThreadComposeMode.richText && warning != null) {
@@ -101,156 +119,86 @@ class ThreadComposeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addParagraphBlock() {
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.append(ComposerParagraphBlock.empty()),
-    );
-    notifyListeners();
+  void insertDetailsEmbed() {
+    _insertEmbed(BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()));
   }
 
-  void addDetailsBlock() {
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.append(ComposerDetailsBlock.empty()),
-    );
-    notifyListeners();
-  }
-
-  void addImagePlaceholder() {
-    final attachmentId = createComposerId('image-attachment');
-    final imageAttachment = ComposerAttachment(
+  void insertImagePlaceholder() {
+    final attachmentId = _createComposerId('image-attachment');
+    final label = '图片占位 ${_richTextDraft.attachments.length + 1}';
+    final attachment = ComposerAttachment(
       id: attachmentId,
       type: ComposerAttachmentType.image,
       uploadState: ComposerUploadState.pending,
-      label: '图片占位 ${_richTextDraft.attachments.length + 1}',
-    );
-    final imageBlock = ComposerImageBlock.placeholder(
-      attachmentId: attachmentId,
+      label: label,
     );
 
     _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.append(imageBlock),
       attachments: <ComposerAttachment>[
         ..._richTextDraft.attachments,
-        imageAttachment,
+        attachment,
       ],
+      clearBodyHtml: true,
     );
-    notifyListeners();
-  }
 
-  void updateParagraphText(String blockId, String value) {
-    final block = _richTextDraft.document.findBlock<ComposerParagraphBlock>(
-      blockId,
-    );
-    if (block == null) {
-      return;
-    }
-
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.replaceBlock(
-        block.copyWith(children: <ComposerInlineNode>[ComposerTextNode(value)]),
-      ),
-    );
-    notifyListeners();
-  }
-
-  void updateDetailsSummaryText(String blockId, String value) {
-    final block = _richTextDraft.document.findBlock<ComposerDetailsBlock>(
-      blockId,
-    );
-    if (block == null) {
-      return;
-    }
-
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.replaceBlock(
-        block.copyWith(summary: <ComposerInlineNode>[ComposerTextNode(value)]),
-      ),
-    );
-    notifyListeners();
-  }
-
-  void updateDetailsBodyText(String blockId, String value) {
-    final block = _richTextDraft.document.findBlock<ComposerDetailsBlock>(
-      blockId,
-    );
-    if (block == null) {
-      return;
-    }
-
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.replaceBlock(
-        block.copyWith(
-          children: <ComposerBlockNode>[
-            ComposerParagraphBlock(
-              id:
-                  block.children
-                      .whereType<ComposerParagraphBlock>()
-                      .firstOrNull
-                      ?.id ??
-                  createComposerId('details-body'),
-              children: <ComposerInlineNode>[ComposerTextNode(value)],
-            ),
-          ],
+    _insertEmbed(
+      BluefishImagePlaceholderEmbed(
+        BluefishImagePlaceholderEmbedData(
+          attachmentId: attachmentId,
+          label: label,
         ),
       ),
     );
-    notifyListeners();
   }
 
-  void updateImageCaption(String blockId, String value) {
-    final block = _richTextDraft.document.findBlock<ComposerImageBlock>(
-      blockId,
-    );
-    if (block == null) {
-      return;
-    }
-
-    _richTextDraft = _richTextDraft.copyWith(
-      document: _richTextDraft.document.replaceBlock(
-        block.copyWith(caption: value),
-      ),
-    );
-    notifyListeners();
+  void updateDetailsEmbed(int offset, BluefishDetailsEmbedData data) {
+    _replaceEmbed(offset, BluefishDetailsEmbed(data));
   }
 
-  void removeRichTextBlock(String blockId) {
-    final imageBlock = _richTextDraft.document.findBlock<ComposerImageBlock>(
-      blockId,
-    );
-    if (imageBlock != null) {
-      removeRichTextAttachment(imageBlock.attachmentId);
-      return;
-    }
+  void updateImagePlaceholderEmbed(
+    int offset,
+    BluefishImagePlaceholderEmbedData data,
+  ) {
+    _replaceEmbed(offset, BluefishImagePlaceholderEmbed(data));
+  }
 
-    final nextDocument = _richTextDraft.document.removeBlock(blockId);
-    _richTextDraft = _richTextDraft.copyWith(
-      document: nextDocument.blocks.isEmpty
-          ? ComposerDocument.withSingleParagraph()
-          : nextDocument,
+  void removeRichTextEmbed(int offset) {
+    _richTextController.replaceText(
+      offset,
+      1,
+      '',
+      TextSelection.collapsed(offset: offset),
     );
-    notifyListeners();
   }
 
   void removeRichTextAttachment(String attachmentId) {
     final nextAttachments = _richTextDraft.attachments
         .where((attachment) => attachment.id != attachmentId)
         .toList(growable: false);
-    final nextDocument = ComposerDocument(
-      blocks: _richTextDraft.document.blocks
-          .where(
-            (block) =>
-                block is! ComposerImageBlock ||
-                block.attachmentId != attachmentId,
-          )
-          .toList(growable: false),
-    );
+
+    if (nextAttachments.length == _richTextDraft.attachments.length) {
+      return;
+    }
 
     _richTextDraft = _richTextDraft.copyWith(
       attachments: nextAttachments,
-      document: nextDocument.blocks.isEmpty
-          ? ComposerDocument.withSingleParagraph()
-          : nextDocument,
+      clearBodyHtml: true,
     );
+
+    final offset = _findImagePlaceholderOffsetByAttachmentId(
+      _serializeControllerDelta(),
+      attachmentId,
+    );
+    if (offset != null) {
+      _richTextController.replaceText(
+        offset,
+        1,
+        '',
+        TextSelection.collapsed(offset: offset),
+      );
+      return;
+    }
+
     notifyListeners();
   }
 
@@ -260,7 +208,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
     }
 
     final pendingAttachment = ComposerAttachment(
-      id: createComposerId('video-attachment'),
+      id: _createComposerId('video-attachment'),
       type: ComposerAttachmentType.video,
       uploadState: ComposerUploadState.uploading,
       label: '视频草稿',
@@ -319,7 +267,12 @@ class ThreadComposeViewModel extends ChangeNotifier {
     try {
       final receipt = switch (_mode) {
         ThreadComposeMode.richText =>
-          await _publishService.publishRichTextThread(_richTextDraft),
+          await _publishService.publishRichTextThread(
+            _richTextDraft = _richTextDraft.copyWith(
+              bodyHtml: richTextPreviewHtml,
+              clearBodyHtml: false,
+            ),
+          ),
         ThreadComposeMode.videoOnly => await _publishService.publishVideoThread(
           _videoDraft,
         ),
@@ -332,13 +285,190 @@ class ThreadComposeViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-}
 
-extension<T> on Iterable<T> {
-  T? get firstOrNull {
-    if (isEmpty) {
-      return null;
+  void _insertEmbed(quill.Embeddable embed) {
+    final selection = _normalizedSelection();
+    final replaceLength = selection.end - selection.start;
+    _richTextController.replaceText(
+      selection.start,
+      replaceLength,
+      embed,
+      TextSelection.collapsed(offset: selection.start + 1),
+    );
+  }
+
+  void _replaceEmbed(int offset, quill.Embeddable embed) {
+    _richTextController.replaceText(
+      offset,
+      1,
+      embed,
+      TextSelection.collapsed(offset: offset + 1),
+    );
+  }
+
+  TextSelection _normalizedSelection() {
+    final selection = _richTextController.selection;
+    if (selection.isValid) {
+      return selection;
     }
-    return first;
+
+    final fallbackOffset = (_richTextController.document.length - 1).clamp(
+      0,
+      _richTextController.document.length,
+    );
+    return TextSelection.collapsed(offset: fallbackOffset);
+  }
+
+  void _handleRichTextChanged() {
+    if (_isApplyingProgrammaticRichTextUpdate) {
+      return;
+    }
+
+    final nextDeltaJson = _serializeControllerDelta();
+    final nextAttachments = _synchronizeImageAttachments(nextDeltaJson);
+
+    final deltaChanged =
+        _deltaSignature(nextDeltaJson) !=
+        _deltaSignature(_richTextDraft.deltaJson);
+    final attachmentsChanged =
+        _attachmentSignature(nextAttachments) !=
+        _attachmentSignature(_richTextDraft.attachments);
+
+    if (!deltaChanged && !attachmentsChanged) {
+      return;
+    }
+
+    _richTextDraft = _richTextDraft.copyWith(
+      deltaJson: nextDeltaJson,
+      attachments: nextAttachments,
+      clearBodyHtml: true,
+    );
+    notifyListeners();
+  }
+
+  List<ComposerAttachment> _synchronizeImageAttachments(
+    List<Map<String, dynamic>> deltaJson,
+  ) {
+    final referencedEmbeds = <String, BluefishImagePlaceholderEmbedData>{};
+    for (final operation in deltaJson) {
+      final insert = operation['insert'];
+      if (insert is! Map ||
+          !insert.containsKey(bluefishImagePlaceholderEmbedType)) {
+        continue;
+      }
+
+      final embedData = BluefishImagePlaceholderEmbedData.fromJsonString(
+        insert[bluefishImagePlaceholderEmbedType].toString(),
+      );
+      referencedEmbeds[embedData.attachmentId] = embedData;
+    }
+
+    return _richTextDraft.attachments
+        .where((attachment) => referencedEmbeds.containsKey(attachment.id))
+        .map((attachment) {
+          final embed = referencedEmbeds[attachment.id]!;
+          return attachment.copyWith(label: embed.label);
+        })
+        .toList(growable: false);
+  }
+
+  int? _findImagePlaceholderOffsetByAttachmentId(
+    List<Map<String, dynamic>> deltaJson,
+    String attachmentId,
+  ) {
+    var offset = 0;
+    for (final operation in deltaJson) {
+      final insert = operation['insert'];
+      if (insert is String) {
+        offset += insert.length;
+        continue;
+      }
+
+      if (insert is Map &&
+          insert.containsKey(bluefishImagePlaceholderEmbedType)) {
+        final embedData = BluefishImagePlaceholderEmbedData.fromJsonString(
+          insert[bluefishImagePlaceholderEmbedType].toString(),
+        );
+        if (embedData.attachmentId == attachmentId) {
+          return offset;
+        }
+      }
+
+      offset += 1;
+    }
+    return null;
+  }
+
+  void _reloadRichTextController() {
+    _isApplyingProgrammaticRichTextUpdate = true;
+    _richTextController.document = _documentFromDeltaJson(
+      _richTextDraft.deltaJson,
+    );
+    _richTextController.updateSelection(
+      TextSelection.collapsed(
+        offset: (_richTextController.document.length - 1).clamp(
+          0,
+          _richTextController.document.length,
+        ),
+      ),
+      quill.ChangeSource.local,
+    );
+    _isApplyingProgrammaticRichTextUpdate = false;
+  }
+
+  quill.Document _documentFromDeltaJson(List<Map<String, dynamic>> deltaJson) {
+    try {
+      return quill.Document.fromJson(deltaJson);
+    } catch (_) {
+      return quill.Document();
+    }
+  }
+
+  List<Map<String, dynamic>> _serializeControllerDelta() {
+    final rawJson = _richTextController.document.toDelta().toJson();
+    return _cloneDeltaJson(rawJson);
+  }
+
+  List<Map<String, dynamic>> _cloneDeltaJson(List<dynamic> rawJson) {
+    return (jsonDecode(jsonEncode(rawJson)) as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList(growable: false);
+  }
+
+  String _deltaSignature(List<Map<String, dynamic>> deltaJson) {
+    return jsonEncode(deltaJson);
+  }
+
+  String _attachmentSignature(List<ComposerAttachment> attachments) {
+    return jsonEncode(
+      attachments
+          .map(
+            (attachment) => <String, Object?>{
+              'id': attachment.id,
+              'type': attachment.type.name,
+              'state': attachment.uploadState.name,
+              'label': attachment.label,
+              'remoteUrl': attachment.remoteUrl,
+              'thumbnailUrl': attachment.thumbnailUrl,
+              'progress': attachment.progress,
+            },
+          )
+          .toList(growable: false),
+    );
+  }
+
+  String _createComposerId(String prefix) {
+    _composerIdCounter += 1;
+    return '$prefix-${DateTime.now().microsecondsSinceEpoch}-$_composerIdCounter';
+  }
+
+  @override
+  void dispose() {
+    _richTextController
+      ..removeListener(_handleRichTextChanged)
+      ..dispose();
+    super.dispose();
   }
 }
+
+int _composerIdCounter = 0;

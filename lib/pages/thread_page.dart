@@ -1,10 +1,10 @@
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
+import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:bluefish/widgets/thread/page_pill.dart';
-import 'package:bluefish/widgets/thread/thread_reply_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -396,13 +396,13 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              showThreadReplySheet(
+              showReplyComposerSheet(
                 context: context,
-                title: '回复主题',
+                title: '发送回复',
                 contextLabel: '当前帖子',
                 contextPreview: data.mainFloor.title,
-                onSubmit: (content) async {
-                  if (content.trim().isEmpty) {
+                onSubmit: (draft) async {
+                  if (!draft.hasPublishableContent) {
                     return;
                   }
                   // TODO: Implement reply submission

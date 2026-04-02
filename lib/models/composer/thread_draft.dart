@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'composer_attachment.dart';
-import 'composer_document.dart';
+import 'quill_draft_utils.dart';
 
 enum ThreadComposeMode { richText, videoOnly }
 
@@ -14,41 +14,43 @@ sealed class ThreadDraft {
 
 @immutable
 class RichTextThreadDraft extends ThreadDraft {
-  final ComposerDocument document;
+  final List<Map<String, dynamic>> deltaJson;
   final List<ComposerAttachment> attachments;
+  final String? bodyHtml;
 
   const RichTextThreadDraft({
     required super.title,
-    required this.document,
+    required this.deltaJson,
     this.attachments = const <ComposerAttachment>[],
+    this.bodyHtml,
   });
 
-  factory RichTextThreadDraft.empty() => RichTextThreadDraft(
-    title: '',
-    document: ComposerDocument.withSingleParagraph(),
-  );
+  factory RichTextThreadDraft.empty() =>
+      RichTextThreadDraft(title: '', deltaJson: emptyQuillDeltaJson());
 
   bool get hasPublishableContent {
-    return !document.isEmpty ||
-        attachments.any((attachment) => attachment.isReady);
+    return !isQuillDeltaMeaningfullyEmpty(deltaJson) || attachments.isNotEmpty;
   }
 
   RichTextThreadDraft copyWith({
     String? title,
-    ComposerDocument? document,
+    List<Map<String, dynamic>>? deltaJson,
     List<ComposerAttachment>? attachments,
+    String? bodyHtml,
+    bool clearBodyHtml = false,
   }) {
     return RichTextThreadDraft(
       title: title ?? this.title,
-      document: document ?? this.document,
+      deltaJson: deltaJson ?? this.deltaJson,
       attachments: attachments ?? this.attachments,
+      bodyHtml: clearBodyHtml ? null : bodyHtml ?? this.bodyHtml,
     );
   }
 
   RichTextThreadDraft clearedBodyPreservingTitle() {
     return RichTextThreadDraft(
       title: title,
-      document: ComposerDocument.withSingleParagraph(),
+      deltaJson: emptyQuillDeltaJson(),
       attachments: const <ComposerAttachment>[],
     );
   }

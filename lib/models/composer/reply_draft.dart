@@ -1,33 +1,36 @@
 import 'package:flutter/foundation.dart';
 
 import 'composer_attachment.dart';
-import 'composer_document.dart';
+import 'quill_draft_utils.dart';
 
 @immutable
 class ReplyDraft {
-  final ComposerDocument document;
+  final List<Map<String, dynamic>> deltaJson;
   final List<ComposerAttachment> attachments;
+  final String? bodyHtml;
 
   const ReplyDraft({
-    required this.document,
+    required this.deltaJson,
     this.attachments = const <ComposerAttachment>[],
+    this.bodyHtml,
   });
 
-  factory ReplyDraft.empty() =>
-      ReplyDraft(document: ComposerDocument.withSingleParagraph());
+  factory ReplyDraft.empty() => ReplyDraft(deltaJson: emptyQuillDeltaJson());
 
   bool get hasPublishableContent {
-    return !document.isEmpty ||
-        attachments.any((attachment) => attachment.isReady);
+    return !isQuillDeltaMeaningfullyEmpty(deltaJson) || attachments.isNotEmpty;
   }
 
   ReplyDraft copyWith({
-    ComposerDocument? document,
+    List<Map<String, dynamic>>? deltaJson,
     List<ComposerAttachment>? attachments,
+    String? bodyHtml,
+    bool clearBodyHtml = false,
   }) {
     return ReplyDraft(
-      document: document ?? this.document,
+      deltaJson: deltaJson ?? this.deltaJson,
       attachments: attachments ?? this.attachments,
+      bodyHtml: clearBodyHtml ? null : bodyHtml ?? this.bodyHtml,
     );
   }
 }
