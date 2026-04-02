@@ -53,7 +53,12 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: AppRoutes.messagesPath,
               name: AppRouteNames.messages,
-              builder: (context, state) => const MessagesPage(),
+              builder: (context, state) => MessagesPage(
+                initialTab: AppRoutes.parseMessagesTab(
+                  state.uri.queryParameters[AppRoutes
+                      .messagesTabQueryParameter],
+                ),
+              ),
               routes: [
                 buildPrivateMessageDetailRoute(
                   parentNavigatorKey: _rootNavigatorKey,

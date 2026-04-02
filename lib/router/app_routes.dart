@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 
 enum MentionTab {
   reply,
-  light;
+  light,
+  privateMessage;
 
   static MentionTab fromQueryValue(String? value) {
     return switch (value?.trim()) {
       'light' => MentionTab.light,
+      'private' => MentionTab.privateMessage,
       _ => MentionTab.reply,
     };
   }
@@ -15,6 +17,7 @@ enum MentionTab {
   String get queryValue => switch (this) {
     MentionTab.reply => 'reply',
     MentionTab.light => 'light',
+    MentionTab.privateMessage => 'private',
   };
 }
 
@@ -47,6 +50,7 @@ class AppRoutes {
   static const String userIdParameter = 'euid';
   static const String userHomePath = '/user/:$userIdParameter';
 
+  static const String messagesTabQueryParameter = 'tab';
   static const String mentionTabQueryParameter = 'tab';
   static const String mentionPath = '/mention';
 
@@ -96,6 +100,22 @@ class AppRoutes {
     ).toString();
   }
 
+  static MentionTab parseMessagesTab(String? rawValue) {
+    return switch (rawValue?.trim()) {
+      'reply' => MentionTab.reply,
+      'light' => MentionTab.light,
+      'private' => MentionTab.privateMessage,
+      _ => MentionTab.privateMessage,
+    };
+  }
+
+  static String messagesLocation({MentionTab tab = MentionTab.privateMessage}) {
+    return Uri(
+      path: messagesPath,
+      queryParameters: _messagesQueryParameters(tab),
+    ).toString();
+  }
+
   static String privateMessageDetailLocation({
     required int puid,
     String? title,
@@ -122,6 +142,14 @@ class AppRoutes {
       return null;
     }
     return <String, String>{mentionTabQueryParameter: tab.queryValue};
+  }
+
+  static Map<String, String>? _messagesQueryParameters(MentionTab tab) {
+    if (tab == MentionTab.privateMessage) {
+      return null;
+    }
+
+    return <String, String>{messagesTabQueryParameter: tab.queryValue};
   }
 
   static Map<String, String>? _privateMessageQueryParameters({
@@ -283,21 +311,29 @@ extension AppNavigationExtensions on BuildContext {
   }
 
   Future<T?> pushMention<T>({MentionTab tab = MentionTab.reply}) {
+    return pushMessages(tab: tab);
+  }
+
+  Future<T?> pushMessages<T>({MentionTab tab = MentionTab.privateMessage}) {
     final router = maybeGoRouter;
     if (router == null) {
       return Future<T?>.value(null);
     }
 
-    return router.push<T>(AppRoutes.mentionLocation(tab: tab));
+    return router.push<T>(AppRoutes.messagesLocation(tab: tab));
   }
 
   void replaceMention({MentionTab tab = MentionTab.reply}) {
+    replaceMessages(tab: tab);
+  }
+
+  void replaceMessages({MentionTab tab = MentionTab.privateMessage}) {
     final router = maybeGoRouter;
     if (router == null) {
       return;
     }
 
-    router.replace(AppRoutes.mentionLocation(tab: tab));
+    router.replace(AppRoutes.messagesLocation(tab: tab));
   }
 
   Future<T?> pushPrivateMessageDetail<T>({

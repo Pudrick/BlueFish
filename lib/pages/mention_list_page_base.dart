@@ -40,31 +40,42 @@ class MentionListPage<T, VM extends MentionViewModel<T>>
 
 class MentionListSection<T, VM extends MentionViewModel<T>>
     extends StatelessWidget {
-  final VM Function() createViewModel;
+  final VM Function()? createViewModel;
+  final VM? viewModel;
   final MentionListSliverBuilder<T, VM> buildListSliver;
-  final IconData titleIcon;
-  final String title;
+  final IconData? titleIcon;
+  final String? title;
   final double bottomInset;
 
   const MentionListSection({
     super.key,
-    required this.createViewModel,
+    this.createViewModel,
+    this.viewModel,
     required this.buildListSliver,
-    required this.titleIcon,
-    required this.title,
+    this.titleIcon,
+    this.title,
     this.bottomInset = 0,
-  });
+  }) : assert(
+         (createViewModel == null) != (viewModel == null),
+         'Provide either createViewModel or viewModel.',
+       );
 
   @override
   Widget build(BuildContext context) {
+    final child = _MentionListSectionView<T, VM>(
+      buildListSliver: buildListSliver,
+      titleIcon: titleIcon,
+      title: title,
+      bottomInset: bottomInset,
+    );
+
+    if (viewModel != null) {
+      return ChangeNotifierProvider<VM>.value(value: viewModel!, child: child);
+    }
+
     return ChangeNotifierProvider<VM>(
-      create: (_) => createViewModel()..init(),
-      child: _MentionListSectionView<T, VM>(
-        buildListSliver: buildListSliver,
-        titleIcon: titleIcon,
-        title: title,
-        bottomInset: bottomInset,
-      ),
+      create: (_) => createViewModel!()..init(),
+      child: child,
     );
   }
 }
@@ -72,8 +83,8 @@ class MentionListSection<T, VM extends MentionViewModel<T>>
 class _MentionListSectionView<T, VM extends MentionViewModel<T>>
     extends StatefulWidget {
   final MentionListSliverBuilder<T, VM> buildListSliver;
-  final IconData titleIcon;
-  final String title;
+  final IconData? titleIcon;
+  final String? title;
   final double bottomInset;
 
   const _MentionListSectionView({
@@ -191,15 +202,16 @@ class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyHeaderDelegate(
-              child: _MentionListHeader<T, VM>(
-                titleIcon: widget.titleIcon,
-                title: widget.title,
+          if (widget.titleIcon != null && widget.title != null)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyHeaderDelegate(
+                child: _MentionListHeader<T, VM>(
+                  titleIcon: widget.titleIcon!,
+                  title: widget.title!,
+                ),
               ),
             ),
-          ),
           widget.buildListSliver(context, viewModel),
           if (widget.bottomInset > 0)
             SliverToBoxAdapter(child: SizedBox(height: widget.bottomInset)),

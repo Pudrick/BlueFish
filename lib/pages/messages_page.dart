@@ -1,30 +1,454 @@
+import 'dart:async';
+
+import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/models/mention_reply.dart';
 import 'package:bluefish/models/private_message_list.dart';
+import 'package:bluefish/pages/mention_list_page_base.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/viewModels/mention_light_view_model.dart';
+import 'package:bluefish/viewModels/mention_reply_view_model.dart';
 import 'package:bluefish/viewModels/private_message_list_view_model.dart';
+import 'package:bluefish/widgets/mention/mention_light_widget.dart';
+import 'package:bluefish/widgets/mention/mention_reply_widget.dart';
 import 'package:bluefish/widgets/private_message/private_message_list_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class MessagesPage extends StatelessWidget {
-  const MessagesPage({super.key});
+class MessagesPage extends StatefulWidget {
+  final MentionTab initialTab;
+
+  const MessagesPage({super.key, this.initialTab = MentionTab.privateMessage});
+
+  @override
+  State<MessagesPage> createState() => _MessagesPageState();
+}
+
+class _MessagesPageState extends State<MessagesPage>
+    with SingleTickerProviderStateMixin {
+  late final MentionReplyViewModel _replyViewModel;
+  late final MentionLightViewModel _lightViewModel;
+  late final PrivateMessageListViewModel _privateMessageViewModel;
+  late final TabController _tabController;
+
+  late MentionTab _currentTab;
+
+  bool _didInitReply = false;
+  bool _didInitLight = false;
+  bool _didInitPrivateMessage = false;
+  String? _lastSyncedLocation;
+
+  int get _replyUnreadCount => _replyViewModel.newList.length;
+  int get _lightUnreadCount => _lightViewModel.newList.length;
+  int get _privateUnreadCount => _privateMessageViewModel.messagePeeks
+      .where((messagePeek) => messagePeek.isUnread)
+      .length;
+
+  @override
+  void initState() {
+    super.initState();
+    _replyViewModel = MentionReplyViewModel();
+    _lightViewModel = MentionLightViewModel();
+    _privateMessageViewModel = PrivateMessageListViewModel();
+    _currentTab = widget.initialTab;
+    _tabController = TabController(
+      length: MentionTab.values.length,
+      vsync: this,
+      initialIndex: widget.initialTab.index,
+    );
+    _ensureTabInitialized(_currentTab);
+    for (final tab in MentionTab.values) {
+      if (tab != _currentTab) {
+        _ensureTabInitialized(tab);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MessagesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab &&
+        widget.initialTab != _currentTab) {
+      _setCurrentTab(widget.initialTab, animate: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _replyViewModel.dispose();
+    _lightViewModel.dispose();
+    _privateMessageViewModel.dispose();
+    super.dispose();
+  }
+
+  void _setCurrentTab(MentionTab tab, {bool animate = false}) {
+    _ensureTabInitialized(tab);
+
+    if (_currentTab != tab) {
+      setState(() {
+        _currentTab = tab;
+      });
+    }
+
+    if (_tabController.index != tab.index) {
+      if (animate) {
+        _tabController.animateTo(tab.index);
+      } else {
+        _tabController.index = tab.index;
+      }
+    }
+  }
+
+  void _ensureTabInitialized(MentionTab tab) {
+    switch (tab) {
+      case MentionTab.reply:
+        if (_didInitReply) {
+          return;
+        }
+        _didInitReply = true;
+        unawaited(_replyViewModel.init());
+        return;
+      case MentionTab.light:
+        if (_didInitLight) {
+          return;
+        }
+        _didInitLight = true;
+        unawaited(_lightViewModel.init());
+        return;
+      case MentionTab.privateMessage:
+        if (_didInitPrivateMessage) {
+          return;
+        }
+        _didInitPrivateMessage = true;
+        unawaited(_privateMessageViewModel.init());
+        return;
+    }
+  }
+
+  void _syncRouteIfNeeded() {
+    final targetLocation = AppRoutes.messagesLocation(tab: _currentTab);
+    if (_lastSyncedLocation == targetLocation) {
+      return;
+    }
+
+    _lastSyncedLocation = targetLocation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final currentLocation = context.maybeGoRouterUri?.toString();
+      if (currentLocation == null) {
+        return;
+      }
+
+      if (currentLocation != targetLocation) {
+        context.replaceMessages(tab: _currentTab);
+      }
+    });
+  }
+
+  String _buildSubtitle() {
+    return switch (_currentTab) {
+      MentionTab.reply => '看看谁回复了你，顺手点回原帖继续聊。',
+      MentionTab.light => '集中查看最新点亮，快速判断哪些内容更有反馈。',
+      MentionTab.privateMessage => '查看最近私信会话，也可以切换到未读优先处理。',
+    };
+  }
+
+  void _openConversation(PrivateMessagePeek messagePeek) {
+    context.pushPrivateMessageDetail(
+      puid: messagePeek.puid,
+      title: messagePeek.nickName,
+      avatarUrl: messagePeek.avatarUrl.toString(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => PrivateMessageListViewModel()..init(),
-      child: const _MessagesPageView(),
+    _syncRouteIfNeeded();
+
+    return Scaffold(
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: Listenable.merge(<Listenable>[
+            _replyViewModel,
+            _lightViewModel,
+            _privateMessageViewModel,
+          ]),
+          builder: (context, _) {
+            return Column(
+              children: [
+                _MessagesHeader(subtitle: _buildSubtitle()),
+                _MessagesTabBar(
+                  controller: _tabController,
+                  onTap: _setCurrentTab,
+                  replyUnreadCount: _replyUnreadCount,
+                  lightUnreadCount: _lightUnreadCount,
+                  privateUnreadCount: _privateUnreadCount,
+                ),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentTab.index,
+                    children: [
+                      _ReplyMessagesTab(viewModel: _replyViewModel),
+                      _LightMessagesTab(viewModel: _lightViewModel),
+                      _PrivateMessagesTab(
+                        viewModel: _privateMessageViewModel,
+                        onOpenConversation: _openConversation,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
 
-class _MessagesPageView extends StatefulWidget {
-  const _MessagesPageView();
+class _MessagesHeader extends StatelessWidget {
+  final String subtitle;
+
+  const _MessagesHeader({required this.subtitle});
 
   @override
-  State<_MessagesPageView> createState() => _MessagesPageViewState();
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '消息',
+              style: textTheme.headlineSmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _MessagesPageViewState extends State<_MessagesPageView> {
+class _MessagesTabBar extends StatelessWidget {
+  final TabController controller;
+  final ValueChanged<MentionTab> onTap;
+  final int replyUnreadCount;
+  final int lightUnreadCount;
+  final int privateUnreadCount;
+
+  const _MessagesTabBar({
+    required this.controller,
+    required this.onTap,
+    required this.replyUnreadCount,
+    required this.lightUnreadCount,
+    required this.privateUnreadCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: TabBar.secondary(
+          controller: controller,
+          onTap: (index) => onTap(MentionTab.values[index]),
+          labelColor: colorScheme.onPrimaryContainer,
+          unselectedLabelColor: colorScheme.onSurfaceVariant,
+          labelStyle: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          unselectedLabelStyle: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          dividerColor: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          indicator: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          splashBorderRadius: BorderRadius.circular(999),
+          tabs: [
+            Tab(
+              height: 46,
+              child: _MessagesTabLabel(
+                icon: Icons.reply_rounded,
+                label: '回复',
+                unreadCount: replyUnreadCount,
+                badgeTone: _MessagesTabBadgeTone.alert,
+              ),
+            ),
+            Tab(
+              height: 46,
+              child: _MessagesTabLabel(
+                icon: Icons.thumb_up_alt_outlined,
+                label: '点亮',
+                unreadCount: lightUnreadCount,
+                badgeTone: _MessagesTabBadgeTone.tonal,
+              ),
+            ),
+            Tab(
+              height: 46,
+              child: _MessagesTabLabel(
+                icon: Icons.mail_outline_rounded,
+                label: '私信',
+                unreadCount: privateUnreadCount,
+                badgeTone: _MessagesTabBadgeTone.alert,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessagesTabLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int unreadCount;
+  final _MessagesTabBadgeTone badgeTone;
+
+  const _MessagesTabLabel({
+    required this.icon,
+    required this.label,
+    required this.unreadCount,
+    required this.badgeTone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 8),
+        Text(label),
+        if (unreadCount > 0) ...[
+          const SizedBox(width: 8),
+          _MessagesTabBadge(count: unreadCount, tone: badgeTone),
+        ],
+      ],
+    );
+  }
+}
+
+enum _MessagesTabBadgeTone { alert, tonal }
+
+class _MessagesTabBadge extends StatelessWidget {
+  final int count;
+  final _MessagesTabBadgeTone tone;
+
+  const _MessagesTabBadge({required this.count, required this.tone});
+
+  String get _label => count > 99 ? '99+' : '$count';
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = switch (tone) {
+      _MessagesTabBadgeTone.alert => colorScheme.error,
+      _MessagesTabBadgeTone.tonal => colorScheme.secondaryContainer,
+    };
+    final foregroundColor = switch (tone) {
+      _MessagesTabBadgeTone.alert => colorScheme.onError,
+      _MessagesTabBadgeTone.tonal => colorScheme.onSecondaryContainer,
+    };
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        _label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: foregroundColor,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+class _ReplyMessagesTab extends StatelessWidget {
+  final MentionReplyViewModel viewModel;
+
+  const _ReplyMessagesTab({required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    return MentionListSection<MentionReply, MentionReplyViewModel>(
+      viewModel: viewModel,
+      bottomInset: 16,
+      buildListSliver: (context, viewModel) => MentionReplyListWidget(
+        newReplies: viewModel.newList,
+        oldReplies: viewModel.oldList,
+        hasNextPage: viewModel.hasNextPage,
+        isLoading: viewModel.isLoading,
+      ),
+    );
+  }
+}
+
+class _LightMessagesTab extends StatelessWidget {
+  final MentionLightViewModel viewModel;
+
+  const _LightMessagesTab({required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    return MentionListSection<MentionLight, MentionLightViewModel>(
+      viewModel: viewModel,
+      bottomInset: 16,
+      buildListSliver: (context, viewModel) => MentionLightListWidget(
+        newLights: viewModel.newList,
+        oldLights: viewModel.oldList,
+        hasNextPage: viewModel.hasNextPage,
+        isLoading: viewModel.isLoading,
+      ),
+    );
+  }
+}
+
+class _PrivateMessagesTab extends StatefulWidget {
+  final PrivateMessageListViewModel viewModel;
+  final ValueChanged<PrivateMessagePeek> onOpenConversation;
+
+  const _PrivateMessagesTab({
+    required this.viewModel,
+    required this.onOpenConversation,
+  });
+
+  @override
+  State<_PrivateMessagesTab> createState() => _PrivateMessagesTabState();
+}
+
+class _PrivateMessagesTabState extends State<_PrivateMessagesTab> {
   static const double _loadMoreTriggerDistance = 180;
 
   final ScrollController _scrollController = ScrollController();
@@ -53,100 +477,93 @@ class _MessagesPageViewState extends State<_MessagesPageView> {
       return;
     }
 
-    final viewModel = context.read<PrivateMessageListViewModel>();
-    if (!viewModel.isLoading && viewModel.hasNextPage) {
-      viewModel.loadMore();
+    if (!widget.viewModel.isLoading && widget.viewModel.hasNextPage) {
+      widget.viewModel.loadMore();
     }
-  }
-
-  void _openConversation(PrivateMessagePeek messagePeek) {
-    context.pushPrivateMessageDetail(
-      puid: messagePeek.puid,
-      title: messagePeek.nickName,
-      avatarUrl: messagePeek.avatarUrl.toString(),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<PrivateMessageListViewModel>();
-    final messagePeeks = viewModel.messagePeeks;
-    final errorMessage = viewModel.errorMessage;
-    final isInitialLoading = viewModel.isLoading && messagePeeks.isEmpty;
-    final showEmptyState =
-        !viewModel.isLoading &&
-        messagePeeks.isEmpty &&
-        (errorMessage == null || errorMessage.isEmpty);
+    return ChangeNotifierProvider<PrivateMessageListViewModel>.value(
+      value: widget.viewModel,
+      child: Consumer<PrivateMessageListViewModel>(
+        builder: (context, viewModel, _) {
+          final messagePeeks = viewModel.messagePeeks;
+          final errorMessage = viewModel.errorMessage;
+          final isInitialLoading = viewModel.isLoading && messagePeeks.isEmpty;
+          final showEmptyState =
+              !viewModel.isLoading &&
+              messagePeeks.isEmpty &&
+              (errorMessage == null || errorMessage.isEmpty);
 
-    return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: viewModel.refresh,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _MessagesHeader(
-                  unreadOnly: viewModel.unreadOnly,
-                  totalCount: messagePeeks.length,
-                  isBusy: viewModel.isLoading,
-                  onUnreadOnlyChanged: viewModel.setUnreadOnly,
-                ),
+          return RefreshIndicator(
+            onRefresh: viewModel.refresh,
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
               ),
-              if (isInitialLoading)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _MessagesLoadingState(),
-                )
-              else if (errorMessage != null && messagePeeks.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _MessagesErrorState(
-                    message: errorMessage,
-                    onRetry: viewModel.refresh,
-                  ),
-                )
-              else if (showEmptyState)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _MessagesEmptyState(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _PrivateMessagesToolbar(
                     unreadOnly: viewModel.unreadOnly,
-                    onRefresh: viewModel.refresh,
+                    totalCount: messagePeeks.length,
+                    isBusy: viewModel.isLoading,
+                    onUnreadOnlyChanged: viewModel.setUnreadOnly,
                   ),
-                )
-              else ...[
-                if (errorMessage != null && messagePeeks.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: _MessagesInlineError(
+                ),
+                if (isInitialLoading)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _MessagesLoadingState(),
+                  )
+                else if (errorMessage != null && messagePeeks.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _MessagesErrorState(
                       message: errorMessage,
                       onRetry: viewModel.refresh,
                     ),
+                  )
+                else if (showEmptyState)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _MessagesEmptyState(
+                      unreadOnly: viewModel.unreadOnly,
+                      onRefresh: viewModel.refresh,
+                    ),
+                  )
+                else ...[
+                  if (errorMessage != null && messagePeeks.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _MessagesInlineError(
+                        message: errorMessage,
+                        onRetry: viewModel.refresh,
+                      ),
+                    ),
+                  PrivateMessageListWidget(
+                    messagePeeks: messagePeeks,
+                    isLoading: viewModel.isLoading,
+                    isLastPage: viewModel.isLastPage,
+                    onTap: widget.onOpenConversation,
                   ),
-                PrivateMessageListWidget(
-                  messagePeeks: messagePeeks,
-                  isLoading: viewModel.isLoading,
-                  isLastPage: viewModel.isLastPage,
-                  onTap: _openConversation,
-                ),
+                ],
               ],
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _MessagesHeader extends StatelessWidget {
+class _PrivateMessagesToolbar extends StatelessWidget {
   final bool unreadOnly;
   final int totalCount;
   final bool isBusy;
   final Future<void> Function(bool) onUnreadOnlyChanged;
 
-  const _MessagesHeader({
+  const _PrivateMessagesToolbar({
     required this.unreadOnly,
     required this.totalCount,
     required this.isBusy,
@@ -159,26 +576,21 @@ class _MessagesHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '消息',
-            style: textTheme.headlineSmall?.copyWith(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            unreadOnly ? '当前仅显示未读会话' : '查看最近的私信会话',
-            style: textTheme.bodyMedium?.copyWith(
+            unreadOnly ? '当前仅显示未读会话' : '切换到私信列表查看最近会话。',
+            style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
+          const SizedBox(height: 10),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               FilterChip(
                 label: const Text('仅看未读'),
@@ -189,7 +601,6 @@ class _MessagesHeader extends StatelessWidget {
                         onUnreadOnlyChanged(selected);
                       },
               ),
-              const SizedBox(width: 10),
               Text(
                 '已加载 $totalCount 条会话',
                 style: textTheme.labelMedium?.copyWith(
@@ -233,7 +644,7 @@ class _MessagesLoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '稍等一下，马上把最近会话带出来',
+              '稍等一下，马上把最新动态带出来。',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -280,7 +691,7 @@ class _MessagesEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              unreadOnly ? '可以切回全部消息看看' : '下拉刷新后再来看看',
+              unreadOnly ? '可以切回全部消息看看。' : '下拉刷新后再来看看。',
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
