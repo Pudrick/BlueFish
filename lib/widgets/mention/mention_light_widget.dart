@@ -3,6 +3,7 @@
 // TODO: check vibe results.
 
 import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/widgets/html/bluefish_html_widget_factory.dart';
 import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
@@ -388,6 +389,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
     return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
+      factoryBuilder: () => BluefishHtmlWidgetFactory(),
       customStylesBuilder: (element) {
         if (element.localName == 'a') {
           final colorInt = widget.linkColor.toARGB32();
@@ -418,7 +420,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                 Positioned.fill(
                   child: ClipRect(
                     child: OverflowBox(
-                      alignment: Alignment.topCenter,
+                      alignment: Alignment.topLeft,
                       minWidth: constraints.maxWidth,
                       maxWidth: constraints.maxWidth,
                       minHeight: widget.collapsedMaxHeight,
@@ -469,7 +471,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                 firstCurve: Curves.easeOutCubic,
                 secondCurve: Curves.easeOutCubic,
                 sizeCurve: Curves.easeInOutCubic,
-                alignment: Alignment.topCenter,
+                alignment: Alignment.topLeft,
                 crossFadeState: _expanded
                     ? CrossFadeState.showSecond
                     : CrossFadeState.showFirst,

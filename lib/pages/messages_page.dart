@@ -222,25 +222,12 @@ class _MessagesHeader extends StatelessWidget {
     return Material(
       color: colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '消息',
-              style: textTheme.headlineSmall?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Text(
+          subtitle,
+          style: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
       ),
     );
@@ -376,11 +363,11 @@ class _MessagesTabBadge extends StatelessWidget {
     };
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(8),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -389,6 +376,7 @@ class _MessagesTabBadge extends StatelessWidget {
           color: foregroundColor,
           fontWeight: FontWeight.w800,
           fontSize: 10,
+          height: 1,
         ),
       ),
     );
