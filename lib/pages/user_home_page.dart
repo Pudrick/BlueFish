@@ -148,6 +148,7 @@ class _UserHomePageViewState extends State<UserHomePageView> {
                 threadsList: data.threads,
                 isLoading: viewModel.isLoadingThreads,
                 isLastPage: viewModel.isLastThreadPage,
+                enableTitleBlurMask: true,
               ),
               DisplayStatus.replies => UserHomeReplyListWidget(
                 replyList: data.replies,
@@ -158,6 +159,7 @@ class _UserHomePageViewState extends State<UserHomePageView> {
                 threadsList: data.recommendThreads,
                 isLoading: viewModel.isLoadingRecommends,
                 isLastPage: viewModel.isLastRecommendPage,
+                enableTitleBlurMask: false,
               ),
             },
           ],
