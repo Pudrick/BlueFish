@@ -179,10 +179,17 @@ class PrivateMessageListWidget extends StatelessWidget {
                 color: Theme.of(context).colorScheme.outline,
               ),
             )
-          : const SizedBox(
+          : isLoading
+          ? const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(
+              '继续上滑加载更多',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
     );
   }

@@ -23,6 +23,9 @@ class PrivateMessageListViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   bool _isLastPage = false;
   bool get isLastPage => _isLastPage;
   bool get hasNextPage => !_isLastPage;
@@ -54,21 +57,16 @@ class PrivateMessageListViewModel extends ChangeNotifier {
   Future<void> setUnreadOnly(bool unreadOnly) async {
     if (_unreadOnly == unreadOnly) return;
 
-    final previousValue = _unreadOnly;
     _unreadOnly = unreadOnly;
     notifyListeners();
-
-    try {
-      await refresh();
-    } catch (_) {
-      _unreadOnly = previousValue;
-      notifyListeners();
-      rethrow;
-    }
+    await refresh();
   }
 
   Future<void> _fetchPage({required int pageNum, required bool reset}) async {
     _isLoading = true;
+    if (reset) {
+      _errorMessage = null;
+    }
     notifyListeners();
 
     try {
@@ -92,6 +90,11 @@ class PrivateMessageListViewModel extends ChangeNotifier {
           : result.pageInfo.pageNum + 1;
       _isLastPage =
           result.pageInfo.isEnd || result.messagePeeks.length < pageSize;
+      _errorMessage = null;
+    } catch (error, stackTrace) {
+      _errorMessage = reset ? '消息列表加载失败，请稍后重试。' : '加载更多失败，请稍后重试。';
+      debugPrint('Failed to fetch private message list: $error');
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _isLoading = false;
       notifyListeners();

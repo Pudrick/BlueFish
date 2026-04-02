@@ -1,3 +1,4 @@
+import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,8 @@ class ReplyFloor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserPuid = _resolveCurrentUserPuid();
+
     return _ReplyFloorContent(
       content: replyFloor,
       isQuote: isQuote,
@@ -30,6 +33,10 @@ class ReplyFloor extends StatelessWidget {
       showOpBadge: replyFloor.isOp,
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
+      replyCount: replyFloor.replyNum,
+      isMine:
+          currentUserPuid != null &&
+          currentUserPuid == replyFloor.meta.author.puid,
     );
   }
 }
@@ -42,6 +49,8 @@ class _ReplyFloorContent extends StatelessWidget {
   final bool showOpBadge;
   final double contentMaxWidth;
   final String? imageHeroScope;
+  final int? replyCount;
+  final bool isMine;
 
   const _ReplyFloorContent({
     required this.content,
@@ -51,6 +60,8 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.showOpBadge,
     required this.contentMaxWidth,
     required this.imageHeroScope,
+    required this.replyCount,
+    required this.isMine,
   });
 
   @override
@@ -100,6 +111,8 @@ class _ReplyFloorContent extends StatelessWidget {
                 showOpBadge: content.quote!.isOp,
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
+                replyCount: null,
+                isMine: false,
               ),
             ),
           ),
@@ -122,21 +135,13 @@ class _ReplyFloorContent extends StatelessWidget {
         if (!isQuote && lightCount != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ActionPill(
-                  icon: Icons.wb_incandescent_outlined,
-                  label: '$lightCount',
-                  onTap: () {},
-                ),
-                _ActionPill(
-                  icon: Icons.thumb_down_alt_outlined,
-                  label: '',
-                  onTap: () {},
-                ),
-              ],
+            child: _ReplyActionRow(
+              lightCount: lightCount!,
+              replyCount: replyCount ?? 0,
+              onLightTap: () {},
+              onReplyChainTap: () {},
+              onGiftTap: () {},
+              onReplyTap: () {},
             ),
           ),
       ],
@@ -168,7 +173,12 @@ class _ReplyFloorContent extends StatelessWidget {
               ),
               if (!isQuote) ...[
                 const SizedBox(width: 8),
-                _FloorNumberPill(floor: displayFloorNumber),
+                _ReplyHeaderActions(
+                  floor: displayFloorNumber,
+                  onMoreTap: () {
+                    _showReplyOverflowActionsSheet(context, isMine: isMine);
+                  },
+                ),
               ],
             ],
           ),
@@ -259,6 +269,29 @@ class _FloorNumberPill extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+class _ReplyHeaderActions extends StatelessWidget {
+  final int floor;
+  final VoidCallback onMoreTap;
+
+  const _ReplyHeaderActions({required this.floor, required this.onMoreTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _FloorNumberPill(floor: floor),
+        const SizedBox(width: 6),
+        _HeaderIconButton(
+          icon: Icons.more_horiz_rounded,
+          tooltip: '更多操作',
+          onTap: onMoreTap,
+        ),
+      ],
     );
   }
 }
@@ -422,14 +455,132 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
   }
 }
 
-class _ActionPill extends StatelessWidget {
+class _ReplyActionRow extends StatelessWidget {
+  final int lightCount;
+  final int replyCount;
+  final VoidCallback onLightTap;
+  final VoidCallback onReplyChainTap;
+  final VoidCallback onGiftTap;
+  final VoidCallback onReplyTap;
+
+  const _ReplyActionRow({
+    required this.lightCount,
+    required this.replyCount,
+    required this.onLightTap,
+    required this.onReplyChainTap,
+    required this.onGiftTap,
+    required this.onReplyTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final compactActions = <Widget>[
+      _CountActionChip(
+        icon: Icons.wb_incandescent_outlined,
+        count: lightCount,
+        tooltip: '亮了 $lightCount',
+        onTap: onLightTap,
+      ),
+      if (replyCount > 0)
+        _CountActionChip(
+          icon: Icons.format_quote_rounded,
+          count: replyCount,
+          tooltip: '查看回复 $replyCount',
+          onTap: onReplyChainTap,
+        ),
+      _IconActionChip(
+        icon: Icons.card_giftcard_rounded,
+        tooltip: '送礼',
+        onTap: onGiftTap,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool stackReplyAction =
+            constraints.maxWidth < 400 && compactActions.length >= 3;
+
+        if (stackReplyAction) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(spacing: 8, runSpacing: 8, children: compactActions),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _PrimaryIconActionChip(
+                  icon: Icons.add_comment_outlined,
+                  tooltip: '回复该内容',
+                  onTap: onReplyTap,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Wrap(spacing: 8, runSpacing: 8, children: compactActions),
+            ),
+            const SizedBox(width: 8),
+            _PrimaryIconActionChip(
+              icon: Icons.add_comment_outlined,
+              tooltip: '回复该内容',
+              onTap: onReplyTap,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String tooltip;
   final VoidCallback onTap;
 
-  const _ActionPill({
+  const _HeaderIconButton({
     required this.icon,
-    required this.label,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CountActionChip extends StatelessWidget {
+  final IconData icon;
+  final int count;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _CountActionChip({
+    required this.icon,
+    required this.count,
+    required this.tooltip,
     required this.onTap,
   });
 
@@ -438,32 +589,298 @@ class _ActionPill extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Material(
-      color: colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(999),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-              if (label.isNotEmpty) ...[
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: colorScheme.surfaceContainerHighest,
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.38),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
-                  label,
+                  _formatCompactCount(count),
                   style: textTheme.labelMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _IconActionChip extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _IconActionChip({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: colorScheme.surfaceContainerHighest,
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.38),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            child: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryIconActionChip extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _PrimaryIconActionChip({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: colorScheme.secondaryContainer,
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: colorScheme.secondary.withValues(alpha: 0.12),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Icon(
+              icon,
+              size: 18,
+              color: colorScheme.onSecondaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showReplyOverflowActionsSheet(
+  BuildContext context, {
+  required bool isMine,
+}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black54,
+    useSafeArea: true,
+    builder: (context) {
+      return _ReplyOverflowActionsSheet(isMine: isMine);
+    },
+  );
+}
+
+class _ReplyOverflowActionsSheet extends StatelessWidget {
+  final bool isMine;
+
+  const _ReplyOverflowActionsSheet({required this.isMine});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Material(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(24),
+            clipBehavior: Clip.antiAlias,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.42),
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.7,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '更多操作',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (!isMine)
+                      _OverflowActionTile(
+                        icon: Icons.flag_outlined,
+                        label: '举报',
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                    if (isMine)
+                      _OverflowActionTile(
+                        icon: Icons.delete_outline_rounded,
+                        label: '删除回复',
+                        danger: true,
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverflowActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool danger;
+
+  const _OverflowActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final backgroundColor = danger
+        ? colorScheme.errorContainer.withValues(alpha: 0.88)
+        : colorScheme.surfaceContainerHighest;
+    final foregroundColor = danger
+        ? colorScheme.onErrorContainer
+        : colorScheme.onSurface;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: foregroundColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatCompactCount(int count) {
+  if (count > 99) {
+    return '99+';
+  }
+  return '$count';
+}
+
+String? _resolveCurrentUserPuid() {
+  final cookies = cookieManager.getCookiesSync();
+  if (cookies.trim().isEmpty) {
+    return null;
+  }
+
+  return _extractPuidFromCookie(cookies, 'u') ??
+      _extractPuidFromCookie(cookies, 'g');
+}
+
+String? _extractPuidFromCookie(String cookies, String key) {
+  final match = RegExp(
+    '(?:^|;\\s*)${RegExp.escape(key)}=([^;]+)',
+  ).firstMatch(cookies);
+  if (match == null) {
+    return null;
+  }
+
+  final decodedValue = Uri.decodeComponent(match.group(1)!);
+  final separatorIndex = decodedValue.indexOf('|');
+  final puid = separatorIndex >= 0
+      ? decodedValue.substring(0, separatorIndex)
+      : decodedValue;
+  final normalizedPuid = puid.trim();
+  return normalizedPuid.isEmpty ? null : normalizedPuid;
 }
