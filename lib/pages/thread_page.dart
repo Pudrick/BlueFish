@@ -388,9 +388,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
             },
           ),
 
-          bottomNavigationBar: const ThreadBottomBar(
+          bottomNavigationBar: ThreadBottomBar(
             hasRecommended: true,
             hasFavorated: false,
+            threadTid: viewModel.tid,
+            threadTitle: data.mainFloor.title,
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
