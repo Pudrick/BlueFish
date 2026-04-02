@@ -1,14 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluefish/models/internal_settings.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/models/user_homepage/user_home_reply.dart';
 import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
+import 'package:http/http.dart' as http;
 
 class UserHomeService {
+  final http.Client _client;
+
+  UserHomeService({http.Client? client}) : _client = client ?? httpClient;
+
   String getAuthorDataFromScripts(List<Element> scripts) {
     for (final script in scripts) {
       final text = script.text.trim();
@@ -31,7 +37,7 @@ class UserHomeService {
   Future<UserHome> getAuthorHomeByEuid(dynamic euid) async {
     if (euid is int) euid = euid.toString();
     Uri homepageUrl = Uri.parse("https://my.hupu.com/$euid");
-    var response = await httpClient.get(homepageUrl);
+    var response = await _client.get(homepageUrl);
     if (response.statusCode != 200) {
       throw const HttpException("Failed to get http response.");
     }
@@ -60,8 +66,7 @@ class UserHomeService {
     return authorHome;
   }
 
-  // TODO: add a tid filter of bengban.
-  Future<List<UserHomeThreadTitle>> loadThreadsPage({
+  Future<({List<UserHomeThreadTitle> threads, int rawCount})> loadThreadsPage({
     required String authorEuid,
     required ThreadListType type,
     required int page,
@@ -77,7 +82,7 @@ class UserHomeService {
       },
     );
 
-    final response = await httpClient.get(threadAPI);
+    final response = await _client.get(threadAPI);
     if (response.statusCode != 200) {
       throw const HttpException('failed to load threads.');
     }
@@ -90,13 +95,24 @@ class UserHomeService {
       ThreadListType.recommend =>
         (json['data']['content'] as List<dynamic>? ?? []),
     };
-    return threadsData
-        .map((e) => UserHomeThreadTitle.fromJson(e as Map<String, dynamic>))
+    final parsedThreads = threadsData
+        .map(
+          (e) => UserHomeThreadTitle.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
         .toList();
+
+    return (
+      threads: parsedThreads
+          .where((thread) => thread.topicId == mainTopicID)
+          .toList(),
+      rawCount: threadsData.length,
+    );
   }
 
-  // return a record: {replies, maxTime}
-  Future<({List<UserHomeReply> replies, String lastMaxTime})> loadRepliesPage({
+  Future<({List<UserHomeReply> replies, String lastMaxTime, int rawCount})>
+  loadRepliesPage({
     required String authorEuid,
     required int page,
     required String lastMaxTime,
@@ -113,7 +129,7 @@ class UserHomeService {
       },
     );
 
-    final response = await httpClient.get(threadAPI);
+    final response = await _client.get(threadAPI);
     if (response.statusCode != 200) {
       throw const HttpException('failed to load replies.');
     }
@@ -124,11 +140,19 @@ class UserHomeService {
     final List<dynamic> repliesData =
         json['data']['replyWithQuoteDtoList'] as List<dynamic>? ?? [];
     final String maxTime = json['data']['maxTime'].toString();
+    final parsedReplies = repliesData
+        .map(
+          (e) =>
+              UserHomeReply.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+
     return (
-      replies: repliesData
-          .map((e) => UserHomeReply.fromJson(e as Map<String, dynamic>))
+      replies: parsedReplies
+          .where((reply) => reply.topicId == mainTopicID)
           .toList(),
       lastMaxTime: maxTime,
+      rawCount: repliesData.length,
     );
   }
 }

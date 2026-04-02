@@ -1,4 +1,4 @@
-int mainTopicID = 788;
+const int mainTopicID = 788;
 
-int mainZoneID = 0;
-int theaterZoneID = 253;
+const int mainZoneID = 0;
+const int theaterZoneID = 253;

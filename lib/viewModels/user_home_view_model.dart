@@ -75,15 +75,15 @@ class UserHomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final newThreads = await _service.loadThreadsPage(
+      final (:threads, :rawCount) = await _service.loadThreadsPage(
         authorEuid: _data!.euid,
         type: ThreadListType.post,
         page: _currentThreadPage,
       );
 
-      _data = _data!.copyWith(threads: [..._data!.threads, ...newThreads]);
+      _data = _data!.copyWith(threads: [..._data!.threads, ...threads]);
 
-      if (newThreads.length < UserHome.threadPageSize) {
+      if (rawCount < UserHome.threadPageSize) {
         _isLastThreadPage = true;
       } else {
         _currentThreadPage++;
@@ -101,17 +101,17 @@ class UserHomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final newRecommends = await _service.loadThreadsPage(
+      final (:threads, :rawCount) = await _service.loadThreadsPage(
         authorEuid: _data!.euid,
         type: ThreadListType.recommend,
         page: _currentRecommendPage,
       );
 
       _data = _data!.copyWith(
-        recommendThreads: [..._data!.recommendThreads, ...newRecommends],
+        recommendThreads: [..._data!.recommendThreads, ...threads],
       );
 
-      if (newRecommends.length < UserHome.threadPageSize) {
+      if (rawCount < UserHome.threadPageSize) {
         _isLastRecommendPage = true;
       } else {
         _currentRecommendPage++;
@@ -129,16 +129,20 @@ class UserHomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final (replies :newReplies, :lastMaxTime) = await _service.loadRepliesPage(
+      final (
+        replies: newReplies,
+        lastMaxTime: lastMaxTime,
+        rawCount: rawCount,
+      ) = await _service.loadRepliesPage(
         authorEuid: _data!.euid,
         page: _currentReplyPage,
-        lastMaxTime: lastReplyMaxTime
+        lastMaxTime: lastReplyMaxTime,
       );
 
       _data = _data!.copyWith(replies: [..._data!.replies, ...newReplies]);
       _lastReplyMaxTime = lastMaxTime;
 
-      if (newReplies.length < UserHome.replyPageSize) {
+      if (rawCount < UserHome.replyPageSize) {
         _isLastReplyPage = true;
       } else {
         _currentReplyPage++;
