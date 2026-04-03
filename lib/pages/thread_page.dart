@@ -7,6 +7,7 @@ import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:bluefish/widgets/thread/page_pill.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart' as html_parser;
 import 'package:provider/provider.dart';
 
 /// Thread detail page entry point.
@@ -89,7 +90,12 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       }
 
       final currentLocation = context.maybeGoRouterUri?.toString();
-      if (currentLocation == null) {
+      final currentUri = context.maybeGoRouterUri;
+      if (currentLocation == null || currentUri == null) {
+        return;
+      }
+
+      if (currentUri.path != AppRoutes.threadDetailPathForTid(viewModel.tid)) {
         return;
       }
 
@@ -120,10 +126,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
   double _contentBodyMaxWidth(double viewportWidth) {
     if (viewportWidth >= 1440) {
-      return 880;
+      return 960;
     }
     if (viewportWidth >= 1024) {
-      return 840;
+      return 920;
     }
     return double.infinity;
   }
@@ -302,6 +308,20 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                         isQuote: false,
                                         floorNumber: fallbackFloorNumber,
                                         contentMaxWidth: contentBodyMaxWidth,
+                                        onReplyTap: () {
+                                          final reply = data.replies[index];
+                                          context.pushThreadReplyComposer(
+                                            tid: viewModel.tid,
+                                            pid: reply.pid,
+                                            page: viewModel.currentPage,
+                                            contextLabel:
+                                                '回复给 $fallbackFloorNumber 楼 · ${reply.meta.author.name}',
+                                            contextPreview:
+                                                _replyContextPreviewFromHtml(
+                                                  reply.contentHtml,
+                                                ),
+                                          );
+                                        },
                                       ),
                                     );
                                   }, childCount: data.replies.length),
@@ -421,4 +441,29 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       },
     );
   }
+}
+
+String _replyContextPreviewFromHtml(String html) {
+  if (html.trim().isEmpty) {
+    return '该回复未包含可预览的文字内容。';
+  }
+
+  final normalizedHtml = html
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</p\s*>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</div\s*>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</li\s*>', caseSensitive: false), '\n');
+
+  final plainText = html_parser.parseFragment(normalizedHtml).text ?? '';
+  final collapsedWhitespace = plainText
+      .replaceAll('\u00A0', ' ')
+      .replaceAll(RegExp(r'[ \t]+\n'), '\n')
+      .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+      .trim();
+
+  if (collapsedWhitespace.isNotEmpty) {
+    return collapsedWhitespace;
+  }
+
+  return '该回复包含图片或其他暂不支持预览的内容。';
 }

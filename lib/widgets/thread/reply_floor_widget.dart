@@ -11,6 +11,7 @@ class ReplyFloor extends StatelessWidget {
   final int? floorNumber;
   final double contentMaxWidth;
   final String? imageHeroScope;
+  final VoidCallback? onReplyTap;
 
   const ReplyFloor({
     super.key,
@@ -19,6 +20,7 @@ class ReplyFloor extends StatelessWidget {
     this.floorNumber,
     this.contentMaxWidth = double.infinity,
     this.imageHeroScope,
+    this.onReplyTap,
   });
 
   @override
@@ -34,6 +36,7 @@ class ReplyFloor extends StatelessWidget {
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
       replyCount: replyFloor.replyNum,
+      onReplyTap: onReplyTap,
       isMine:
           currentUserPuid != null &&
           currentUserPuid == replyFloor.meta.author.puid,
@@ -50,6 +53,7 @@ class _ReplyFloorContent extends StatelessWidget {
   final double contentMaxWidth;
   final String? imageHeroScope;
   final int? replyCount;
+  final VoidCallback? onReplyTap;
   final bool isMine;
 
   const _ReplyFloorContent({
@@ -61,6 +65,7 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.contentMaxWidth,
     required this.imageHeroScope,
     required this.replyCount,
+    required this.onReplyTap,
     required this.isMine,
   });
 
@@ -69,6 +74,9 @@ class _ReplyFloorContent extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = theme.textTheme;
+    final double cardMaxWidth = contentMaxWidth.isFinite
+        ? contentMaxWidth + 24
+        : double.infinity;
 
     final bool notDisplay = !content.visibility.canDisplay;
     final String? notDisplayReasonText = notDisplay
@@ -86,7 +94,7 @@ class _ReplyFloorContent extends StatelessWidget {
     final resolvedImageHeroScope =
         imageHeroScope ?? 'thread-reply:${content.pid}';
 
-    Widget bodyContent = Column(
+    final Widget bodyContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isQuote && content.quote != null) ...[
@@ -112,6 +120,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
                 replyCount: null,
+                onReplyTap: null,
                 isMine: false,
               ),
             ),
@@ -141,58 +150,61 @@ class _ReplyFloorContent extends StatelessWidget {
               onLightTap: () {},
               onReplyChainTap: () {},
               onGiftTap: () {},
-              onReplyTap: () {},
+              onReplyTap: onReplyTap ?? () {},
             ),
           ),
       ],
     );
 
+    Widget contentColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AuthorInfoWidget(
+                meta: content.meta,
+                showOpBadge: showOpBadge,
+              ),
+            ),
+            if (!isQuote) ...[
+              const SizedBox(width: 8),
+              _ReplyHeaderActions(
+                floor: displayFloorNumber,
+                onMoreTap: () {
+                  _showReplyOverflowActionsSheet(context, isMine: isMine);
+                },
+              ),
+            ],
+          ],
+        ),
+        SizedBox(height: isQuote ? 10 : 12),
+        bodyContent,
+      ],
+    );
+
     if (contentMaxWidth.isFinite) {
-      bodyContent = Align(
+      contentColumn = Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: contentMaxWidth),
-          child: bodyContent,
+          child: contentColumn,
         ),
       );
     }
 
     final Widget floorContent = Padding(
       padding: EdgeInsets.fromLTRB(12, 12, 12, isQuote ? 10 : 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: AuthorInfoWidget(
-                  meta: content.meta,
-                  showOpBadge: showOpBadge,
-                ),
-              ),
-              if (!isQuote) ...[
-                const SizedBox(width: 8),
-                _ReplyHeaderActions(
-                  floor: displayFloorNumber,
-                  onMoreTap: () {
-                    _showReplyOverflowActionsSheet(context, isMine: isMine);
-                  },
-                ),
-              ],
-            ],
-          ),
-          SizedBox(height: isQuote ? 10 : 12),
-          bodyContent,
-        ],
-      ),
+      child: contentColumn,
     );
 
     if (isQuote) {
       return floorContent;
     }
 
-    return Card(
+    final Widget card = Card(
+      key: ValueKey('reply-floor-card-${content.pid}'),
       margin: EdgeInsets.zero,
       elevation: 0,
       color: colorScheme.surface,
@@ -204,6 +216,18 @@ class _ReplyFloorContent extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: floorContent,
+    );
+
+    if (!cardMaxWidth.isFinite) {
+      return card;
+    }
+
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: cardMaxWidth),
+        child: card,
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../models/composer/composer_attachment.dart';
 import '../models/composer/quill_embed_models.dart';
 import '../models/composer/quill_draft_utils.dart';
 import '../models/composer/thread_draft.dart';
+import '../services/composer/composer_image_picker_service.dart';
 import '../services/composer/html_export_service.dart';
 import '../services/thread_publish_service.dart';
 import '../services/thread_video_upload_service.dart';
@@ -14,6 +15,7 @@ import '../services/thread_video_upload_service.dart';
 class ThreadComposeViewModel extends ChangeNotifier {
   final ThreadPublishService _publishService;
   final ThreadVideoUploadService _videoUploadService;
+  final ComposerImagePickerService _imagePickerService;
   final HtmlExportService _htmlExportService;
 
   ThreadComposeMode _mode = ThreadComposeMode.richText;
@@ -29,10 +31,13 @@ class ThreadComposeViewModel extends ChangeNotifier {
   ThreadComposeViewModel({
     ThreadPublishService? publishService,
     ThreadVideoUploadService? videoUploadService,
+    ComposerImagePickerService? imagePickerService,
     HtmlExportService? htmlExportService,
   }) : _publishService = publishService ?? const StubThreadPublishService(),
        _videoUploadService =
            videoUploadService ?? const StubThreadVideoUploadService(),
+       _imagePickerService =
+           imagePickerService ?? DeviceComposerImagePickerService(),
        _htmlExportService = htmlExportService ?? const HtmlExportService() {
     _richTextController = quill.QuillController(
       document: _documentFromDeltaJson(_richTextDraft.deltaJson),
@@ -127,14 +132,35 @@ class ThreadComposeViewModel extends ChangeNotifier {
     );
   }
 
-  void insertImagePlaceholder() {
+  Future<void> pickAndInsertImage() async {
+    try {
+      final pickedImage = await _imagePickerService.pickImage();
+      if (pickedImage == null) {
+        _statusMessage = '已取消选择图片。';
+        notifyListeners();
+        return;
+      }
+
+      _insertPickedImage(pickedImage);
+    } catch (_) {
+      _statusMessage = '选择图片失败，请稍后再试。';
+      notifyListeners();
+    }
+  }
+
+  void _insertPickedImage(PickedComposerImage pickedImage) {
     final attachmentId = _createComposerId('image-attachment');
-    final label = '图片占位 ${_richTextDraft.attachments.length + 1}';
+    final label = pickedImage.name.trim().isEmpty
+        ? '图片 ${_richTextDraft.attachments.length + 1}'
+        : pickedImage.name.trim();
     final attachment = ComposerAttachment(
       id: attachmentId,
       type: ComposerAttachmentType.image,
       uploadState: ComposerUploadState.pending,
       label: label,
+      localPath: pickedImage.path,
+      thumbnailUrl: pickedImage.path,
+      bytes: pickedImage.bytes,
     );
 
     _richTextDraft = _richTextDraft.copyWith(
@@ -144,12 +170,14 @@ class ThreadComposeViewModel extends ChangeNotifier {
       ],
       clearBodyHtml: true,
     );
+    _statusMessage = '已添加图片：$label';
 
     _insertBlockEmbedWithLineBreaks(
       BluefishImagePlaceholderEmbed(
         BluefishImagePlaceholderEmbedData(
           attachmentId: attachmentId,
           label: label,
+          sourceUrl: pickedImage.path,
         ),
       ),
     );
@@ -298,56 +326,69 @@ class ThreadComposeViewModel extends ChangeNotifier {
         selection.start == 0 || plainText[selection.start - 1] == '\n';
     final hasTrailingNewline =
         selection.end >= plainText.length || plainText[selection.end] == '\n';
+    _isApplyingProgrammaticRichTextUpdate = true;
+    try {
+      _richTextController.replaceText(
+        selection.start,
+        replaceLength,
+        '',
+        TextSelection.collapsed(offset: selection.start),
+      );
 
-    _richTextController.replaceText(
-      selection.start,
-      replaceLength,
-      '',
-      TextSelection.collapsed(offset: selection.start),
-    );
+      var insertOffset = selection.start;
+      if (!hasLeadingNewline) {
+        _richTextController.replaceText(
+          insertOffset,
+          0,
+          '\n',
+          TextSelection.collapsed(offset: insertOffset + 1),
+        );
+        insertOffset += 1;
+      }
 
-    var insertOffset = selection.start;
-    if (!hasLeadingNewline) {
       _richTextController.replaceText(
         insertOffset,
         0,
-        '\n',
+        embed,
         TextSelection.collapsed(offset: insertOffset + 1),
       );
       insertOffset += 1;
-    }
 
-    _richTextController.replaceText(
-      insertOffset,
-      0,
-      embed,
-      TextSelection.collapsed(offset: insertOffset + 1),
-    );
-    insertOffset += 1;
+      if (!hasTrailingNewline) {
+        _richTextController.replaceText(
+          insertOffset,
+          0,
+          '\n',
+          TextSelection.collapsed(offset: insertOffset + 1),
+        );
+        insertOffset += 1;
+      }
 
-    if (!hasTrailingNewline) {
-      _richTextController.replaceText(
-        insertOffset,
-        0,
-        '\n',
-        TextSelection.collapsed(offset: insertOffset + 1),
+      _richTextController.updateSelection(
+        TextSelection.collapsed(offset: insertOffset),
+        quill.ChangeSource.local,
       );
-      insertOffset += 1;
+    } finally {
+      _isApplyingProgrammaticRichTextUpdate = false;
     }
 
-    _richTextController.updateSelection(
-      TextSelection.collapsed(offset: insertOffset),
-      quill.ChangeSource.local,
-    );
+    _handleRichTextChanged();
   }
 
   void _replaceEmbed(int offset, quill.Embeddable embed) {
-    _richTextController.replaceText(
-      offset,
-      1,
-      embed,
-      TextSelection.collapsed(offset: offset + 1),
-    );
+    _isApplyingProgrammaticRichTextUpdate = true;
+    try {
+      _richTextController.replaceText(
+        offset,
+        1,
+        embed,
+        TextSelection.collapsed(offset: offset + 1),
+      );
+    } finally {
+      _isApplyingProgrammaticRichTextUpdate = false;
+    }
+
+    _handleRichTextChanged();
   }
 
   TextSelection _normalizedSelection() {
@@ -528,8 +569,10 @@ class ThreadComposeViewModel extends ChangeNotifier {
               'type': attachment.type.name,
               'state': attachment.uploadState.name,
               'label': attachment.label,
+              'localPath': attachment.localPath,
               'remoteUrl': attachment.remoteUrl,
               'thumbnailUrl': attachment.thumbnailUrl,
+              'bytes': attachment.bytes,
               'progress': attachment.progress,
             },
           )

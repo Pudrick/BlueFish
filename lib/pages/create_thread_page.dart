@@ -278,7 +278,7 @@ class _RichTextModeSection extends StatelessWidget {
         QuillComposerToolbar(
           controller: viewModel.richTextController,
           onInsertDetails: viewModel.insertDetailsEmbed,
-          onInsertImagePlaceholder: viewModel.insertImagePlaceholder,
+          onInsertImagePlaceholder: viewModel.pickAndInsertImage,
         ),
         const SizedBox(height: 12),
         QuillComposerEditor(
@@ -291,7 +291,7 @@ class _RichTextModeSection extends StatelessWidget {
         const SizedBox(height: 12),
         ComposerAccessoryPanel(
           title: '附件与后续扩展',
-          description: '已插入的图片附件会显示在这里，后续接入真实选择与上传时会继续复用这层附件能力。',
+          description: '已选择的图片附件会显示在这里，后续接入真实上传时会继续复用这层附件能力。',
           attachments: draft.attachments,
           onRemoveAttachment: viewModel.removeRichTextAttachment,
         ),

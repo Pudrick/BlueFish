@@ -8,6 +8,7 @@ import '../../models/composer/composer_attachment.dart';
 import '../../models/composer/quill_embed_models.dart';
 import '../../models/composer/quill_draft_utils.dart';
 import '../../models/composer/reply_draft.dart';
+import '../../services/composer/composer_image_picker_service.dart';
 import '../../services/composer/html_export_service.dart';
 import '../../services/thread_publish_service.dart';
 import '../../services/thread_video_upload_service.dart';
@@ -28,6 +29,7 @@ Future<ReplyDraft?> showReplyComposerSheet({
   Future<void> Function(ReplyDraft draft)? onSubmit,
   ThreadPublishService? publishService,
   ThreadVideoUploadService? videoUploadService,
+  ComposerImagePickerService? imagePickerService,
 }) {
   return showGeneralDialog<ReplyDraft>(
     context: context,
@@ -48,6 +50,7 @@ Future<ReplyDraft?> showReplyComposerSheet({
         onSubmit: onSubmit,
         publishService: publishService,
         videoUploadService: videoUploadService,
+        imagePickerService: imagePickerService,
       );
     },
   );
@@ -65,6 +68,7 @@ class ReplyComposerSheet extends StatefulWidget {
   final Future<void> Function(ReplyDraft draft)? onSubmit;
   final ThreadPublishService? publishService;
   final ThreadVideoUploadService? videoUploadService;
+  final ComposerImagePickerService? imagePickerService;
 
   const ReplyComposerSheet({
     super.key,
@@ -79,6 +83,7 @@ class ReplyComposerSheet extends StatefulWidget {
     this.onSubmit,
     this.publishService,
     this.videoUploadService,
+    this.imagePickerService,
   });
 
   @override
@@ -97,9 +102,11 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
   late ReplyDraft _draft;
   bool _isSubmitting = false;
   String? _statusMessage;
+  bool _isApplyingProgrammaticRichTextUpdate = false;
   bool _isNormalizingCollapsedSelection = false;
   late final ThreadPublishService _publishService;
   late final ThreadVideoUploadService _videoUploadService;
+  late final ComposerImagePickerService _imagePickerService;
   final HtmlExportService _htmlExportService = const HtmlExportService();
 
   late final quill.QuillController _controller;
@@ -112,6 +119,8 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
     _publishService = widget.publishService ?? const StubThreadPublishService();
     _videoUploadService =
         widget.videoUploadService ?? const StubThreadVideoUploadService();
+    _imagePickerService =
+        widget.imagePickerService ?? DeviceComposerImagePickerService();
     _controller = quill.QuillController(
       document: _documentFromDeltaJson(_draft.deltaJson),
       selection: const TextSelection.collapsed(offset: 0),
@@ -135,13 +144,41 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
     );
   }
 
-  void _insertImagePlaceholder() {
+  Future<void> _pickAndInsertImage() async {
+    try {
+      final pickedImage = await _imagePickerService.pickImage();
+      if (pickedImage == null) {
+        setState(() {
+          _statusMessage = '已取消选择图片。';
+        });
+        return;
+      }
+
+      _insertPickedImage(pickedImage);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _statusMessage = '选择图片失败，请稍后再试。';
+      });
+    }
+  }
+
+  void _insertPickedImage(PickedComposerImage pickedImage) {
     final attachmentId = _createComposerId('reply-image-attachment');
+    final label = pickedImage.name.trim().isEmpty
+        ? '回复图片 ${_draft.attachments.length + 1}'
+        : pickedImage.name.trim();
     final attachment = ComposerAttachment(
       id: attachmentId,
       type: ComposerAttachmentType.image,
       uploadState: ComposerUploadState.pending,
-      label: '回复图片占位 ${_draft.attachments.length + 1}',
+      label: label,
+      localPath: pickedImage.path,
+      thumbnailUrl: pickedImage.path,
+      bytes: pickedImage.bytes,
     );
 
     setState(() {
@@ -149,14 +186,15 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
         attachments: <ComposerAttachment>[..._draft.attachments, attachment],
         clearBodyHtml: true,
       );
-      _statusMessage = '已插入回复图片占位。';
+      _statusMessage = '已添加图片：$label';
     });
 
     _insertBlockEmbedWithLineBreaks(
       BluefishImagePlaceholderEmbed(
         BluefishImagePlaceholderEmbedData(
           attachmentId: attachmentId,
-          label: attachment.label,
+          label: label,
+          sourceUrl: pickedImage.path,
         ),
       ),
     );
@@ -335,56 +373,69 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
         selection.start == 0 || plainText[selection.start - 1] == '\n';
     final hasTrailingNewline =
         selection.end >= plainText.length || plainText[selection.end] == '\n';
+    _isApplyingProgrammaticRichTextUpdate = true;
+    try {
+      _controller.replaceText(
+        selection.start,
+        replaceLength,
+        '',
+        TextSelection.collapsed(offset: selection.start),
+      );
 
-    _controller.replaceText(
-      selection.start,
-      replaceLength,
-      '',
-      TextSelection.collapsed(offset: selection.start),
-    );
+      var insertOffset = selection.start;
+      if (!hasLeadingNewline) {
+        _controller.replaceText(
+          insertOffset,
+          0,
+          '\n',
+          TextSelection.collapsed(offset: insertOffset + 1),
+        );
+        insertOffset += 1;
+      }
 
-    var insertOffset = selection.start;
-    if (!hasLeadingNewline) {
       _controller.replaceText(
         insertOffset,
         0,
-        '\n',
+        embed,
         TextSelection.collapsed(offset: insertOffset + 1),
       );
       insertOffset += 1;
-    }
 
-    _controller.replaceText(
-      insertOffset,
-      0,
-      embed,
-      TextSelection.collapsed(offset: insertOffset + 1),
-    );
-    insertOffset += 1;
+      if (!hasTrailingNewline) {
+        _controller.replaceText(
+          insertOffset,
+          0,
+          '\n',
+          TextSelection.collapsed(offset: insertOffset + 1),
+        );
+        insertOffset += 1;
+      }
 
-    if (!hasTrailingNewline) {
-      _controller.replaceText(
-        insertOffset,
-        0,
-        '\n',
-        TextSelection.collapsed(offset: insertOffset + 1),
+      _controller.updateSelection(
+        TextSelection.collapsed(offset: insertOffset),
+        quill.ChangeSource.local,
       );
-      insertOffset += 1;
+    } finally {
+      _isApplyingProgrammaticRichTextUpdate = false;
     }
 
-    _controller.updateSelection(
-      TextSelection.collapsed(offset: insertOffset),
-      quill.ChangeSource.local,
-    );
+    _handleRichTextChanged();
   }
 
   void _replaceEmbed(int offset, quill.Embeddable embed) {
-    _controller.replaceText(
-      offset,
-      1,
-      embed,
-      TextSelection.collapsed(offset: offset + 1),
-    );
+    _isApplyingProgrammaticRichTextUpdate = true;
+    try {
+      _controller.replaceText(
+        offset,
+        1,
+        embed,
+        TextSelection.collapsed(offset: offset + 1),
+      );
+    } finally {
+      _isApplyingProgrammaticRichTextUpdate = false;
+    }
+
+    _handleRichTextChanged();
   }
 
   TextSelection _normalizedSelection() {
@@ -401,6 +452,10 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
   }
 
   void _handleRichTextChanged() {
+    if (_isApplyingProgrammaticRichTextUpdate) {
+      return;
+    }
+
     if (_normalizeCollapsedSelectionAroundBlockEmbeds()) {
       return;
     }
@@ -528,6 +583,8 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
             'type': attachment.type.name,
             'state': attachment.uploadState.name,
             'label': attachment.label,
+            'localPath': attachment.localPath,
+            'bytes': attachment.bytes,
             'progress': attachment.progress,
           },
         )
@@ -687,8 +744,8 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                                 const SizedBox(height: 4),
                                 Text(
                                   widget.allowVideoAttachments
-                                      ? '支持富文本、折叠说明、图片占位和视频附件草稿。'
-                                      : '支持富文本、折叠说明和图片占位。',
+                                      ? '支持富文本、折叠说明、图片和视频附件草稿。'
+                                      : '支持富文本、折叠说明和图片。',
                                   style: textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -721,45 +778,15 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                         children: [
                           if (hasContext)
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (widget.contextLabel != null &&
-                                      widget.contextLabel!.trim().isNotEmpty)
-                                    Text(
-                                      widget.contextLabel!,
-                                      style: textTheme.labelLarge?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  if (widget.contextPreview != null &&
-                                      widget.contextPreview!
-                                          .trim()
-                                          .isNotEmpty) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      widget.contextPreview!,
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                        height: 1.45,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                            _ComposerContextPreviewCard(
+                              contextLabel: widget.contextLabel,
+                              contextPreview: widget.contextPreview,
                             ),
                           if (hasContext) const SizedBox(height: 12),
                           QuillComposerToolbar(
                             controller: _controller,
                             onInsertDetails: _insertDetailsEmbed,
-                            onInsertImagePlaceholder: _insertImagePlaceholder,
+                            onInsertImagePlaceholder: _pickAndInsertImage,
                             onInsertVideoPlaceholder:
                                 widget.allowVideoAttachments
                                 ? _addVideoPlaceholder
@@ -777,7 +804,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                           const SizedBox(height: 12),
                           ComposerAccessoryPanel(
                             title: '附件与状态',
-                            description: '已添加的图片和视频附件会显示在这里，后续可以直接接入真实上传链路。',
+                            description: '已选择的图片和视频附件会显示在这里，后续可以直接接入真实上传链路。',
                             attachments: _draft.attachments,
                             onRemoveAttachment: _removeAttachment,
                           ),
@@ -801,7 +828,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                             child: Text(
                               _draft.hasPublishableContent
                                   ? '草稿可发送'
-                                  : '请先输入正文、插入折叠说明/图片占位，或在开启视频扩展后添加视频',
+                                  : '请先输入正文、插入折叠说明/图片，或在开启视频扩展后添加视频',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -838,6 +865,250 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ComposerContextPreviewCard extends StatefulWidget {
+  static const double _collapsedPreviewHeight = 132;
+
+  final String? contextLabel;
+  final String? contextPreview;
+
+  const _ComposerContextPreviewCard({
+    required this.contextLabel,
+    required this.contextPreview,
+  });
+
+  @override
+  State<_ComposerContextPreviewCard> createState() =>
+      _ComposerContextPreviewCardState();
+}
+
+class _ComposerContextPreviewCardState
+    extends State<_ComposerContextPreviewCard> {
+  final GlobalKey _measurementKey = GlobalKey();
+  bool _needsCollapse = false;
+  bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncCollapsedState());
+  }
+
+  @override
+  void didUpdateWidget(covariant _ComposerContextPreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contextLabel != widget.contextLabel ||
+        oldWidget.contextPreview != widget.contextPreview) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _syncCollapsedState(),
+      );
+    }
+  }
+
+  void _syncCollapsedState() {
+    final renderObject = _measurementKey.currentContext?.findRenderObject();
+    if (!mounted || renderObject is! RenderBox) {
+      return;
+    }
+
+    final shouldCollapse =
+        renderObject.size.height >
+        _ComposerContextPreviewCard._collapsedPreviewHeight;
+    if (shouldCollapse == _needsCollapse) {
+      return;
+    }
+
+    setState(() {
+      _needsCollapse = shouldCollapse;
+      if (!shouldCollapse) {
+        _isExpanded = false;
+      }
+    });
+  }
+
+  void _toggleExpanded() {
+    if (!_needsCollapse) {
+      return;
+    }
+
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final previewText = widget.contextPreview?.trim();
+    final hasPreview = previewText != null && previewText.isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final previewBody = _ComposerContextPreviewBody(
+          label: widget.contextLabel,
+          preview: previewText,
+        );
+        final previewContent = _needsCollapse && !_isExpanded
+            ? SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: previewBody,
+              )
+            : previewBody;
+
+        return Stack(
+          children: [
+            Offstage(
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: _ComposerContextPreviewBody(
+                  key: _measurementKey,
+                  label: widget.contextLabel,
+                  preview: previewText,
+                ),
+              ),
+            ),
+            Container(
+              key: const ValueKey('reply-composer-context-card'),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: ClipRect(
+                      child: SizedBox(
+                        key: const ValueKey('reply-composer-context-preview'),
+                        width: double.infinity,
+                        height: _needsCollapse && !_isExpanded
+                            ? _ComposerContextPreviewCard
+                                  ._collapsedPreviewHeight
+                            : null,
+                        child: Stack(
+                          children: [
+                            previewContent,
+                            if (_needsCollapse && !_isExpanded && hasPreview)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: IgnorePointer(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          colorScheme.surfaceContainerLow
+                                              .withValues(alpha: 0),
+                                          colorScheme.surfaceContainerLow,
+                                        ],
+                                      ),
+                                    ),
+                                    child: const SizedBox(height: 52),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_needsCollapse) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('reply-composer-context-toggle'),
+                        onPressed: _toggleExpanded,
+                        icon: AnimatedRotation(
+                          turns: _isExpanded ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          child: const Icon(Icons.keyboard_arrow_down_rounded),
+                        ),
+                        label: Text(_isExpanded ? '收起回复' : '展开回复'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          textStyle: textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ComposerContextPreviewBody extends StatelessWidget {
+  final String? label;
+  final String? preview;
+
+  const _ComposerContextPreviewBody({super.key, this.label, this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final trimmedLabel = label?.trim();
+    final trimmedPreview = preview?.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (trimmedLabel != null && trimmedLabel.isNotEmpty)
+          Text(
+            trimmedLabel,
+            style: textTheme.labelLarge?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        if (trimmedPreview != null && trimmedPreview.isNotEmpty) ...[
+          if (trimmedLabel != null && trimmedLabel.isNotEmpty)
+            const SizedBox(height: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Text(
+                trimmedPreview,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.55,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 const quill.QuillSimpleToolbarButtonOptions _toolbarButtonOptions =
     quill.QuillSimpleToolbarButtonOptions();
 const double _toolbarButtonSpacing = 4;
+const Duration _toolbarAnimationDuration = Duration(milliseconds: 220);
+const Curve _toolbarAnimationCurve = Curves.easeOutCubic;
 
 class QuillComposerToolbar extends StatefulWidget {
   final quill.QuillController controller;
@@ -181,13 +183,27 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
               ),
               TextButton.icon(
                 onPressed: _toggleExpanded,
-                icon: Icon(
-                  _isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 18,
+                icon: AnimatedRotation(
+                  turns: _isExpanded ? 0.5 : 0,
+                  duration: _toolbarAnimationDuration,
+                  curve: _toolbarAnimationCurve,
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                  ),
                 ),
-                label: Text(_isExpanded ? '收起排版' : '更多排版'),
+                label: AnimatedSwitcher(
+                  duration: _toolbarAnimationDuration,
+                  switchInCurve: _toolbarAnimationCurve,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  child: Text(
+                    _isExpanded ? '收起排版' : '更多排版',
+                    key: ValueKey<bool>(_isExpanded),
+                  ),
+                ),
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -205,7 +221,7 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
               FilledButton.tonalIcon(
                 onPressed: widget.onInsertImagePlaceholder,
                 icon: const Icon(Icons.image_outlined, size: 18),
-                label: const Text('图片占位'),
+                label: const Text('图片'),
               ),
               FilledButton.tonalIcon(
                 onPressed: widget.onInsertDetails,
@@ -220,10 +236,21 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
                 ),
             ],
           ),
-          if (_isExpanded) ...[
-            const SizedBox(height: 12),
-            _buildExpandedFormattingPanel(),
-          ],
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _buildExpandedFormattingPanel(),
+            ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: _toolbarAnimationDuration,
+            firstCurve: _toolbarAnimationCurve,
+            secondCurve: _toolbarAnimationCurve,
+            sizeCurve: _toolbarAnimationCurve,
+            alignment: Alignment.topLeft,
+          ),
         ],
       ),
     );

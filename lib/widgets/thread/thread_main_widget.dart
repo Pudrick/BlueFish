@@ -101,8 +101,79 @@ class ThreadMainFloorWidget extends StatelessWidget {
         mainFloor.isVideoThread &&
         (mainFloor.resolvedVideoCover != null ||
             mainFloor.resolvedVideoUrl != null);
+    final double cardMaxWidth = contentMaxWidth.isFinite
+        ? contentMaxWidth + 24
+        : double.infinity;
 
-    return Card(
+    Widget contentColumn = Column(
+      key: const ValueKey('thread-main-content-column'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AuthorInfoWidget(meta: mainFloor.meta),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _MainMetaPill(
+              icon: Icons.thumb_up_outlined,
+              label: '${mainFloor.recommendNum}推荐',
+            ),
+            _MainMetaPill(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: '${mainFloor.repliesNum}回复',
+            ),
+            _MainMetaPill(
+              icon: Icons.visibility_outlined,
+              label: '${mainFloor.readNum}浏览',
+            ),
+            if (mainFloor.hasVote)
+              const _MainMetaPill(icon: Icons.bar_chart_rounded, label: '投票贴'),
+            if (mainFloor.isVideoThread)
+              const _MainMetaPill(
+                icon: Icons.play_circle_outline_rounded,
+                label: '视频贴',
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Divider(
+          height: 1,
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        const SizedBox(height: 14),
+        BluefishHtmlWidget(
+          mainFloor.contentHtml,
+          key: const ValueKey('thread-main-content'),
+          enableImageGallery: true,
+          imageHeroScope: 'thread-main:${mainFloor.tid}',
+          textStyle: textTheme.bodyLarge?.copyWith(
+            color: colorScheme.onSurface,
+            height: 1.55,
+          ),
+        ),
+        if (showVideoSection) ...[
+          const SizedBox(height: 16),
+          ThreadInlineVideoWidget(
+            videoUrl: mainFloor.resolvedVideoUrl,
+            coverUrl: mainFloor.resolvedVideoCover,
+          ),
+        ],
+      ],
+    );
+
+    if (contentMaxWidth.isFinite) {
+      contentColumn = Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: contentMaxWidth),
+          child: contentColumn,
+        ),
+      );
+    }
+
+    final Widget card = Card(
+      key: const ValueKey('thread-main-floor-card'),
       margin: EdgeInsets.zero,
       elevation: 0,
       color: colorScheme.surfaceContainerLow,
@@ -113,77 +184,18 @@ class ThreadMainFloorWidget extends StatelessWidget {
         ),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AuthorInfoWidget(meta: mainFloor.meta),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MainMetaPill(
-                  icon: Icons.thumb_up_outlined,
-                  label: '${mainFloor.recommendNum}推荐',
-                ),
-                _MainMetaPill(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: '${mainFloor.repliesNum}回复',
-                ),
-                _MainMetaPill(
-                  icon: Icons.visibility_outlined,
-                  label: '${mainFloor.readNum}浏览',
-                ),
-                if (mainFloor.hasVote)
-                  const _MainMetaPill(
-                    icon: Icons.bar_chart_rounded,
-                    label: '投票贴',
-                  ),
-                if (mainFloor.isVideoThread)
-                  const _MainMetaPill(
-                    icon: Icons.play_circle_outline_rounded,
-                    label: '视频贴',
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Divider(
-              height: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    BluefishHtmlWidget(
-                      mainFloor.contentHtml,
-                      key: const ValueKey('thread-main-content'),
-                      enableImageGallery: true,
-                      imageHeroScope: 'thread-main:${mainFloor.tid}',
-                      textStyle: textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                        height: 1.55,
-                      ),
-                    ),
-                    if (showVideoSection) ...[
-                      const SizedBox(height: 16),
-                      ThreadInlineVideoWidget(
-                        videoUrl: mainFloor.resolvedVideoUrl,
-                        coverUrl: mainFloor.resolvedVideoCover,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: Padding(padding: const EdgeInsets.all(12), child: contentColumn),
+    );
+
+    if (!cardMaxWidth.isFinite) {
+      return card;
+    }
+
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: cardMaxWidth),
+        child: card,
       ),
     );
   }

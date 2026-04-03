@@ -95,7 +95,7 @@ class BluefishImagePlaceholderEmbedData {
   ) {
     return BluefishImagePlaceholderEmbedData(
       attachmentId: json['attachmentId']?.toString() ?? '',
-      label: json['label']?.toString() ?? '图片占位',
+      label: json['label']?.toString() ?? '图片',
       caption: json['caption']?.toString(),
       sourceUrl: json['sourceUrl']?.toString(),
     );

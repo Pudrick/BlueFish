@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/composer/quill_embed_models.dart';
+import 'composer_image_preview_provider.dart';
 
 class DetailsEmbedCard extends StatefulWidget {
   final BluefishDetailsEmbedData data;
@@ -292,75 +293,124 @@ class ImagePlaceholderEmbedCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final caption = data.caption?.trim();
+    final sourceLabel = data.sourceUrl?.trim();
+    final hasSourceLabel = sourceLabel != null && sourceLabel.isNotEmpty;
+    final imageProvider = hasSourceLabel
+        ? resolveComposerImageProvider(sourceLabel)
+        : null;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.image_outlined,
-                  color: colorScheme.onSecondaryContainer,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(minHeight: 120),
+                color: colorScheme.surfaceContainerLow,
+                child: imageProvider == null
+                    ? _ComposerImageFallback(
+                        label: data.label,
+                        colorScheme: colorScheme,
+                        textTheme: textTheme,
+                      )
+                    : ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 420),
+                        child: Image(
+                          key: const ValueKey('composer-image-preview'),
+                          image: imageProvider,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _ComposerImageFallback(
+                              label: data.label,
+                              colorScheme: colorScheme,
+                              textTheme: textTheme,
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ),
+            if (!readOnly)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () => _editCaption(context),
+                        tooltip: '编辑图片说明',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                      ),
+                      if (onRemove != null)
+                        IconButton(
+                          onPressed: onRemove,
+                          tooltip: '移除图片',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data.label,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      data.sourceUrl == null || data.sourceUrl!.trim().isEmpty
-                          ? '当前还是图片占位，后续接入真实选择器后会显示实际图片。'
-                          : data.sourceUrl!,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!readOnly)
-                TextButton.icon(
-                  onPressed: () => _editCaption(context),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('说明'),
-                ),
-              if (!readOnly && onRemove != null)
-                IconButton(
-                  onPressed: onRemove,
-                  tooltip: '移除图片占位',
-                  icon: const Icon(Icons.delete_outline_rounded),
-                ),
-            ],
-          ),
-          if (caption != null && caption.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(caption, style: textTheme.bodyMedium?.copyWith(height: 1.45)),
           ],
+        ),
+        if (caption != null && caption.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            caption,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ComposerImageFallback extends StatelessWidget {
+  final String label;
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+
+  const _ComposerImageFallback({
+    required this.label,
+    required this.colorScheme,
+    required this.textTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image_outlined, color: colorScheme.primary),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

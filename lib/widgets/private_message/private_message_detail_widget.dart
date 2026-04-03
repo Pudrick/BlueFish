@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:bluefish/models/private_message_detail.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/private_message_detail_view_model.dart';
 import 'package:bluefish/widgets/private_message/detail/private_message_detail_bubble.dart';
 import 'package:bluefish/widgets/private_message/detail/private_message_detail_header.dart';
@@ -177,19 +178,33 @@ class _PrivateMessageDetailWidgetState
     return null;
   }
 
+  double _conversationHeaderHeight(
+    BuildContext context,
+    PrivateMessageDetailViewModel viewModel,
+  ) {
+    final badgeCount = <bool>[
+      viewModel.isSystem,
+      viewModel.unread,
+      viewModel.isBanned,
+    ].where((isVisible) => isVisible).length;
+    final baseHeight = switch (badgeCount) {
+      0 => 92.0,
+      1 => 122.0,
+      _ => 160.0,
+    };
+    final textScaleFactor = MediaQuery.textScalerOf(context).scale(1);
+    final extraTextHeight = math.max(0.0, textScaleFactor - 1) * 24;
+
+    return baseHeight + extraTextHeight;
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<PrivateMessageDetailViewModel>();
-    final colorScheme = Theme.of(context).colorScheme;
     final orderedMessages = _orderedMessages(viewModel.messages);
     final counterpart = _resolveCounterpart(viewModel, orderedMessages);
     final conversationEntries = _buildEntries(orderedMessages);
-
-    if (viewModel.isLoading && orderedMessages.isEmpty) {
-      return Center(
-        child: CircularProgressIndicator(color: colorScheme.primary),
-      );
-    }
+    final isInitialLoading = viewModel.isLoading && orderedMessages.isEmpty;
 
     if (orderedMessages.isNotEmpty) {
       _scheduleInitialScrollToLatest();
@@ -204,7 +219,7 @@ class _PrivateMessageDetailWidgetState
           SliverPersistentHeader(
             pinned: true,
             delegate: PrivateMessageHeaderDelegate(
-              height: viewModel.isBanned ? 114 : 96,
+              height: _conversationHeaderHeight(context, viewModel),
               child: PrivateMessageConversationHeader(
                 title:
                     counterpart?.nickName ??
@@ -218,51 +233,59 @@ class _PrivateMessageDetailWidgetState
                 isSystem: viewModel.isSystem,
                 unread: viewModel.unread,
                 isBanned: viewModel.isBanned,
+                onBackPressed: () => context.popOrGoMessages(),
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: PrivateMessageHistoryStatusCard(
-                loadedCount: orderedMessages.length,
-                totalCount:
-                    viewModel.pageInfo?.totalMessagesNum ??
-                    orderedMessages.length,
-                hasNextPage: viewModel.hasNextPage,
-                isLoadingOlder: _isLoadingOlder,
-              ),
-            ),
-          ),
-          if (orderedMessages.isEmpty)
-            SliverFillRemaining(
+          if (isInitialLoading)
+            const SliverFillRemaining(
               hasScrollBody: false,
-              child: PrivateMessageEmptyConversationState(
-                isSystem: viewModel.isSystem,
-              ),
+              child: Center(child: CircularProgressIndicator()),
             )
-          else
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                12,
-                8,
-                12,
-                math.max(widget.bottomInset, 24),
-              ),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final entry = conversationEntries[index];
-                  return switch (entry) {
-                    _DateDividerEntry() =>
-                      PrivateMessageConversationDateDivider(date: entry.date),
-                    _MessageEntry() => PrivateMessageBubble(
-                      message: entry.message,
-                      loginPuid: viewModel.loginPuid,
-                    ),
-                  };
-                }, childCount: conversationEntries.length),
+          else ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: PrivateMessageHistoryStatusCard(
+                  loadedCount: orderedMessages.length,
+                  totalCount:
+                      viewModel.pageInfo?.totalMessagesNum ??
+                      orderedMessages.length,
+                  hasNextPage: viewModel.hasNextPage,
+                  isLoadingOlder: _isLoadingOlder,
+                ),
               ),
             ),
+            if (orderedMessages.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: PrivateMessageEmptyConversationState(
+                  isSystem: viewModel.isSystem,
+                ),
+              )
+            else
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  math.max(widget.bottomInset, 24),
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final entry = conversationEntries[index];
+                    return switch (entry) {
+                      _DateDividerEntry() =>
+                        PrivateMessageConversationDateDivider(date: entry.date),
+                      _MessageEntry() => PrivateMessageBubble(
+                        message: entry.message,
+                        loginPuid: viewModel.loginPuid,
+                      ),
+                    };
+                  }, childCount: conversationEntries.length),
+                ),
+              ),
+          ],
         ],
       ),
     );

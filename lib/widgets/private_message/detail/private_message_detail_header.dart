@@ -8,6 +8,7 @@ class PrivateMessageConversationHeader extends StatelessWidget {
   final bool isSystem;
   final bool unread;
   final bool isBanned;
+  final VoidCallback? onBackPressed;
 
   const PrivateMessageConversationHeader({
     super.key,
@@ -18,6 +19,7 @@ class PrivateMessageConversationHeader extends StatelessWidget {
     required this.isSystem,
     required this.unread,
     required this.isBanned,
+    this.onBackPressed,
   });
 
   @override
@@ -29,11 +31,34 @@ class PrivateMessageConversationHeader extends StatelessWidget {
     if (interval != null && interval! > 0) {
       metaSegments.add('发信间隔 ${interval}s');
     }
+    final badges = <Widget>[
+      if (isSystem)
+        _PrivateMessageHeaderBadge(
+          icon: Icons.admin_panel_settings_outlined,
+          label: '系统消息',
+          foregroundColor: colorScheme.onSecondaryContainer,
+          backgroundColor: colorScheme.secondaryContainer,
+        ),
+      if (unread)
+        _PrivateMessageHeaderBadge(
+          icon: Icons.mark_chat_unread_outlined,
+          label: '未读会话',
+          foregroundColor: colorScheme.onError,
+          backgroundColor: colorScheme.error,
+        ),
+      if (isBanned)
+        _PrivateMessageHeaderBadge(
+          icon: Icons.lock_outline,
+          label: '当前不可发信',
+          foregroundColor: colorScheme.onTertiaryContainer,
+          backgroundColor: colorScheme.tertiaryContainer,
+        ),
+    ];
 
     return Material(
       color: colorScheme.surface,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+        padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -45,7 +70,10 @@ class PrivateMessageConversationHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                _PrivateMessageHeaderBackButton(onPressed: onBackPressed),
+                const SizedBox(width: 8),
                 PrivateMessageConversationAvatar(
                   avatarUrl: avatarUrl,
                   size: 44,
@@ -62,7 +90,7 @@ class PrivateMessageConversationHeader extends StatelessWidget {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleLarge?.copyWith(
+                        style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -78,36 +106,42 @@ class PrivateMessageConversationHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (isSystem)
-                  _PrivateMessageHeaderBadge(
-                    icon: Icons.admin_panel_settings_outlined,
-                    label: '系统消息',
-                    foregroundColor: colorScheme.onSecondaryContainer,
-                    backgroundColor: colorScheme.secondaryContainer,
-                  ),
-                if (unread)
-                  _PrivateMessageHeaderBadge(
-                    icon: Icons.mark_chat_unread_outlined,
-                    label: '未读会话',
-                    foregroundColor: colorScheme.onError,
-                    backgroundColor: colorScheme.error,
-                  ),
-                if (isBanned)
-                  _PrivateMessageHeaderBadge(
-                    icon: Icons.lock_outline,
-                    label: '当前不可发信',
-                    foregroundColor: colorScheme.onTertiaryContainer,
-                    backgroundColor: colorScheme.tertiaryContainer,
-                  ),
-              ],
-            ),
+            if (badges.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: badges),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PrivateMessageHeaderBackButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+
+  const _PrivateMessageHeaderBackButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: '返回上一层',
+        padding: EdgeInsets.zero,
+        iconSize: 20,
+        style: IconButton.styleFrom(
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          foregroundColor: colorScheme.onSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: const Icon(Icons.arrow_back_rounded),
       ),
     );
   }

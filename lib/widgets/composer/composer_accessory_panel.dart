@@ -82,6 +82,13 @@ class _AttachmentTile extends StatelessWidget {
       ComposerUploadState.uploaded => '已就绪',
       ComposerUploadState.failed => '失败',
     };
+    final secondaryLabel = switch (attachment.type) {
+      ComposerAttachmentType.image =>
+        attachment.localPath?.trim().isNotEmpty == true
+            ? attachment.localPath!.trim()
+            : null,
+      ComposerAttachmentType.video => null,
+    };
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -123,6 +130,17 @@ class _AttachmentTile extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (secondaryLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    secondaryLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

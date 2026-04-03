@@ -91,6 +91,7 @@ class AuthSessionManager extends ChangeNotifier {
 
   final AuthCookiePersistence _loginPersistence;
   final AuthCookiePersistence? _debugOverridePersistence;
+  final String? _debugCookieFromEnvironmentOverride;
 
   Future<void>? _initialization;
   bool _isInitialized = false;
@@ -103,6 +104,7 @@ class AuthSessionManager extends ChangeNotifier {
   AuthSessionManager({
     AuthCookiePersistence? loginPersistence,
     AuthCookiePersistence? debugOverridePersistence,
+    String? debugCookieFromEnvironmentOverride,
   }) : _loginPersistence = loginPersistence ?? SecureAuthCookiePersistence(),
        _debugOverridePersistence =
            debugOverridePersistence ??
@@ -110,7 +112,11 @@ class AuthSessionManager extends ChangeNotifier {
                ? SharedPreferencesAuthCookiePersistence(
                    storageKey: debugOverrideStorageKey,
                  )
-               : null);
+               : null),
+       _debugCookieFromEnvironmentOverride =
+           debugCookieFromEnvironmentOverride {
+    _resolveActiveCookies();
+  }
 
   bool get isInitialized => _isInitialized;
 
@@ -125,8 +131,9 @@ class AuthSessionManager extends ChangeNotifier {
 
   String? get debugOverrideCookies => _debugOverrideCookies;
 
-  String? get debugCookieFromEnvironment =>
-      _normalizeCookies(_debugCookieFromEnvironment);
+  String? get debugCookieFromEnvironment => _normalizeCookies(
+    _debugCookieFromEnvironmentOverride ?? _debugCookieFromEnvironment,
+  );
 
   Future<void> initialize() {
     return _initialization ??= _loadPersistedState();

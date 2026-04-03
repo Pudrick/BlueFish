@@ -30,6 +30,7 @@ class AppRouteNames {
   static const String messages = 'messages';
   static const String me = 'me';
   static const String threadDetail = 'threadDetail';
+  static const String threadReplyComposer = 'threadReplyComposer';
   static const String userHome = 'userHome';
   static const String mention = 'mention';
   static const String privateMessageDetail = 'privateMessageDetail';
@@ -46,8 +47,11 @@ class AppRoutes {
   static const String mePath = '/me';
 
   static const String threadIdParameter = 'tid';
+  static const String threadReplyIdParameter = 'pid';
   static const String threadPageQueryParameter = 'page';
   static const String threadDetailPath = '/thread/:$threadIdParameter';
+  static const String threadReplyComposerPathSegment =
+      'reply/:$threadReplyIdParameter';
 
   static const String userIdParameter = 'euid';
   static const String userHomePath = '/user/:$userIdParameter';
@@ -84,9 +88,22 @@ class AppRoutes {
     return parsed;
   }
 
+  static String threadDetailPathForTid(String tid) => '/thread/${tid.trim()}';
+
   static String threadDetailLocation({required String tid, int page = 1}) {
     return Uri(
-      path: '/thread/${tid.trim()}',
+      path: threadDetailPathForTid(tid),
+      queryParameters: _threadQueryParameters(page),
+    ).toString();
+  }
+
+  static String threadReplyComposerLocation({
+    required String tid,
+    required String pid,
+    int page = 1,
+  }) {
+    return Uri(
+      path: '${threadDetailPathForTid(tid)}/reply/${pid.trim()}',
       queryParameters: _threadQueryParameters(page),
     ).toString();
   }
@@ -256,6 +273,57 @@ class PhotoGalleryRouteData {
   }
 }
 
+@immutable
+class ThreadReplyComposerRouteData {
+  static const String _contextLabelKey = 'contextLabel';
+  static const String _contextPreviewKey = 'contextPreview';
+
+  final String? contextLabel;
+  final String? contextPreview;
+
+  const ThreadReplyComposerRouteData({this.contextLabel, this.contextPreview});
+
+  Object? toExtra() {
+    final extra = <String, Object?>{};
+    final trimmedContextLabel = contextLabel?.trim();
+    final trimmedContextPreview = contextPreview?.trim();
+
+    if (trimmedContextLabel != null && trimmedContextLabel.isNotEmpty) {
+      extra[_contextLabelKey] = trimmedContextLabel;
+    }
+    if (trimmedContextPreview != null && trimmedContextPreview.isNotEmpty) {
+      extra[_contextPreviewKey] = trimmedContextPreview;
+    }
+
+    if (extra.isEmpty) {
+      return null;
+    }
+    return extra;
+  }
+
+  static ThreadReplyComposerRouteData? tryParse(Object? extra) {
+    if (extra == null) {
+      return const ThreadReplyComposerRouteData();
+    }
+    if (extra is! Map) {
+      return null;
+    }
+
+    final rawContextLabel = extra[_contextLabelKey];
+    final rawContextPreview = extra[_contextPreviewKey];
+
+    if ((rawContextLabel != null && rawContextLabel is! String) ||
+        (rawContextPreview != null && rawContextPreview is! String)) {
+      return null;
+    }
+
+    return ThreadReplyComposerRouteData(
+      contextLabel: (rawContextLabel as String?)?.trim(),
+      contextPreview: (rawContextPreview as String?)?.trim(),
+    );
+  }
+}
+
 extension AppNavigationExtensions on BuildContext {
   GoRouter? get maybeGoRouter => GoRouter.maybeOf(this);
 
@@ -316,6 +384,31 @@ extension AppNavigationExtensions on BuildContext {
     );
   }
 
+  Future<T?> pushThreadReplyComposer<T>({
+    required Object tid,
+    required Object pid,
+    int page = 1,
+    String? contextLabel,
+    String? contextPreview,
+  }) {
+    final router = maybeGoRouter;
+    if (router == null) {
+      return Future<T?>.value(null);
+    }
+
+    return router.push<T>(
+      AppRoutes.threadReplyComposerLocation(
+        tid: tid.toString(),
+        pid: pid.toString(),
+        page: page,
+      ),
+      extra: ThreadReplyComposerRouteData(
+        contextLabel: contextLabel,
+        contextPreview: contextPreview,
+      ).toExtra(),
+    );
+  }
+
   Future<T?> pushUserHome<T>({required Object euid}) {
     final router = maybeGoRouter;
     if (router == null) {
@@ -349,6 +442,21 @@ extension AppNavigationExtensions on BuildContext {
     }
 
     router.replace(AppRoutes.messagesLocation(tab: tab));
+  }
+
+  void popOrGoMessages({MentionTab tab = MentionTab.privateMessage}) {
+    final router = maybeGoRouter;
+    if (router == null) {
+      Navigator.maybePop(this);
+      return;
+    }
+
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+
+    router.go(AppRoutes.messagesLocation(tab: tab));
   }
 
   Future<T?> pushPrivateMessageDetail<T>({
