@@ -1,6 +1,7 @@
 import 'package:bluefish/models/thread_main.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
+import 'package:bluefish/widgets/thread/thread_inline_video_widget.dart';
 import 'package:flutter/material.dart';
 
 // html widget package.
@@ -96,6 +97,10 @@ class ThreadMainFloorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final showVideoSection =
+        mainFloor.isVideoThread &&
+        (mainFloor.resolvedVideoCover != null ||
+            mainFloor.resolvedVideoUrl != null);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -136,7 +141,7 @@ class ThreadMainFloorWidget extends StatelessWidget {
                     icon: Icons.bar_chart_rounded,
                     label: '投票贴',
                   ),
-                if (mainFloor.hasVideo)
+                if (mainFloor.isVideoThread)
                   const _MainMetaPill(
                     icon: Icons.play_circle_outline_rounded,
                     label: '视频贴',
@@ -153,14 +158,27 @@ class ThreadMainFloorWidget extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                child: BluefishHtmlWidget(
-                  mainFloor.contentHtml,
-                  enableImageGallery: true,
-                  imageHeroScope: 'thread-main:${mainFloor.tid}',
-                  textStyle: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                    height: 1.55,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    BluefishHtmlWidget(
+                      mainFloor.contentHtml,
+                      key: const ValueKey('thread-main-content'),
+                      enableImageGallery: true,
+                      imageHeroScope: 'thread-main:${mainFloor.tid}',
+                      textStyle: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                        height: 1.55,
+                      ),
+                    ),
+                    if (showVideoSection) ...[
+                      const SizedBox(height: 16),
+                      ThreadInlineVideoWidget(
+                        videoUrl: mainFloor.resolvedVideoUrl,
+                        coverUrl: mainFloor.resolvedVideoCover,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

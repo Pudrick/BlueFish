@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import '../../models/composer/quill_embed_models.dart';
+import '../../models/composer/quill_draft_utils.dart';
 import 'details_embed_card.dart';
 
 typedef DetailsEmbedUpdate =
@@ -64,6 +65,7 @@ class _QuillComposerEditorState extends State<QuillComposerEditor> {
           placeholder: widget.placeholder,
           embedBuilders: [
             _DetailsEmbedBuilder(
+              focusNode: _focusNode,
               onChanged: widget.onDetailsEmbedChanged,
               onRemoved: widget.onEmbedRemoved,
             ),
@@ -79,10 +81,12 @@ class _QuillComposerEditorState extends State<QuillComposerEditor> {
 }
 
 class _DetailsEmbedBuilder extends quill.EmbedBuilder {
+  final FocusNode focusNode;
   final DetailsEmbedUpdate onChanged;
   final ValueChanged<int> onRemoved;
 
   const _DetailsEmbedBuilder({
+    required this.focusNode,
     required this.onChanged,
     required this.onRemoved,
   });
@@ -95,18 +99,86 @@ class _DetailsEmbedBuilder extends quill.EmbedBuilder {
     final data = BluefishDetailsEmbedData.fromJsonString(
       embedContext.node.value.data as String,
     );
+    final documentOffset = embedContext.node.documentOffset;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: DetailsEmbedCard(
-        data: data,
-        readOnly: embedContext.readOnly,
-        onChanged: (nextData) {
-          onChanged(embedContext.node.documentOffset, nextData);
-        },
-        onRemove: embedContext.readOnly
-            ? null
-            : () => onRemoved(embedContext.node.documentOffset),
+    void updateBoundarySelection(TextSelection selection) {
+      focusNode.requestFocus();
+      embedContext.controller.updateSelection(
+        selection,
+        quill.ChangeSource.local,
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (embedContext.readOnly)
+          const SizedBox(height: 6)
+        else
+          _DetailsBoundaryTapTarget(
+            key: ValueKey('details_embed_before_zone_$documentOffset'),
+            gestureKey: ValueKey(
+              'details_embed_before_gesture_$documentOffset',
+            ),
+            onTap: () {
+              updateBoundarySelection(
+                collapsedSelectionBeforeBlockEmbed(
+                  plainText: embedContext.controller.document.toPlainText(),
+                  embedOffset: documentOffset,
+                ),
+              );
+            },
+          ),
+        DetailsEmbedCard(
+          data: data,
+          readOnly: embedContext.readOnly,
+          onChanged: (nextData) {
+            onChanged(documentOffset, nextData);
+          },
+          onRemove: embedContext.readOnly
+              ? null
+              : () => onRemoved(documentOffset),
+        ),
+        if (embedContext.readOnly)
+          const SizedBox(height: 6)
+        else
+          _DetailsBoundaryTapTarget(
+            key: ValueKey('details_embed_after_zone_$documentOffset'),
+            gestureKey: ValueKey('details_embed_after_gesture_$documentOffset'),
+            onTap: () {
+              updateBoundarySelection(
+                collapsedSelectionAfterBlockEmbed(
+                  plainText: embedContext.controller.document.toPlainText(),
+                  embedOffset: documentOffset,
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _DetailsBoundaryTapTarget extends StatelessWidget {
+  final Key? gestureKey;
+  final VoidCallback onTap;
+
+  const _DetailsBoundaryTapTarget({
+    super.key,
+    this.gestureKey,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 6,
+      width: double.infinity,
+      child: GestureDetector(
+        key: gestureKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
       ),
     );
   }

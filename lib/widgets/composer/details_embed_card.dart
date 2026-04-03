@@ -66,6 +66,10 @@ class _DetailsEmbedCardState extends State<DetailsEmbedCard> {
               const SizedBox(height: 16),
               TextField(
                 controller: summaryController,
+                minLines: 1,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
                   labelText: 'Summary',
                   hintText: '输入折叠标题',
@@ -145,18 +149,40 @@ class _DetailsEmbedCardState extends State<DetailsEmbedCard> {
         children: [
           Row(
             children: [
-              Icon(
-                _expanded
-                    ? Icons.keyboard_arrow_down_rounded
-                    : Icons.keyboard_arrow_right_rounded,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  summary,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _toggleExpanded,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          AnimatedRotation(
+                            turns: _expanded ? 0.25 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            child: Icon(
+                              Icons.keyboard_arrow_right_rounded,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              summary,
+                              style: textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -175,16 +201,35 @@ class _DetailsEmbedCardState extends State<DetailsEmbedCard> {
             ],
           ),
           const SizedBox(height: 8),
-          InkWell(
-            onTap: _toggleExpanded,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Text(
-                _expanded ? (body.isEmpty ? '当前还没有补充内容。' : body) : '点击展开查看内容',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.45,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _toggleExpanded,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 180),
+                  firstCurve: Curves.easeOutCubic,
+                  secondCurve: Curves.easeOutCubic,
+                  sizeCurve: Curves.easeOutCubic,
+                  crossFadeState: _expanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: Text(
+                    '点击展开查看内容',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.45,
+                    ),
+                  ),
+                  secondChild: Text(
+                    body.isEmpty ? '当前还没有补充内容。' : body,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.45,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import '../models/composer/composer_attachment.dart';
 import '../models/composer/quill_embed_models.dart';
+import '../models/composer/quill_draft_utils.dart';
 import '../models/composer/thread_draft.dart';
 import '../services/composer/html_export_service.dart';
 import '../services/thread_publish_service.dart';
@@ -21,6 +22,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
   bool _isSubmitting = false;
   String? _statusMessage;
   bool _isApplyingProgrammaticRichTextUpdate = false;
+  bool _isNormalizingCollapsedSelection = false;
 
   late final quill.QuillController _richTextController;
 
@@ -120,7 +122,9 @@ class ThreadComposeViewModel extends ChangeNotifier {
   }
 
   void insertDetailsEmbed() {
-    _insertEmbed(BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()));
+    _insertBlockEmbedWithLineBreaks(
+      BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()),
+    );
   }
 
   void insertImagePlaceholder() {
@@ -297,6 +301,57 @@ class ThreadComposeViewModel extends ChangeNotifier {
     );
   }
 
+  void _insertBlockEmbedWithLineBreaks(quill.Embeddable embed) {
+    final selection = _normalizedSelection();
+    final plainText = _richTextController.document.toPlainText();
+    final replaceLength = selection.end - selection.start;
+    final hasLeadingNewline =
+        selection.start == 0 || plainText[selection.start - 1] == '\n';
+    final hasTrailingNewline =
+        selection.end >= plainText.length || plainText[selection.end] == '\n';
+
+    _richTextController.replaceText(
+      selection.start,
+      replaceLength,
+      '',
+      TextSelection.collapsed(offset: selection.start),
+    );
+
+    var insertOffset = selection.start;
+    if (!hasLeadingNewline) {
+      _richTextController.replaceText(
+        insertOffset,
+        0,
+        '\n',
+        TextSelection.collapsed(offset: insertOffset + 1),
+      );
+      insertOffset += 1;
+    }
+
+    _richTextController.replaceText(
+      insertOffset,
+      0,
+      embed,
+      TextSelection.collapsed(offset: insertOffset + 1),
+    );
+    insertOffset += 1;
+
+    if (!hasTrailingNewline) {
+      _richTextController.replaceText(
+        insertOffset,
+        0,
+        '\n',
+        TextSelection.collapsed(offset: insertOffset + 1),
+      );
+      insertOffset += 1;
+    }
+
+    _richTextController.updateSelection(
+      TextSelection.collapsed(offset: insertOffset),
+      quill.ChangeSource.local,
+    );
+  }
+
   void _replaceEmbed(int offset, quill.Embeddable embed) {
     _richTextController.replaceText(
       offset,
@@ -324,6 +379,10 @@ class ThreadComposeViewModel extends ChangeNotifier {
       return;
     }
 
+    if (_normalizeCollapsedSelectionAroundDetailsEmbed()) {
+      return;
+    }
+
     final nextDeltaJson = _serializeControllerDelta();
     final nextAttachments = _synchronizeImageAttachments(nextDeltaJson);
 
@@ -344,6 +403,38 @@ class ThreadComposeViewModel extends ChangeNotifier {
       clearBodyHtml: true,
     );
     notifyListeners();
+  }
+
+  bool _normalizeCollapsedSelectionAroundDetailsEmbed() {
+    if (_isNormalizingCollapsedSelection) {
+      return false;
+    }
+
+    final selection = _richTextController.selection;
+    if (!selection.isValid || !selection.isCollapsed) {
+      return false;
+    }
+
+    final deltaJson = _serializeControllerDelta();
+    final normalizedSelection = normalizedCollapsedSelectionForDetailsEmbed(
+      deltaJson: deltaJson,
+      plainText: _richTextController.document.toPlainText(),
+      selection: selection,
+    );
+    if (normalizedSelection == null || normalizedSelection == selection) {
+      return false;
+    }
+
+    _isNormalizingCollapsedSelection = true;
+    try {
+      _richTextController.updateSelection(
+        normalizedSelection,
+        quill.ChangeSource.local,
+      );
+    } finally {
+      _isNormalizingCollapsedSelection = false;
+    }
+    return true;
   }
 
   List<ComposerAttachment> _synchronizeImageAttachments(

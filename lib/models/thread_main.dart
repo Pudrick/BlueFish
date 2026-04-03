@@ -29,6 +29,13 @@ class ThreadMain {
   final String contentHtml;
   final FloorMeta meta;
 
+  String? get resolvedVideoCover => _normalizeMediaField(videoCover);
+
+  String? get resolvedVideoUrl => _normalizeMediaField(video);
+
+  bool get isVideoThread =>
+      hasVideo || resolvedVideoCover != null || resolvedVideoUrl != null;
+
   const ThreadMain({
     required this.tid,
     required this.title,
@@ -85,6 +92,15 @@ class ThreadMain {
   static bool _detectVote(String contentHtml) {
     final htmlDoc = parse(contentHtml);
     return htmlDoc.querySelector('[data-type="vote"]') != null;
+  }
+
+  static String? _normalizeMediaField(String? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   // TODO: check video existence via HTML when the API payload is not reliable.

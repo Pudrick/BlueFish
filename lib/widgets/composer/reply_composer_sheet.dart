@@ -5,6 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import '../../models/composer/composer_attachment.dart';
 import '../../models/composer/quill_embed_models.dart';
+import '../../models/composer/quill_draft_utils.dart';
 import '../../models/composer/reply_draft.dart';
 import '../../services/composer/html_export_service.dart';
 import '../../services/thread_publish_service.dart';
@@ -87,6 +88,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
   late ReplyDraft _draft;
   bool _isSubmitting = false;
   String? _statusMessage;
+  bool _isNormalizingCollapsedSelection = false;
   late final ThreadPublishService _publishService;
   late final ThreadVideoUploadService _videoUploadService;
   final HtmlExportService _htmlExportService = const HtmlExportService();
@@ -107,7 +109,9 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
   }
 
   void _insertDetailsEmbed() {
-    _insertEmbed(BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()));
+    _insertBlockEmbedWithLineBreaks(
+      BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()),
+    );
   }
 
   void _insertImagePlaceholder() {
@@ -313,6 +317,57 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     );
   }
 
+  void _insertBlockEmbedWithLineBreaks(quill.Embeddable embed) {
+    final selection = _normalizedSelection();
+    final plainText = _controller.document.toPlainText();
+    final replaceLength = selection.end - selection.start;
+    final hasLeadingNewline =
+        selection.start == 0 || plainText[selection.start - 1] == '\n';
+    final hasTrailingNewline =
+        selection.end >= plainText.length || plainText[selection.end] == '\n';
+
+    _controller.replaceText(
+      selection.start,
+      replaceLength,
+      '',
+      TextSelection.collapsed(offset: selection.start),
+    );
+
+    var insertOffset = selection.start;
+    if (!hasLeadingNewline) {
+      _controller.replaceText(
+        insertOffset,
+        0,
+        '\n',
+        TextSelection.collapsed(offset: insertOffset + 1),
+      );
+      insertOffset += 1;
+    }
+
+    _controller.replaceText(
+      insertOffset,
+      0,
+      embed,
+      TextSelection.collapsed(offset: insertOffset + 1),
+    );
+    insertOffset += 1;
+
+    if (!hasTrailingNewline) {
+      _controller.replaceText(
+        insertOffset,
+        0,
+        '\n',
+        TextSelection.collapsed(offset: insertOffset + 1),
+      );
+      insertOffset += 1;
+    }
+
+    _controller.updateSelection(
+      TextSelection.collapsed(offset: insertOffset),
+      quill.ChangeSource.local,
+    );
+  }
+
   void _replaceEmbed(int offset, quill.Embeddable embed) {
     _controller.replaceText(
       offset,
@@ -336,6 +391,10 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
   }
 
   void _handleRichTextChanged() {
+    if (_normalizeCollapsedSelectionAroundDetailsEmbed()) {
+      return;
+    }
+
     final nextDeltaJson = _serializeControllerDelta();
     final nextAttachments = _synchronizeImageAttachments(nextDeltaJson);
     final deltaChanged =
@@ -355,6 +414,38 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
         clearBodyHtml: true,
       );
     });
+  }
+
+  bool _normalizeCollapsedSelectionAroundDetailsEmbed() {
+    if (_isNormalizingCollapsedSelection) {
+      return false;
+    }
+
+    final selection = _controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) {
+      return false;
+    }
+
+    final deltaJson = _serializeControllerDelta();
+    final normalizedSelection = normalizedCollapsedSelectionForDetailsEmbed(
+      deltaJson: deltaJson,
+      plainText: _controller.document.toPlainText(),
+      selection: selection,
+    );
+    if (normalizedSelection == null || normalizedSelection == selection) {
+      return false;
+    }
+
+    _isNormalizingCollapsedSelection = true;
+    try {
+      _controller.updateSelection(
+        normalizedSelection,
+        quill.ChangeSource.local,
+      );
+    } finally {
+      _isNormalizingCollapsedSelection = false;
+    }
+    return true;
   }
 
   List<ComposerAttachment> _synchronizeImageAttachments(
