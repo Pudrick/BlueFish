@@ -271,16 +271,10 @@ class _RichTextModeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.read<ThreadComposeViewModel>();
-    final textTheme = Theme.of(context).textTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '图文主贴编辑区',
-          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
         QuillComposerToolbar(
           controller: viewModel.richTextController,
           onInsertDetails: viewModel.insertDetailsEmbed,
@@ -321,11 +315,6 @@ class _VideoModeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '视频主贴编辑区',
-          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
         ComposerToolbar(onAddVideo: viewModel.selectVideoPlaceholder),
         const SizedBox(height: 12),
         Container(
