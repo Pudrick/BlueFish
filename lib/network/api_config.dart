@@ -1,4 +1,4 @@
-import 'package:bluefish/userdata/user_settings.dart';
+import 'package:bluefish/network/api_path_settings.dart';
 
 /// Centralized API configuration.
 class ApiConfig {
@@ -6,11 +6,14 @@ class ApiConfig {
 
   static const String baseUrl = 'https://bbs.mobileapi.hupu.com';
 
-  static String get appVersion => appVersionNumber;
+  static String get apiVersion => apiVersionSegment;
 
   static const String userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36';
 
-  /// Builds a full API path with version prefix.
-  static String apiPath(String path) => '$baseUrl/1/$appVersion/$path';
+  /// Builds a full API path with gateway and API-version path segments.
+  static String apiPath(String path, {String gatewayVersion = '1'}) {
+    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+    return '$baseUrl/$gatewayVersion/$apiVersion/$normalizedPath';
+  }
 }

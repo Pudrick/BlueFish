@@ -1,4 +1,4 @@
-import 'package:bluefish/auth/cookie_manager_dev.dart';
+import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/network/interceptors/auth_interceptor.dart';
 import 'package:bluefish/network/interceptors/request_interceptor.dart';
 import 'package:http/http.dart' as http;
@@ -15,10 +15,10 @@ class AppHttpClient extends http.BaseClient {
        _interceptors = interceptors;
 
   /// Creates a client with default auth interceptor.
-  factory AppHttpClient.withAuth(CookieManager cookieManager) {
+  factory AppHttpClient.withAuth(AuthSessionManager authSessionManager) {
     return AppHttpClient._(
       inner: http.Client(),
-      interceptors: [AuthInterceptor(cookieManager)],
+      interceptors: [AuthInterceptor(authSessionManager)],
     );
   }
 
@@ -52,38 +52,38 @@ class AppHttpClient extends http.BaseClient {
 /// Global singleton for the default HTTP client.
 /// Must call [initializeHttpClient] before use.
 AppHttpClient? _defaultClient;
-CookieManager? _cookieManager;
+AuthSessionManager? _authSessionManager;
 
 bool _initialized = false;
 
 /// Initializes the global HTTP client. Call this at app startup.
-/// This enables async cookie loading from SharedPreferences.
+/// This loads persisted auth cookies before the widget tree mounts.
 Future<void> initializeHttpClient() async {
   if (_initialized) return;
-  _cookieManager = CookieManager();
-  await _cookieManager!.initialize();
-  _defaultClient = AppHttpClient.withAuth(_cookieManager!);
+  _authSessionManager ??= AuthSessionManager();
+  await _authSessionManager!.initialize();
+  _defaultClient = AppHttpClient.withAuth(_authSessionManager!);
   _initialized = true;
 }
 
 /// Synchronously initializes the HTTP client if not already done.
-/// Uses default cookies (no SharedPreferences loading).
+/// Persisted cookies will not be available until [initializeHttpClient] runs.
 void _ensureInitializedSync() {
   if (_initialized) return;
-  _cookieManager = CookieManager();
-  _defaultClient = AppHttpClient.withAuth(_cookieManager!);
+  _authSessionManager ??= AuthSessionManager();
+  _defaultClient = AppHttpClient.withAuth(_authSessionManager!);
   _initialized = true;
 }
 
 /// Gets the global HTTP client instance.
-/// Auto-initializes synchronously if needed (uses default cookies).
+/// Auto-initializes synchronously if needed.
 AppHttpClient get httpClient {
   _ensureInitializedSync();
   return _defaultClient!;
 }
 
-/// Gets the global cookie manager instance.
-CookieManager get cookieManager {
+/// Gets the global auth session manager instance.
+AuthSessionManager get authSessionManager {
   _ensureInitializedSync();
-  return _cookieManager!;
+  return _authSessionManager!;
 }

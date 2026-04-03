@@ -859,7 +859,7 @@ String _formatCompactCount(int count) {
 }
 
 String? _resolveCurrentUserPuid() {
-  final cookies = cookieManager.getCookiesSync();
+  final cookies = authSessionManager.getCookiesSync();
   if (cookies.trim().isEmpty) {
     return null;
   }

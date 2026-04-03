@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/single_thread_title.dart';
-import 'package:bluefish/userdata/user_settings.dart';
 import 'package:http/http.dart' as http;
 
 class ThreadListService {
@@ -12,15 +12,11 @@ class ThreadListService {
   ThreadListService({http.Client? client}) : _client = client ?? httpClient;
 
   Uri topicThreadsBaseUrl() {
-    return Uri.parse(
-      'https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/getTopicThreads?',
-    );
+    return Uri.parse(ApiConfig.apiPath('topics/getTopicThreads'));
   }
 
   Uri pinnedThreadsUrl({required int topicID}) {
-    return Uri.parse(
-      'https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/$topicID',
-    );
+    return Uri.parse(ApiConfig.apiPath('topics/$topicID'));
   }
 
   Uri threadListUrl({
@@ -43,7 +39,7 @@ class ThreadListService {
     }
 
     return Uri.parse(
-      'https://bbs.mobileapi.hupu.com/1/$appVersionNumber/topics/getTopicThreads',
+      ApiConfig.apiPath('topics/getTopicThreads'),
     ).replace(queryParameters: query);
   }
 

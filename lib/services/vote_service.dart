@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/network/http_client.dart';
-import 'package:bluefish/userdata/user_settings.dart';
 import 'package:http/http.dart' as http;
 
 class VoteService {
@@ -15,8 +15,8 @@ class VoteService {
   // https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11124697
   Future<Vote> getVote(int voteId) async {
     final voteUrl = Uri.parse(
-      'https://bbs.mobileapi.hupu.com/3/$appVersionNumber/bbsintapi/vote/v1/getVoteInfo?voteId=$voteId',
-    );
+      ApiConfig.apiPath('bbsintapi/vote/v1/getVoteInfo', gatewayVersion: '3'),
+    ).replace(queryParameters: <String, String>{'voteId': '$voteId'});
     final response = await _client.get(voteUrl);
 
     if (response.statusCode != 200) {
