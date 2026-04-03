@@ -5,6 +5,10 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 const String bluefishDetailsEmbedType = 'bluefish-details';
 const String bluefishImagePlaceholderEmbedType = 'bluefish-image-placeholder';
+const Set<String> bluefishBlockEmbedTypes = <String>{
+  bluefishDetailsEmbedType,
+  bluefishImagePlaceholderEmbedType,
+};
 
 @immutable
 class BluefishDetailsEmbedData {

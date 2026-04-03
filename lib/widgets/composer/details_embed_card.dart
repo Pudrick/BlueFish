@@ -71,7 +71,7 @@ class _DetailsEmbedCardState extends State<DetailsEmbedCard> {
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
-                  labelText: 'Summary',
+                  labelText: '折叠标题',
                   hintText: '输入折叠标题',
                 ),
               ),
@@ -81,7 +81,7 @@ class _DetailsEmbedCardState extends State<DetailsEmbedCard> {
                 minLines: 4,
                 maxLines: null,
                 decoration: const InputDecoration(
-                  labelText: 'Details Body',
+                  labelText: '折叠内容',
                   hintText: '输入折叠内容',
                 ),
               ),

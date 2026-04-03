@@ -70,6 +70,7 @@ class _QuillComposerEditorState extends State<QuillComposerEditor> {
               onRemoved: widget.onEmbedRemoved,
             ),
             _ImagePlaceholderEmbedBuilder(
+              focusNode: _focusNode,
               onChanged: widget.onImagePlaceholderChanged,
               onRemoved: widget.onEmbedRemoved,
             ),
@@ -116,7 +117,7 @@ class _DetailsEmbedBuilder extends quill.EmbedBuilder {
         if (embedContext.readOnly)
           const SizedBox(height: 6)
         else
-          _DetailsBoundaryTapTarget(
+          _BlockBoundaryTapTarget(
             key: ValueKey('details_embed_before_zone_$documentOffset'),
             gestureKey: ValueKey(
               'details_embed_before_gesture_$documentOffset',
@@ -143,7 +144,7 @@ class _DetailsEmbedBuilder extends quill.EmbedBuilder {
         if (embedContext.readOnly)
           const SizedBox(height: 6)
         else
-          _DetailsBoundaryTapTarget(
+          _BlockBoundaryTapTarget(
             key: ValueKey('details_embed_after_zone_$documentOffset'),
             gestureKey: ValueKey('details_embed_after_gesture_$documentOffset'),
             onTap: () {
@@ -160,11 +161,11 @@ class _DetailsEmbedBuilder extends quill.EmbedBuilder {
   }
 }
 
-class _DetailsBoundaryTapTarget extends StatelessWidget {
+class _BlockBoundaryTapTarget extends StatelessWidget {
   final Key? gestureKey;
   final VoidCallback onTap;
 
-  const _DetailsBoundaryTapTarget({
+  const _BlockBoundaryTapTarget({
     super.key,
     this.gestureKey,
     required this.onTap,
@@ -185,10 +186,12 @@ class _DetailsBoundaryTapTarget extends StatelessWidget {
 }
 
 class _ImagePlaceholderEmbedBuilder extends quill.EmbedBuilder {
+  final FocusNode focusNode;
   final ImagePlaceholderEmbedUpdate onChanged;
   final ValueChanged<int> onRemoved;
 
   const _ImagePlaceholderEmbedBuilder({
+    required this.focusNode,
     required this.onChanged,
     required this.onRemoved,
   });
@@ -201,19 +204,61 @@ class _ImagePlaceholderEmbedBuilder extends quill.EmbedBuilder {
     final data = BluefishImagePlaceholderEmbedData.fromJsonString(
       embedContext.node.value.data as String,
     );
+    final documentOffset = embedContext.node.documentOffset;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: ImagePlaceholderEmbedCard(
-        data: data,
-        readOnly: embedContext.readOnly,
-        onChanged: (nextData) {
-          onChanged(embedContext.node.documentOffset, nextData);
-        },
-        onRemove: embedContext.readOnly
-            ? null
-            : () => onRemoved(embedContext.node.documentOffset),
-      ),
+    void updateBoundarySelection(TextSelection selection) {
+      focusNode.requestFocus();
+      embedContext.controller.updateSelection(
+        selection,
+        quill.ChangeSource.local,
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (embedContext.readOnly)
+          const SizedBox(height: 6)
+        else
+          _BlockBoundaryTapTarget(
+            key: ValueKey('image_embed_before_zone_$documentOffset'),
+            gestureKey: ValueKey('image_embed_before_gesture_$documentOffset'),
+            onTap: () {
+              updateBoundarySelection(
+                collapsedSelectionBeforeBlockEmbed(
+                  plainText: embedContext.controller.document.toPlainText(),
+                  embedOffset: documentOffset,
+                ),
+              );
+            },
+          ),
+        ImagePlaceholderEmbedCard(
+          data: data,
+          readOnly: embedContext.readOnly,
+          onChanged: (nextData) {
+            onChanged(documentOffset, nextData);
+          },
+          onRemove: embedContext.readOnly
+              ? null
+              : () => onRemoved(documentOffset),
+        ),
+        if (embedContext.readOnly)
+          const SizedBox(height: 6)
+        else
+          _BlockBoundaryTapTarget(
+            key: ValueKey('image_embed_after_zone_$documentOffset'),
+            gestureKey: ValueKey('image_embed_after_gesture_$documentOffset'),
+            onTap: () {
+              updateBoundarySelection(
+                collapsedSelectionAfterBlockEmbed(
+                  plainText: embedContext.controller.document.toPlainText(),
+                  embedOffset: documentOffset,
+                ),
+              );
+            },
+          ),
+      ],
     );
   }
 }

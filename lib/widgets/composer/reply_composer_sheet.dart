@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -84,7 +85,15 @@ class ReplyComposerSheet extends StatefulWidget {
   State<ReplyComposerSheet> createState() => _ReplyComposerSheetState();
 }
 
-class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
+class _ReplyComposerSheetState extends State<ReplyComposerSheet>
+    with SingleTickerProviderStateMixin {
+  static const double _collapsedHeightFactor = 0.9;
+  static const double _collapsedSheetInset = 12;
+  static const double _collapsedBorderRadius = 28;
+  static const double _dragDistanceToFullscreen = 140;
+  static const double _fullscreenSnapThreshold = 0.62;
+  static const Duration _sheetSnapDuration = Duration(milliseconds: 260);
+
   late ReplyDraft _draft;
   bool _isSubmitting = false;
   String? _statusMessage;
@@ -94,6 +103,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
   final HtmlExportService _htmlExportService = const HtmlExportService();
 
   late final quill.QuillController _controller;
+  late final AnimationController _fullscreenController;
 
   @override
   void initState() {
@@ -106,6 +116,17 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
       document: _documentFromDeltaJson(_draft.deltaJson),
       selection: const TextSelection.collapsed(offset: 0),
     )..addListener(_handleRichTextChanged);
+    _fullscreenController = AnimationController(
+      vsync: this,
+      duration: _sheetSnapDuration,
+    )..addListener(_handleFullscreenProgressChanged);
+  }
+
+  void _handleFullscreenProgressChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
   }
 
   void _insertDetailsEmbed() {
@@ -131,7 +152,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
       _statusMessage = '已插入回复图片占位。';
     });
 
-    _insertEmbed(
+    _insertBlockEmbedWithLineBreaks(
       BluefishImagePlaceholderEmbed(
         BluefishImagePlaceholderEmbedData(
           attachmentId: attachmentId,
@@ -306,17 +327,6 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     }
   }
 
-  void _insertEmbed(quill.Embeddable embed) {
-    final selection = _normalizedSelection();
-    final replaceLength = selection.end - selection.start;
-    _controller.replaceText(
-      selection.start,
-      replaceLength,
-      embed,
-      TextSelection.collapsed(offset: selection.start + 1),
-    );
-  }
-
   void _insertBlockEmbedWithLineBreaks(quill.Embeddable embed) {
     final selection = _normalizedSelection();
     final plainText = _controller.document.toPlainText();
@@ -391,7 +401,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
   }
 
   void _handleRichTextChanged() {
-    if (_normalizeCollapsedSelectionAroundDetailsEmbed()) {
+    if (_normalizeCollapsedSelectionAroundBlockEmbeds()) {
       return;
     }
 
@@ -416,7 +426,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     });
   }
 
-  bool _normalizeCollapsedSelectionAroundDetailsEmbed() {
+  bool _normalizeCollapsedSelectionAroundBlockEmbeds() {
     if (_isNormalizingCollapsedSelection) {
       return false;
     }
@@ -427,7 +437,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     }
 
     final deltaJson = _serializeControllerDelta();
-    final normalizedSelection = normalizedCollapsedSelectionForDetailsEmbed(
+    final normalizedSelection = normalizedCollapsedSelectionForBlockEmbeds(
       deltaJson: deltaJson,
       plainText: _controller.document.toPlainText(),
       selection: selection,
@@ -544,8 +554,45 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     return '$prefix-${DateTime.now().microsecondsSinceEpoch}-$_replyComposerIdCounter';
   }
 
+  void _handleSheetResizeDragStart(DragStartDetails details) {
+    _fullscreenController.stop();
+  }
+
+  void _handleSheetResizeDragUpdate(DragUpdateDetails details) {
+    final delta = details.primaryDelta ?? 0;
+    final nextValue =
+        (_fullscreenController.value - (delta / _dragDistanceToFullscreen))
+            .clamp(0.0, 1.0);
+    if (nextValue == _fullscreenController.value) {
+      return;
+    }
+    _fullscreenController.value = nextValue;
+  }
+
+  void _handleSheetResizeDragEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dy;
+    final bool shouldCollapse = velocity > 700;
+    final bool shouldExpand =
+        !shouldCollapse &&
+        (velocity < -700 ||
+            _fullscreenController.value >= _fullscreenSnapThreshold);
+    final target = shouldExpand ? 1.0 : 0.0;
+
+    _fullscreenController.animateTo(target, curve: Curves.easeOutCubic);
+  }
+
+  bool get _isFullscreen => _fullscreenController.value >= 0.98;
+
+  void _toggleFullscreen() {
+    final target = _isFullscreen ? 0.0 : 1.0;
+    _fullscreenController.animateTo(target, curve: Curves.easeOutCubic);
+  }
+
   @override
   void dispose() {
+    _fullscreenController
+      ..removeListener(_handleFullscreenProgressChanged)
+      ..dispose();
     _controller
       ..removeListener(_handleRichTextChanged)
       ..dispose();
@@ -557,6 +604,25 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final fullscreenProgress = _fullscreenController.value;
+    final sheetHeightFactor = ui.lerpDouble(
+      _collapsedHeightFactor,
+      1,
+      fullscreenProgress,
+    )!;
+    final sheetInset = ui.lerpDouble(
+      _collapsedSheetInset,
+      0,
+      fullscreenProgress,
+    )!;
+    final sheetRadius = ui.lerpDouble(
+      _collapsedBorderRadius,
+      0,
+      fullscreenProgress,
+    )!;
+    final handleZoneHeight = ui.lerpDouble(24, 32, fullscreenProgress)!;
+    final handleWidth = ui.lerpDouble(42, 58, fullscreenProgress)!;
+    final handleOpacity = ui.lerpDouble(0.42, 0.8, fullscreenProgress)!;
     final hasContext =
         (widget.contextLabel?.trim().isNotEmpty ?? false) ||
         (widget.contextPreview?.trim().isNotEmpty ?? false);
@@ -569,17 +635,43 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: FractionallySizedBox(
-            heightFactor: 0.9,
+            heightFactor: sheetHeightFactor,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(sheetInset),
               child: Material(
+                key: const ValueKey('reply-composer-sheet-surface'),
                 color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(sheetRadius),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
+                    MouseRegion(
+                      cursor: SystemMouseCursors.resizeUpDown,
+                      child: GestureDetector(
+                        key: const ValueKey('reply-composer-drag-handle-zone'),
+                        behavior: HitTestBehavior.opaque,
+                        onVerticalDragStart: _handleSheetResizeDragStart,
+                        onVerticalDragUpdate: _handleSheetResizeDragUpdate,
+                        onVerticalDragEnd: _handleSheetResizeDragEnd,
+                        child: SizedBox(
+                          height: handleZoneHeight,
+                          child: Center(
+                            child: Container(
+                              width: handleWidth,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: colorScheme.onSurfaceVariant.withValues(
+                                  alpha: handleOpacity,
+                                ),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
                       child: Row(
                         children: [
                           Expanded(
@@ -605,6 +697,18 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
                             ),
                           ),
                           IconButton(
+                            key: const ValueKey(
+                              'reply-composer-fullscreen-toggle',
+                            ),
+                            tooltip: _isFullscreen ? '恢复默认大小' : '全屏显示',
+                            onPressed: _toggleFullscreen,
+                            icon: Icon(
+                              _isFullscreen
+                                  ? Icons.fullscreen_exit_rounded
+                                  : Icons.fullscreen_rounded,
+                            ),
+                          ),
+                          IconButton(
                             onPressed: () => Navigator.of(context).maybePop(),
                             icon: const Icon(Icons.close_rounded),
                           ),
@@ -613,6 +717,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet> {
                     ),
                     Expanded(
                       child: ListView(
+                        key: const ValueKey('reply-composer-content-scroll'),
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                         children: [
                           if (hasContext)

@@ -66,7 +66,7 @@ TextSelection collapsedSelectionAfterBlockEmbed({
   );
 }
 
-TextSelection? normalizedCollapsedSelectionForDetailsEmbed({
+TextSelection? normalizedCollapsedSelectionForBlockEmbeds({
   required List<Map<String, dynamic>> deltaJson,
   required String plainText,
   required TextSelection selection,
@@ -92,7 +92,8 @@ TextSelection? normalizedCollapsedSelectionForDetailsEmbed({
       continue;
     }
 
-    if (!insert.containsKey(bluefishDetailsEmbedType)) {
+    final isBlockEmbed = bluefishBlockEmbedTypes.any(insert.containsKey);
+    if (!isBlockEmbed) {
       offset += 1;
       continue;
     }

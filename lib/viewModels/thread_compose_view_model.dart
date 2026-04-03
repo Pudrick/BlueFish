@@ -145,7 +145,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
       clearBodyHtml: true,
     );
 
-    _insertEmbed(
+    _insertBlockEmbedWithLineBreaks(
       BluefishImagePlaceholderEmbed(
         BluefishImagePlaceholderEmbedData(
           attachmentId: attachmentId,
@@ -290,17 +290,6 @@ class ThreadComposeViewModel extends ChangeNotifier {
     }
   }
 
-  void _insertEmbed(quill.Embeddable embed) {
-    final selection = _normalizedSelection();
-    final replaceLength = selection.end - selection.start;
-    _richTextController.replaceText(
-      selection.start,
-      replaceLength,
-      embed,
-      TextSelection.collapsed(offset: selection.start + 1),
-    );
-  }
-
   void _insertBlockEmbedWithLineBreaks(quill.Embeddable embed) {
     final selection = _normalizedSelection();
     final plainText = _richTextController.document.toPlainText();
@@ -379,7 +368,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
       return;
     }
 
-    if (_normalizeCollapsedSelectionAroundDetailsEmbed()) {
+    if (_normalizeCollapsedSelectionAroundBlockEmbeds()) {
       return;
     }
 
@@ -405,7 +394,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _normalizeCollapsedSelectionAroundDetailsEmbed() {
+  bool _normalizeCollapsedSelectionAroundBlockEmbeds() {
     if (_isNormalizingCollapsedSelection) {
       return false;
     }
@@ -416,7 +405,7 @@ class ThreadComposeViewModel extends ChangeNotifier {
     }
 
     final deltaJson = _serializeControllerDelta();
-    final normalizedSelection = normalizedCollapsedSelectionForDetailsEmbed(
+    final normalizedSelection = normalizedCollapsedSelectionForBlockEmbeds(
       deltaJson: deltaJson,
       plainText: _richTextController.document.toPlainText(),
       selection: selection,
