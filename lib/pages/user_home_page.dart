@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
+import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
 import 'package:bluefish/widgets/user_home/user_home_display_select_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_info_widget.dart';
 import 'package:bluefish/widgets/user_home/user_home_reply_list_widget.dart';
@@ -105,9 +106,13 @@ class _UserHomePageViewState extends State<UserHomePageView> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<UserHomeViewModel>();
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (viewModel.data == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return FullscreenFeedbackScaffold(
+        onBackPressed: _handleBack,
+        child: CircularProgressIndicator(color: colorScheme.primary),
+      );
     }
 
     UserHome data = viewModel.data!;

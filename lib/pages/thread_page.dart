@@ -2,6 +2,7 @@ import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
+import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
 import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
@@ -78,6 +79,21 @@ class _ThreadPageContent extends StatefulWidget {
 class _ThreadPageContentState extends State<_ThreadPageContent> {
   final ScrollController _scrollController = ScrollController();
   String? _lastSyncedLocation;
+  bool _showScrollToTop = false;
+  bool _showScrollToBottom = false;
+  bool _quickActionSyncScheduled = false;
+
+  static const Duration _scrollAnimationDuration = Duration(milliseconds: 260);
+  static const Duration _quickActionAnimationDuration = Duration(
+    milliseconds: 180,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScrollPositionChanged);
+    _scheduleQuickActionSync();
+  }
 
   void _handleBack() {
     context.popOrGoThreadList();
@@ -92,7 +108,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         0,
-        duration: const Duration(milliseconds: 260),
+        duration: _scrollAnimationDuration,
         curve: Curves.easeOutCubic,
       );
     }
@@ -101,15 +117,130 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   }
 
   void _scrollToTopIfNeeded() {
+    _jumpToEdgeIfNeeded(toTop: true);
+  }
+
+  void _scrollToBottomIfNeeded() {
+    _jumpToEdgeIfNeeded(toTop: false);
+  }
+
+  void _jumpToEdgeIfNeeded({required bool toTop}) {
     if (!_scrollController.hasClients) {
       return;
     }
 
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
+    final position = _scrollController.position;
+    final target = toTop ? position.minScrollExtent : position.maxScrollExtent;
+    final alreadyAtEdge = toTop
+        ? position.pixels <= target + 0.5
+        : position.pixels >= target - 0.5;
+    if (alreadyAtEdge) {
+      return;
+    }
+
+    _scrollController.jumpTo(target);
+    _settleJumpToEdge(toTop: toTop);
+  }
+
+  void _settleJumpToEdge({required bool toTop, int attempt = 0}) {
+    if (!mounted || !_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final target = toTop ? position.minScrollExtent : position.maxScrollExtent;
+    final reachedEdge = toTop
+        ? position.pixels <= target + 0.5
+        : position.pixels >= target - 0.5;
+
+    if (reachedEdge || attempt >= 8) {
+      _syncQuickActionsVisibility();
+      return;
+    }
+
+    // Sliver max extent can grow while children are laid out, so settle over frames.
+    _scrollController.jumpTo(target);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _settleJumpToEdge(toTop: toTop, attempt: attempt + 1);
+    });
+  }
+
+  Widget _buildAnimatedQuickScrollFab({
+    required bool visible,
+    required String heroTag,
+    required VoidCallback onPressed,
+    required String tooltip,
+    required IconData icon,
+  }) {
+    return AnimatedSwitcher(
+      duration: _quickActionAnimationDuration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final scale = Tween<double>(begin: 0.86, end: 1).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: scale, child: child),
+        );
+      },
+      child: visible
+          ? Padding(
+              key: ValueKey<String>('${heroTag}_visible'),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: FloatingActionButton.small(
+                heroTag: heroTag,
+                onPressed: onPressed,
+                tooltip: tooltip,
+                elevation: 0,
+                child: Icon(icon, size: 20),
+              ),
+            )
+          : SizedBox(key: ValueKey<String>('${heroTag}_hidden')),
     );
+  }
+
+  void _handleScrollPositionChanged() {
+    _syncQuickActionsVisibility();
+  }
+
+  void _scheduleQuickActionSync() {
+    if (_quickActionSyncScheduled) {
+      return;
+    }
+
+    _quickActionSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _quickActionSyncScheduled = false;
+      _syncQuickActionsVisibility();
+    });
+  }
+
+  void _syncQuickActionsVisibility() {
+    if (!mounted || !_scrollController.hasClients) {
+      if (_showScrollToTop || _showScrollToBottom) {
+        setState(() {
+          _showScrollToTop = false;
+          _showScrollToBottom = false;
+        });
+      }
+      return;
+    }
+
+    const double edgeTolerance = 6;
+    final position = _scrollController.position;
+    final bool showScrollToTop = position.pixels > edgeTolerance;
+    final bool showScrollToBottom =
+        position.pixels < position.maxScrollExtent - edgeTolerance;
+
+    if (showScrollToTop == _showScrollToTop &&
+        showScrollToBottom == _showScrollToBottom) {
+      return;
+    }
+
+    setState(() {
+      _showScrollToTop = showScrollToTop;
+      _showScrollToBottom = showScrollToBottom;
+    });
   }
 
   Future<void> _applyAuthorFilter(String euid) async {
@@ -174,6 +305,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_handleScrollPositionChanged);
     _scrollController.dispose();
     super.dispose();
   }
@@ -205,44 +337,36 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
         _syncRouteIfNeeded(viewModel);
+        _scheduleQuickActionSync();
 
         // Loading state
         if (viewModel.isLoading && viewModel.data == null) {
-          return Scaffold(
-            body: SafeArea(
-              child: Center(
-                child: CircularProgressIndicator(color: colorScheme.primary),
-              ),
-            ),
+          return FullscreenFeedbackScaffold(
+            onBackPressed: _handleBack,
+            child: CircularProgressIndicator(color: colorScheme.primary),
           );
         }
 
         // Error state
         if (viewModel.isError && viewModel.data == null) {
-          return Scaffold(
-            body: SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      viewModel.errorMessage ?? '加载失败',
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: viewModel.refresh,
-                      child: const Text('重试'),
-                    ),
-                  ],
+          return FullscreenFeedbackScaffold(
+            onBackPressed: _handleBack,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  viewModel.errorMessage ?? '加载失败',
+                  style: TextStyle(color: colorScheme.error),
+                  textAlign: TextAlign.center,
                 ),
-              ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: viewModel.refresh,
+                  child: const Text('重试'),
+                ),
+              ],
             ),
           );
         }
@@ -518,26 +642,53 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
               _applyAuthorFilter(data.opEuid);
             },
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              showReplyComposerSheet(
-                context: context,
-                title: '发送回复',
-                contextLabel: '当前帖子',
-                contextPreview: data.mainFloor.title,
-                onSubmit: (draft) async {
-                  if (!draft.hasPublishableContent) {
-                    return;
-                  }
-                  // TODO: Implement reply submission
-                  // After successful submission:
-                  // viewModel.invalidateCache();
-                  // viewModel.refresh();
-                },
-              );
-            },
-            elevation: 0,
-            child: const Icon(Icons.edit_outlined, size: 20),
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildAnimatedQuickScrollFab(
+                  visible: _showScrollToTop,
+                  heroTag: 'thread_detail_scroll_top_fab',
+                  onPressed: _scrollToTopIfNeeded,
+                  tooltip: '滑至顶部',
+                  icon: Icons.keyboard_double_arrow_up_rounded,
+                ),
+                _buildAnimatedQuickScrollFab(
+                  visible: _showScrollToBottom,
+                  heroTag: 'thread_detail_scroll_bottom_fab',
+                  onPressed: _scrollToBottomIfNeeded,
+                  tooltip: '滑至底部',
+                  icon: Icons.keyboard_double_arrow_down_rounded,
+                ),
+                if (_showScrollToTop || _showScrollToBottom)
+                  const SizedBox(height: 4),
+                FloatingActionButton(
+                  heroTag: 'thread_detail_reply_fab',
+                  onPressed: () {
+                    showReplyComposerSheet(
+                      context: context,
+                      title: '发送回复',
+                      contextLabel: '当前帖子',
+                      contextPreview: data.mainFloor.title,
+                      onSubmit: (draft) async {
+                        if (!draft.hasPublishableContent) {
+                          return;
+                        }
+                        // TODO: Implement reply submission
+                        // After successful submission:
+                        // viewModel.invalidateCache();
+                        // viewModel.refresh();
+                      },
+                    );
+                  },
+                  tooltip: '发送回复',
+                  elevation: 0,
+                  child: const Icon(Icons.edit_outlined, size: 20),
+                ),
+              ],
+            ),
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.endContained,
