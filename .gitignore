@@ -78,3 +78,6 @@ lib/temp/*
 
 # Development cookie manager with hardcoded test cookies
 lib/auth/cookie_manager_dev.dart
+
+# Files related with vibe
+AGENTS.md
