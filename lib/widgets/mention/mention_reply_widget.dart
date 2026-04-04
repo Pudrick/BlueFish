@@ -146,7 +146,6 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
         height: 1.5,
       ),
       style: MentionExpandableTextStyle.fade,
-      accentColor: colorScheme.primary,
       fadeColor: colorScheme.surfaceContainerHigh,
     );
   }
@@ -184,7 +183,6 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
             color: colorScheme.onSurfaceVariant,
           ),
           style: MentionExpandableTextStyle.fade,
-          accentColor: colorScheme.primary,
           fadeColor: colorScheme.surfaceContainerHigh,
         ),
       ),
@@ -327,8 +325,11 @@ class _MentionReplyImageStripState extends State<_MentionReplyImageStrip> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.broken_image),
+                                    color: colorScheme.surfaceContainerHighest,
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                             ),
                           ),

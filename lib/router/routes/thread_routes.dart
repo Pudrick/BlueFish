@@ -38,16 +38,15 @@ final threadRoutes = <RouteBase>[
             barrierLabel: MaterialLocalizations.of(
               context,
             ).modalBarrierDismissLabel,
-            transitionDuration: const Duration(milliseconds: 220),
-            reverseTransitionDuration: const Duration(milliseconds: 180),
+            transitionDuration: replyComposerSheetTransitionDuration,
+            reverseTransitionDuration:
+                replyComposerSheetReverseTransitionDuration,
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  final curvedAnimation = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                    reverseCurve: Curves.easeInCubic,
+                  return buildReplyComposerSheetTransition(
+                    animation: animation,
+                    child: child,
                   );
-                  return FadeTransition(opacity: curvedAnimation, child: child);
                 },
             child: ReplyComposerSheet(
               title: '发送回复',

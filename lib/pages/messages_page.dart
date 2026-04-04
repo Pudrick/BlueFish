@@ -353,6 +353,7 @@ class _MessagesTabBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final backgroundColor = switch (tone) {
       _MessagesTabBadgeTone.alert => colorScheme.error,
       _MessagesTabBadgeTone.tonal => colorScheme.secondaryContainer,
@@ -372,10 +373,9 @@ class _MessagesTabBadge extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         _label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        style: textTheme.labelSmall?.copyWith(
           color: foregroundColor,
           fontWeight: FontWeight.w800,
-          fontSize: 10,
           height: 1,
         ),
       ),

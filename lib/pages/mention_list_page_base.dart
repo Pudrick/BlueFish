@@ -146,6 +146,7 @@ class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
   Widget build(BuildContext context) {
     final viewModel = context.watch<VM>();
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     if (viewModel.isLoading &&
         viewModel.newList.isEmpty &&
@@ -178,8 +179,7 @@ class _MentionListSectionViewState<T, VM extends MentionViewModel<T>>
                         const SizedBox(height: 16),
                         Text(
                           '暂无消息',
-                          style: TextStyle(
-                            fontSize: 16,
+                          style: textTheme.bodyLarge?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
@@ -232,6 +232,7 @@ class _MentionListHeader<T, VM extends MentionViewModel<T>>
   Widget build(BuildContext context) {
     final viewModel = context.watch<VM>();
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       color: colorScheme.surface,
@@ -256,9 +257,8 @@ class _MentionListHeader<T, VM extends MentionViewModel<T>>
               ),
               child: Text(
                 '${viewModel.newList.length}',
-                style: TextStyle(
+                style: textTheme.labelSmall?.copyWith(
                   color: colorScheme.onError,
-                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),

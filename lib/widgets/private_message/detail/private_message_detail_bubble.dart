@@ -113,9 +113,9 @@ class PrivateMessageBubble extends StatelessWidget {
                         child: PrivateMessageBody(
                           message: message,
                           textColor: foregroundColor,
-                          linkColor: _isMine
-                              ? colorScheme.primary
-                              : colorScheme.tertiary,
+                          attachmentTone: _isMine
+                              ? PrivateMessageCardAttachmentTone.mine
+                              : PrivateMessageCardAttachmentTone.other,
                         ),
                       ),
                     ),
@@ -137,13 +137,13 @@ class PrivateMessageBubble extends StatelessWidget {
 class PrivateMessageBody extends StatelessWidget {
   final SinglePrivateMessage message;
   final Color textColor;
-  final Color linkColor;
+  final PrivateMessageCardAttachmentTone attachmentTone;
 
   const PrivateMessageBody({
     super.key,
     required this.message,
     required this.textColor,
-    required this.linkColor,
+    required this.attachmentTone,
   });
 
   @override
@@ -167,7 +167,7 @@ class PrivateMessageBody extends StatelessWidget {
           PrivateMessageCardAttachment(
             cardPm: message.cardPm!,
             messageId: message.pmid,
-            accentColor: linkColor,
+            tone: attachmentTone,
           ),
       ],
     );

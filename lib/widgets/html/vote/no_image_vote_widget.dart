@@ -1,4 +1,5 @@
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 import 'package:bluefish/widgets/html/vote/vote_action_bar.dart';
 import 'package:bluefish/widgets/html/vote/vote_card_shell.dart';
 import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
@@ -214,9 +215,7 @@ class _TextVoteOptionTile extends StatelessWidget {
                 const SizedBox(height: 12),
                 _VoteProgressBar(
                   value: option.percentage,
-                  accentColor: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.secondary,
+                  selected: isSelected,
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -295,13 +294,14 @@ class _ResultPercentBadge extends StatelessWidget {
 
 class _VoteProgressBar extends StatelessWidget {
   final double value;
-  final Color accentColor;
+  final bool selected;
 
-  const _VoteProgressBar({required this.value, required this.accentColor});
+  const _VoteProgressBar({required this.value, required this.selected});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = context.semanticColors;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
@@ -310,7 +310,9 @@ class _VoteProgressBar extends StatelessWidget {
         child: LinearProgressIndicator(
           value: value.clamp(0, 1),
           backgroundColor: colorScheme.surfaceContainerHighest,
-          color: accentColor,
+          color: selected
+              ? colorScheme.primary
+              : semanticColors.voteTrailingAccent,
         ),
       ),
     );

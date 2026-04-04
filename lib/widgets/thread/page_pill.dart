@@ -241,7 +241,7 @@ class _PageSheetState extends State<_PageSheet> {
                     children: [
                       Text(
                         "1",
-                        style: TextStyle(
+                        style: textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -261,7 +261,7 @@ class _PageSheetState extends State<_PageSheet> {
                       ),
                       Text(
                         "${widget.totalpages}",
-                        style: TextStyle(
+                        style: textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -354,14 +354,13 @@ class _PageSheetState extends State<_PageSheet> {
                                     alignment: Alignment.center,
                                     child: Text(
                                       "$page",
-                                      style: TextStyle(
+                                      style: textTheme.labelLarge?.copyWith(
                                         color: isCurrent
                                             ? colorScheme.onPrimary
                                             : colorScheme.onSurface,
                                         fontWeight: isCurrent
                                             ? FontWeight.bold
                                             : FontWeight.normal,
-                                        fontSize: 14,
                                       ),
                                     ),
                                   ),

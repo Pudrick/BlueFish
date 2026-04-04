@@ -155,6 +155,10 @@ class UserHomeInfoWidget extends StatelessWidget {
 
   Widget _buildActionButtons(BuildContext context) {
     final isFollowed = userHome.followStatus != FollowStatus.notFollowed;
+    final textTheme = Theme.of(context).textTheme;
+    final buttonLabelStyle = textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -168,12 +172,12 @@ class UserHomeInfoWidget extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check),
-                      SizedBox(width: 4),
-                      Text('已关注', style: TextStyle(fontSize: 13)),
+                      const Icon(Icons.check),
+                      const SizedBox(width: 4),
+                      Text('已关注', style: buttonLabelStyle),
                     ],
                   ),
                 )
@@ -183,12 +187,12 @@ class UserHomeInfoWidget extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.person_add_outlined),
-                      SizedBox(width: 4),
-                      Text('关注', style: TextStyle(fontSize: 13)),
+                      const Icon(Icons.person_add_outlined),
+                      const SizedBox(width: 4),
+                      Text('关注', style: buttonLabelStyle),
                     ],
                   ),
                 ),
@@ -201,12 +205,12 @@ class UserHomeInfoWidget extends StatelessWidget {
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.mail_outline_outlined),
-                SizedBox(width: 4),
-                Text('私信', style: TextStyle(fontSize: 13)),
+                const Icon(Icons.mail_outline_outlined),
+                const SizedBox(width: 4),
+                Text('私信', style: buttonLabelStyle),
               ],
             ),
           ),

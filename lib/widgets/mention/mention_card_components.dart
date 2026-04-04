@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 
 enum MentionExpandableTextStyle { textLink, fade }
 
@@ -112,7 +113,6 @@ class MentionExpandableTextSection extends StatefulWidget {
   final int maxLines;
   final TextStyle? textStyle;
   final MentionExpandableTextStyle style;
-  final Color accentColor;
   final Color? fadeColor;
 
   const MentionExpandableTextSection({
@@ -121,7 +121,6 @@ class MentionExpandableTextSection extends StatefulWidget {
     required this.maxLines,
     required this.textStyle,
     required this.style,
-    required this.accentColor,
     this.fadeColor,
   });
 
@@ -151,8 +150,9 @@ class _MentionExpandableTextSectionState
 
   @override
   Widget build(BuildContext context) {
+    final semanticColors = context.semanticColors;
     final textLinkStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: widget.accentColor,
+      color: semanticColors.mentionAccent,
       fontWeight: FontWeight.bold,
     );
 
@@ -214,6 +214,7 @@ class _MentionExpandableTextSectionState
         );
       case MentionExpandableTextStyle.fade:
         final fadeColor = widget.fadeColor ?? Theme.of(context).cardColor;
+        final semanticColors = context.semanticColors;
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _expand,
@@ -247,7 +248,7 @@ class _MentionExpandableTextSectionState
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: widget.accentColor,
+                      color: semanticColors.mentionAccent,
                       size: 22,
                     ),
                   ),
@@ -279,7 +280,7 @@ class _MentionExpandableTextSectionState
                 ? Center(
                     child: Icon(
                       Icons.keyboard_arrow_up_rounded,
-                      color: widget.accentColor,
+                      color: context.semanticColors.mentionAccent,
                       size: 22,
                     ),
                   )

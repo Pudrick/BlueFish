@@ -16,6 +16,40 @@ import 'composer_accessory_panel.dart';
 import 'quill_composer_editor.dart';
 import 'quill_composer_toolbar.dart';
 
+const Duration replyComposerSheetTransitionDuration = Duration(
+  milliseconds: 220,
+);
+const Duration replyComposerSheetReverseTransitionDuration = Duration(
+  milliseconds: 180,
+);
+
+Widget buildReplyComposerSheetTransition({
+  required Animation<double> animation,
+  required Widget child,
+}) {
+  final curvedAnimation = CurvedAnimation(
+    parent: animation,
+    curve: Curves.easeOutCubic,
+    reverseCurve: Curves.easeInCubic,
+  );
+  final opacityAnimation = CurvedAnimation(
+    parent: animation,
+    curve: const Interval(0, 0.7, curve: Curves.easeOut),
+    reverseCurve: Curves.easeIn,
+  );
+
+  return FadeTransition(
+    opacity: opacityAnimation,
+    child: SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(curvedAnimation),
+      child: child,
+    ),
+  );
+}
+
 Future<ReplyDraft?> showReplyComposerSheet({
   required BuildContext context,
   String title = '发送回复',
@@ -36,7 +70,13 @@ Future<ReplyDraft?> showReplyComposerSheet({
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: replyComposerSheetTransitionDuration,
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return buildReplyComposerSheetTransition(
+        animation: animation,
+        child: child,
+      );
+    },
     pageBuilder: (context, animation, secondaryAnimation) {
       return ReplyComposerSheet(
         title: title,
@@ -91,13 +131,16 @@ class ReplyComposerSheet extends StatefulWidget {
 }
 
 class _ReplyComposerSheetState extends State<ReplyComposerSheet>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const double _collapsedHeightFactor = 0.9;
   static const double _collapsedSheetInset = 12;
   static const double _collapsedBorderRadius = 28;
   static const double _dragDistanceToFullscreen = 140;
   static const double _fullscreenSnapThreshold = 0.62;
   static const Duration _sheetSnapDuration = Duration(milliseconds: 260);
+  static const double _dismissDragThreshold = 120;
+  static const double _dismissDragVelocity = 1100;
+  static const double _maxDismissDragOffset = 260;
 
   late ReplyDraft _draft;
   bool _isSubmitting = false;
@@ -111,6 +154,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
 
   late final quill.QuillController _controller;
   late final AnimationController _fullscreenController;
+  late final AnimationController _dismissOffsetController;
 
   @override
   void initState() {
@@ -128,10 +172,14 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
     _fullscreenController = AnimationController(
       vsync: this,
       duration: _sheetSnapDuration,
-    )..addListener(_handleFullscreenProgressChanged);
+    )..addListener(_handleAnimationProgressChanged);
+    _dismissOffsetController = AnimationController.unbounded(
+      vsync: this,
+      value: 0,
+    )..addListener(_handleAnimationProgressChanged);
   }
 
-  void _handleFullscreenProgressChanged() {
+  void _handleAnimationProgressChanged() {
     if (!mounted) {
       return;
     }
@@ -613,10 +661,23 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
 
   void _handleSheetResizeDragStart(DragStartDetails details) {
     _fullscreenController.stop();
+    _dismissOffsetController.stop();
   }
 
   void _handleSheetResizeDragUpdate(DragUpdateDetails details) {
     final delta = details.primaryDelta ?? 0;
+    if (delta < 0 && _dismissOffsetController.value > 0) {
+      _dismissOffsetController.value = (_dismissOffsetController.value + delta)
+          .clamp(0.0, _maxDismissDragOffset);
+      return;
+    }
+
+    if (delta > 0 && _fullscreenController.value <= 0.0) {
+      _dismissOffsetController.value = (_dismissOffsetController.value + delta)
+          .clamp(0.0, _maxDismissDragOffset);
+      return;
+    }
+
     final nextValue =
         (_fullscreenController.value - (delta / _dragDistanceToFullscreen))
             .clamp(0.0, 1.0);
@@ -628,6 +689,21 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
 
   void _handleSheetResizeDragEnd(DragEndDetails details) {
     final velocity = details.velocity.pixelsPerSecond.dy;
+    if (_dismissOffsetController.value >= _dismissDragThreshold ||
+        velocity >= _dismissDragVelocity) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+
+    if (_dismissOffsetController.value > 0) {
+      _dismissOffsetController.animateTo(
+        0,
+        duration: _sheetSnapDuration,
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+
     final bool shouldCollapse = velocity > 700;
     final bool shouldExpand =
         !shouldCollapse &&
@@ -648,7 +724,10 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
   @override
   void dispose() {
     _fullscreenController
-      ..removeListener(_handleFullscreenProgressChanged)
+      ..removeListener(_handleAnimationProgressChanged)
+      ..dispose();
+    _dismissOffsetController
+      ..removeListener(_handleAnimationProgressChanged)
       ..dispose();
     _controller
       ..removeListener(_handleRichTextChanged)
@@ -695,170 +774,174 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
             heightFactor: sheetHeightFactor,
             child: Padding(
               padding: EdgeInsets.all(sheetInset),
-              child: Material(
-                key: const ValueKey('reply-composer-sheet-surface'),
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(sheetRadius),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    MouseRegion(
-                      cursor: SystemMouseCursors.resizeUpDown,
-                      child: GestureDetector(
-                        key: const ValueKey('reply-composer-drag-handle-zone'),
-                        behavior: HitTestBehavior.opaque,
-                        onVerticalDragStart: _handleSheetResizeDragStart,
-                        onVerticalDragUpdate: _handleSheetResizeDragUpdate,
-                        onVerticalDragEnd: _handleSheetResizeDragEnd,
-                        child: SizedBox(
-                          height: handleZoneHeight,
-                          child: Center(
-                            child: Container(
-                              width: handleWidth,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: colorScheme.onSurfaceVariant.withValues(
-                                  alpha: handleOpacity,
+              child: Transform.translate(
+                offset: Offset(0, _dismissOffsetController.value),
+                child: Material(
+                  key: const ValueKey('reply-composer-sheet-surface'),
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(sheetRadius),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      MouseRegion(
+                        cursor: SystemMouseCursors.resizeUpDown,
+                        child: GestureDetector(
+                          key: const ValueKey(
+                            'reply-composer-drag-handle-zone',
+                          ),
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragStart: _handleSheetResizeDragStart,
+                          onVerticalDragUpdate: _handleSheetResizeDragUpdate,
+                          onVerticalDragEnd: _handleSheetResizeDragEnd,
+                          child: SizedBox(
+                            height: handleZoneHeight,
+                            child: Center(
+                              child: Container(
+                                width: handleWidth,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: handleOpacity),
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
-                                borderRadius: BorderRadius.circular(999),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.title,
-                                  style: textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    style: textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  widget.allowVideoAttachments
-                                      ? '支持富文本、折叠说明、图片和视频附件草稿。'
-                                      : '支持富文本、折叠说明和图片。',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.allowVideoAttachments
+                                        ? '支持富文本、折叠说明、图片和视频附件草稿。'
+                                        : '支持富文本、折叠说明和图片。',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            key: const ValueKey(
-                              'reply-composer-fullscreen-toggle',
-                            ),
-                            tooltip: _isFullscreen ? '恢复默认大小' : '全屏显示',
-                            onPressed: _toggleFullscreen,
-                            icon: Icon(
-                              _isFullscreen
-                                  ? Icons.fullscreen_exit_rounded
-                                  : Icons.fullscreen_rounded,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        key: const ValueKey('reply-composer-content-scroll'),
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                        children: [
-                          if (hasContext)
-                            _ComposerContextPreviewCard(
-                              contextLabel: widget.contextLabel,
-                              contextPreview: widget.contextPreview,
-                            ),
-                          if (hasContext) const SizedBox(height: 12),
-                          QuillComposerToolbar(
-                            controller: _controller,
-                            onInsertDetails: _insertDetailsEmbed,
-                            onInsertImagePlaceholder: _pickAndInsertImage,
-                            onInsertVideoPlaceholder:
-                                widget.allowVideoAttachments
-                                ? _addVideoPlaceholder
-                                : null,
-                          ),
-                          const SizedBox(height: 12),
-                          QuillComposerEditor(
-                            controller: _controller,
-                            placeholder: widget.placeholder,
-                            onDetailsEmbedChanged: _updateDetailsEmbed,
-                            onImagePlaceholderChanged:
-                                _updateImagePlaceholderEmbed,
-                            onEmbedRemoved: _removeEmbed,
-                          ),
-                          const SizedBox(height: 12),
-                          ComposerAccessoryPanel(
-                            title: '附件与状态',
-                            description: '已选择的图片和视频附件会显示在这里，后续可以直接接入真实上传链路。',
-                            attachments: _draft.attachments,
-                            onRemoveAttachment: _removeAttachment,
-                          ),
-                          if (_statusMessage != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              _statusMessage!,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                                ],
                               ),
+                            ),
+                            IconButton(
+                              key: const ValueKey(
+                                'reply-composer-fullscreen-toggle',
+                              ),
+                              tooltip: _isFullscreen ? '恢复默认大小' : '全屏显示',
+                              onPressed: _toggleFullscreen,
+                              icon: Icon(
+                                _isFullscreen
+                                    ? Icons.fullscreen_exit_rounded
+                                    : Icons.fullscreen_rounded,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).maybePop(),
+                              icon: const Icon(Icons.close_rounded),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _draft.hasPublishableContent
-                                  ? '草稿可发送'
-                                  : '请先输入正文、插入折叠说明/图片，或在开启视频扩展后添加视频',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                      Expanded(
+                        child: ListView(
+                          key: const ValueKey('reply-composer-content-scroll'),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          children: [
+                            if (hasContext)
+                              _ComposerContextPreviewCard(
+                                contextLabel: widget.contextLabel,
+                                contextPreview: widget.contextPreview,
+                              ),
+                            if (hasContext) const SizedBox(height: 12),
+                            QuillComposerToolbar(
+                              controller: _controller,
+                              onInsertDetails: _insertDetailsEmbed,
+                              onInsertImagePlaceholder: _pickAndInsertImage,
+                              onInsertVideoPlaceholder:
+                                  widget.allowVideoAttachments
+                                  ? _addVideoPlaceholder
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+                            QuillComposerEditor(
+                              controller: _controller,
+                              placeholder: widget.placeholder,
+                              onDetailsEmbedChanged: _updateDetailsEmbed,
+                              onImagePlaceholderChanged:
+                                  _updateImagePlaceholderEmbed,
+                              onEmbedRemoved: _removeEmbed,
+                            ),
+                            const SizedBox(height: 12),
+                            ComposerAccessoryPanel(
+                              title: '附件与状态',
+                              description: '已选择的图片和视频附件会显示在这里，后续可以直接接入真实上传链路。',
+                              attachments: _draft.attachments,
+                              onRemoveAttachment: _removeAttachment,
+                            ),
+                            if (_statusMessage != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                _statusMessage!,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _draft.hasPublishableContent
+                                    ? '草稿可发送'
+                                    : '请先输入正文、插入折叠说明/图片，或在开启视频扩展后添加视频',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                          TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => Navigator.of(context).maybePop(),
-                            child: const Text('取消'),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.icon(
-                            onPressed: _isSubmitting ? null : _submit,
-                            icon: _isSubmitting
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: colorScheme.onPrimary,
-                                    ),
-                                  )
-                                : const Icon(Icons.send_rounded),
-                            label: Text(widget.submitLabel),
-                          ),
-                        ],
+                            TextButton(
+                              onPressed: _isSubmitting
+                                  ? null
+                                  : () => Navigator.of(context).maybePop(),
+                              child: const Text('取消'),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.icon(
+                              onPressed: _isSubmitting ? null : _submit,
+                              icon: _isSubmitting
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colorScheme.onPrimary,
+                                      ),
+                                    )
+                                  : const Icon(Icons.send_rounded),
+                              label: Text(widget.submitLabel),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

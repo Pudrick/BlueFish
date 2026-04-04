@@ -40,6 +40,8 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -79,7 +81,10 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
               ),
               child: Text(
                 "${_currentIndex + 1} / ${widget.imageUrls.length}",
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: textTheme.labelLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),

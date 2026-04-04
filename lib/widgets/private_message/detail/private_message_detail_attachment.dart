@@ -1,23 +1,31 @@
 import 'package:bluefish/models/private_message_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 import 'package:flutter/material.dart';
+
+enum PrivateMessageCardAttachmentTone { mine, other }
 
 class PrivateMessageCardAttachment extends StatelessWidget {
   final CardPm cardPm;
   final int messageId;
-  final Color accentColor;
+  final PrivateMessageCardAttachmentTone tone;
 
   const PrivateMessageCardAttachment({
     super.key,
     required this.cardPm,
     required this.messageId,
-    required this.accentColor,
+    required this.tone,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final semanticColors = context.semanticColors;
+    final accentColor = switch (tone) {
+      PrivateMessageCardAttachmentTone.mine => semanticColors.linkAccent,
+      PrivateMessageCardAttachmentTone.other => semanticColors.linkAccentAlt,
+    };
 
     return Container(
       width: double.infinity,

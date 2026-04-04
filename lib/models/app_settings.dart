@@ -37,12 +37,14 @@ class AppSettings {
   static const double minFontScale = 0.85;
   static const double maxFontScale = 1.35;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
+  static const Object _unset = Object();
   static const AppSettings defaults = AppSettings._(
     themePreference: AppThemePreference.system,
     seedColorValue: defaultSeedColorValue,
     contentFontScale: 1,
     titleFontScale: 1,
     metaFontScale: 1,
+    apiVersionOverride: null,
   );
 
   final AppThemePreference themePreference;
@@ -50,6 +52,7 @@ class AppSettings {
   final double contentFontScale;
   final double titleFontScale;
   final double metaFontScale;
+  final String? apiVersionOverride;
 
   const AppSettings._({
     required this.themePreference,
@@ -57,6 +60,7 @@ class AppSettings {
     required this.contentFontScale,
     required this.titleFontScale,
     required this.metaFontScale,
+    required this.apiVersionOverride,
   });
 
   factory AppSettings({
@@ -65,6 +69,7 @@ class AppSettings {
     required double contentFontScale,
     required double titleFontScale,
     required double metaFontScale,
+    String? apiVersionOverride,
   }) {
     return AppSettings._(
       themePreference: themePreference,
@@ -72,6 +77,7 @@ class AppSettings {
       contentFontScale: _normalizeFontScale(contentFontScale),
       titleFontScale: _normalizeFontScale(titleFontScale),
       metaFontScale: _normalizeFontScale(metaFontScale),
+      apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
     );
   }
 
@@ -85,6 +91,7 @@ class AppSettings {
     double? contentFontScale,
     double? titleFontScale,
     double? metaFontScale,
+    Object? apiVersionOverride = _unset,
   }) {
     return AppSettings(
       themePreference: themePreference ?? this.themePreference,
@@ -92,6 +99,9 @@ class AppSettings {
       contentFontScale: contentFontScale ?? this.contentFontScale,
       titleFontScale: titleFontScale ?? this.titleFontScale,
       metaFontScale: metaFontScale ?? this.metaFontScale,
+      apiVersionOverride: identical(apiVersionOverride, _unset)
+          ? this.apiVersionOverride
+          : apiVersionOverride as String?,
     );
   }
 
@@ -102,6 +112,14 @@ class AppSettings {
 
   static int _normalizeSeedColorValue(int value) {
     return value | 0xFF000000;
+  }
+
+  static String? _normalizeApiVersionOverride(String? value) {
+    final normalizedValue = value?.trim();
+    if (normalizedValue == null || normalizedValue.isEmpty) {
+      return null;
+    }
+    return normalizedValue;
   }
 
   @override
@@ -115,7 +133,8 @@ class AppSettings {
         other.seedColorValue == seedColorValue &&
         other.contentFontScale == contentFontScale &&
         other.titleFontScale == titleFontScale &&
-        other.metaFontScale == metaFontScale;
+        other.metaFontScale == metaFontScale &&
+        other.apiVersionOverride == apiVersionOverride;
   }
 
   @override
@@ -125,5 +144,6 @@ class AppSettings {
     contentFontScale,
     titleFontScale,
     metaFontScale,
+    apiVersionOverride,
   );
 }

@@ -3,6 +3,7 @@
 // TODO: check vibe results.
 
 import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget_factory.dart';
 import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
@@ -229,7 +230,6 @@ class _MentionLightCardState extends State<MentionLightCard> {
             height: 1.5,
           ),
           style: MentionExpandableTextStyle.textLink,
-          accentColor: colorScheme.primary,
         ),
       ],
     );
@@ -276,7 +276,6 @@ class _MentionLightCardState extends State<MentionLightCard> {
                 textStyle: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
-                linkColor: colorScheme.tertiary,
               ),
             ],
           ],
@@ -364,13 +363,11 @@ class _ExpandableHtmlSection extends StatefulWidget {
   final String html;
   final double collapsedMaxHeight;
   final TextStyle? textStyle;
-  final Color linkColor;
 
   const _ExpandableHtmlSection({
     required this.html,
     required this.collapsedMaxHeight,
     required this.textStyle,
-    required this.linkColor,
   });
 
   @override
@@ -386,13 +383,15 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
   }
 
   Widget _buildHtmlWidget() {
+    final linkColor = context.semanticColors.mentionQuoteAccent;
+
     return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
       factoryBuilder: () => BluefishHtmlWidgetFactory(),
       customStylesBuilder: (element) {
         if (element.localName == 'a') {
-          final colorInt = widget.linkColor.toARGB32();
+          final colorInt = linkColor.toARGB32();
           final hexColor =
               '#${(colorInt & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
           return {'color': hexColor};
@@ -405,6 +404,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final semanticColors = context.semanticColors;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -450,7 +450,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: colorScheme.tertiary,
+                        color: semanticColors.mentionQuoteAccent,
                         size: 22,
                       ),
                     ),
@@ -490,7 +490,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                   child: Center(
                     child: Icon(
                       Icons.keyboard_arrow_up_rounded,
-                      color: colorScheme.tertiary,
+                      color: semanticColors.mentionQuoteAccent,
                       size: 22,
                     ),
                   ),

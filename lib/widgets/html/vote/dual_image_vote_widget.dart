@@ -1,8 +1,20 @@
 import 'package:bluefish/models/vote.dart';
+import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 import 'package:bluefish/widgets/html/vote/vote_action_bar.dart';
 import 'package:bluefish/widgets/html/vote/vote_card_shell.dart';
 import 'package:bluefish/widgets/html/vote/vote_info_widget.dart';
 import 'package:flutter/material.dart';
+
+enum _DualImageVoteTone { leading, trailing }
+
+Color _resolveVoteToneColor(BuildContext context, _DualImageVoteTone tone) {
+  final semanticColors = context.semanticColors;
+
+  return switch (tone) {
+    _DualImageVoteTone.leading => semanticColors.voteLeadingAccent,
+    _DualImageVoteTone.trailing => semanticColors.voteTrailingAccent,
+  };
+}
 
 class DualImageVoteWidget extends StatefulWidget {
   final Vote vote;
@@ -87,8 +99,6 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return VoteCardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +117,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       selected: _isSelected(_leftOption),
                       enabled: _canToggle(_leftOption),
                       showResults: !_vote.canVote,
-                      accentColor: colorScheme.tertiary,
+                      tone: _DualImageVoteTone.leading,
                       onTap: _canToggle(_leftOption)
                           ? () => _toggle(_leftOption)
                           : null,
@@ -118,7 +128,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       selected: _isSelected(_rightOption),
                       enabled: _canToggle(_rightOption),
                       showResults: !_vote.canVote,
-                      accentColor: colorScheme.secondary,
+                      tone: _DualImageVoteTone.trailing,
                       onTap: _canToggle(_rightOption)
                           ? () => _toggle(_rightOption)
                           : null,
@@ -136,7 +146,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       selected: _isSelected(_leftOption),
                       enabled: _canToggle(_leftOption),
                       showResults: !_vote.canVote,
-                      accentColor: colorScheme.tertiary,
+                      tone: _DualImageVoteTone.leading,
                       onTap: _canToggle(_leftOption)
                           ? () => _toggle(_leftOption)
                           : null,
@@ -149,7 +159,7 @@ class _DualImageVoteWidgetState extends State<DualImageVoteWidget> {
                       selected: _isSelected(_rightOption),
                       enabled: _canToggle(_rightOption),
                       showResults: !_vote.canVote,
-                      accentColor: colorScheme.secondary,
+                      tone: _DualImageVoteTone.trailing,
                       onTap: _canToggle(_rightOption)
                           ? () => _toggle(_rightOption)
                           : null,
@@ -199,7 +209,7 @@ class _DualImageVoteOptionCard extends StatelessWidget {
   final bool selected;
   final bool enabled;
   final bool showResults;
-  final Color accentColor;
+  final _DualImageVoteTone tone;
   final VoidCallback? onTap;
 
   const _DualImageVoteOptionCard({
@@ -207,7 +217,7 @@ class _DualImageVoteOptionCard extends StatelessWidget {
     required this.selected,
     required this.enabled,
     required this.showResults,
-    required this.accentColor,
+    required this.tone,
     required this.onTap,
   });
 
@@ -215,6 +225,8 @@ class _DualImageVoteOptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final semanticColors = context.semanticColors;
+    final accentColor = _resolveVoteToneColor(context, tone);
     final borderRadius = BorderRadius.circular(18);
     final imageBorderRadius = BorderRadius.circular(15);
     final borderColor = selected
@@ -262,8 +274,12 @@ class _DualImageVoteOptionCard extends StatelessWidget {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  Colors.black.withValues(alpha: 0.02),
-                                  Colors.black.withValues(alpha: 0.38),
+                                  semanticColors.mediaOverlay.withValues(
+                                    alpha: 0.02,
+                                  ),
+                                  semanticColors.mediaOverlay.withValues(
+                                    alpha: 0.38,
+                                  ),
                                 ],
                               ),
                             ),
@@ -280,17 +296,16 @@ class _DualImageVoteOptionCard extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.18,
-                                      ),
+                                      color: semanticColors.mediaOverlay
+                                          .withValues(alpha: 0.18),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.check_rounded,
-                                  color: Colors.white,
+                                  color: semanticColors.onMediaOverlay,
                                   size: 20,
                                 ),
                               ),
@@ -304,7 +319,7 @@ class _DualImageVoteOptionCard extends StatelessWidget {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
+                                color: semanticColors.onMediaOverlay,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
                               ),
@@ -321,7 +336,7 @@ class _DualImageVoteOptionCard extends StatelessWidget {
                     child: Text(
                       '已达到选择上限',
                       style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.55),
+                        color: accentColor.withValues(alpha: 0.78),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -402,10 +417,12 @@ class _VoteComparisonBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final leftColor = leftSelected ? colorScheme.primary : colorScheme.tertiary;
+    final leftColor = leftSelected
+        ? colorScheme.primary
+        : _resolveVoteToneColor(context, _DualImageVoteTone.leading);
     final rightColor = rightSelected
         ? colorScheme.primary
-        : colorScheme.secondary;
+        : _resolveVoteToneColor(context, _DualImageVoteTone.trailing);
 
     return Container(
       width: double.infinity,

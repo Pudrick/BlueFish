@@ -7,6 +7,7 @@ class AppSettingsStore {
   static const String _contentFontScaleKey = 'settings.content_font_scale';
   static const String _titleFontScaleKey = 'settings.title_font_scale';
   static const String _metaFontScaleKey = 'settings.meta_font_scale';
+  static const String _apiVersionOverrideKey = 'settings.api_version_override';
 
   SharedPreferences? _prefs;
 
@@ -33,6 +34,7 @@ class AppSettingsStore {
       metaFontScale:
           prefs.getDouble(_metaFontScaleKey) ??
           AppSettings.defaults.metaFontScale,
+      apiVersionOverride: prefs.getString(_apiVersionOverrideKey),
     );
   }
 
@@ -47,6 +49,14 @@ class AppSettingsStore {
     await prefs.setDouble(_contentFontScaleKey, settings.contentFontScale);
     await prefs.setDouble(_titleFontScaleKey, settings.titleFontScale);
     await prefs.setDouble(_metaFontScaleKey, settings.metaFontScale);
+    if (settings.apiVersionOverride == null) {
+      await prefs.remove(_apiVersionOverrideKey);
+    } else {
+      await prefs.setString(
+        _apiVersionOverrideKey,
+        settings.apiVersionOverride!,
+      );
+    }
   }
 
   Future<void> reset() async {
@@ -57,5 +67,6 @@ class AppSettingsStore {
     await prefs.remove(_contentFontScaleKey);
     await prefs.remove(_titleFontScaleKey);
     await prefs.remove(_metaFontScaleKey);
+    await prefs.remove(_apiVersionOverrideKey);
   }
 }

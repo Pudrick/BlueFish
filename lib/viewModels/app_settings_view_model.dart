@@ -1,4 +1,5 @@
 import 'package:bluefish/models/app_settings.dart';
+import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/userdata/app_settings_store.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,7 +12,9 @@ class AppSettingsViewModel extends ChangeNotifier {
 
   AppSettingsViewModel({AppSettingsStore? store, AppSettings? initialSettings})
     : _store = store ?? AppSettingsStore(),
-      _settings = initialSettings ?? AppSettings.defaults;
+      _settings = initialSettings ?? AppSettings.defaults {
+    ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
+  }
 
   AppSettings get settings => _settings;
 
@@ -29,6 +32,7 @@ class AppSettingsViewModel extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     _settings = await _store.load();
+    ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     _isInitialized = true;
     notifyListeners();
   }
@@ -57,8 +61,15 @@ class AppSettingsViewModel extends ChangeNotifier {
     return _applyAndPersist(_settings.copyWith(metaFontScale: metaFontScale));
   }
 
+  Future<void> updateApiVersionOverride(String? apiVersionOverride) {
+    return _applyAndPersist(
+      _settings.copyWith(apiVersionOverride: apiVersionOverride),
+    );
+  }
+
   Future<void> reset() async {
     _settings = AppSettings.defaults;
+    ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     notifyListeners();
     await _store.reset();
   }
@@ -69,6 +80,7 @@ class AppSettingsViewModel extends ChangeNotifier {
     }
 
     _settings = nextSettings;
+    ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     notifyListeners();
     await _store.save(_settings);
   }

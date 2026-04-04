@@ -10,11 +10,12 @@ class UserHomeDisplaySelectWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<UserHomeViewModel>();
+    final textTheme = Theme.of(context).textTheme;
 
     return SegmentedButton<DisplayStatus>(
       style: SegmentedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        textStyle: const TextStyle(fontSize: 15),
+        textStyle: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
       segments: const <ButtonSegment<DisplayStatus>>[
         ButtonSegment(
