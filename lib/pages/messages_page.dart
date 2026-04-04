@@ -150,8 +150,8 @@ class _MessagesPageState extends State<MessagesPage>
 
   String _buildSubtitle() {
     return switch (_currentTab) {
-      MentionTab.reply => '看看谁回复了你，顺手点回原帖继续聊。',
-      MentionTab.light => '集中查看最新点亮，快速判断哪些内容更有反馈。',
+      MentionTab.reply => '回复的点击跳转已经尽力了（）',
+      MentionTab.light => '看看是不是裂天又来送祝福了',
       MentionTab.privateMessage => '查看最近私信会话，也可以切换到未读优先处理。',
     };
   }
