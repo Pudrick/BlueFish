@@ -1,10 +1,13 @@
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget_factory.dart';
 import 'package:bluefish/widgets/html/vote/vote_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
+import 'package:provider/provider.dart';
 
 class BluefishHtmlWidget extends StatelessWidget {
   final String html;
@@ -22,6 +25,15 @@ class BluefishHtmlWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.select<AppSettingsViewModel?, AppSettings?>(
+      (vm) => vm?.settings,
+    );
+    final imageShrinkTriggerMaxEdgeDp =
+        settings?.imageShrinkTriggerMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
+    final imageShrinkTargetMaxEdgeDp =
+        settings?.imageShrinkTargetMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
     final galleryData = enableImageGallery
         ? _prepareImageGalleryHtml()
         : const _PreparedImageGalleryHtml(
@@ -36,6 +48,8 @@ class BluefishHtmlWidget extends StatelessWidget {
         renderedHtml,
         textStyle: textStyle,
         factoryBuilder: () => BluefishHtmlWidgetFactory(
+          imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
+          imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
           onTapImageAtIndex: enableImageGallery
               ? (context, galleryIndex) => _openPhotoGallery(
                   context,

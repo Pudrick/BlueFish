@@ -36,7 +36,14 @@ enum AppThemePreference {
 class AppSettings {
   static const double minFontScale = 0.85;
   static const double maxFontScale = 1.35;
+  static const double minImageShrinkTriggerMaxEdgeDp = 400;
+  static const double maxImageShrinkTriggerMaxEdgeDp = 1200;
+  static const double defaultImageShrinkTriggerMaxEdgeDp = 640;
+  static const double minImageShrinkTargetMaxEdgeDp = 240;
+  static const double maxImageShrinkTargetMaxEdgeDp = 640;
+  static const double defaultImageShrinkTargetMaxEdgeDp = 360;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
+  static const double _imageEdgeStepDp = 10;
   static const Object _unset = Object();
   static const AppSettings defaults = AppSettings._(
     themePreference: AppThemePreference.system,
@@ -44,6 +51,8 @@ class AppSettings {
     contentFontScale: 1,
     titleFontScale: 1,
     metaFontScale: 1,
+    imageShrinkTriggerMaxEdgeDp: defaultImageShrinkTriggerMaxEdgeDp,
+    imageShrinkTargetMaxEdgeDp: defaultImageShrinkTargetMaxEdgeDp,
     apiVersionOverride: null,
   );
 
@@ -52,6 +61,8 @@ class AppSettings {
   final double contentFontScale;
   final double titleFontScale;
   final double metaFontScale;
+  final double imageShrinkTriggerMaxEdgeDp;
+  final double imageShrinkTargetMaxEdgeDp;
   final String? apiVersionOverride;
 
   const AppSettings._({
@@ -60,6 +71,8 @@ class AppSettings {
     required this.contentFontScale,
     required this.titleFontScale,
     required this.metaFontScale,
+    required this.imageShrinkTriggerMaxEdgeDp,
+    required this.imageShrinkTargetMaxEdgeDp,
     required this.apiVersionOverride,
   });
 
@@ -69,14 +82,31 @@ class AppSettings {
     required double contentFontScale,
     required double titleFontScale,
     required double metaFontScale,
+    required double imageShrinkTriggerMaxEdgeDp,
+    required double imageShrinkTargetMaxEdgeDp,
     String? apiVersionOverride,
   }) {
+    final normalizedTrigger = _normalizeImageEdgeDp(
+      value: imageShrinkTriggerMaxEdgeDp,
+      min: minImageShrinkTriggerMaxEdgeDp,
+      max: maxImageShrinkTriggerMaxEdgeDp,
+    );
+    final normalizedTarget = _normalizeImageEdgeDp(
+      value: imageShrinkTargetMaxEdgeDp,
+      min: minImageShrinkTargetMaxEdgeDp,
+      max: maxImageShrinkTargetMaxEdgeDp,
+    );
+
     return AppSettings._(
       themePreference: themePreference,
       seedColorValue: _normalizeSeedColorValue(seedColorValue),
       contentFontScale: _normalizeFontScale(contentFontScale),
       titleFontScale: _normalizeFontScale(titleFontScale),
       metaFontScale: _normalizeFontScale(metaFontScale),
+      imageShrinkTriggerMaxEdgeDp: normalizedTrigger,
+      imageShrinkTargetMaxEdgeDp: normalizedTarget > normalizedTrigger
+          ? normalizedTrigger
+          : normalizedTarget,
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
     );
   }
@@ -91,6 +121,8 @@ class AppSettings {
     double? contentFontScale,
     double? titleFontScale,
     double? metaFontScale,
+    double? imageShrinkTriggerMaxEdgeDp,
+    double? imageShrinkTargetMaxEdgeDp,
     Object? apiVersionOverride = _unset,
   }) {
     return AppSettings(
@@ -99,6 +131,10 @@ class AppSettings {
       contentFontScale: contentFontScale ?? this.contentFontScale,
       titleFontScale: titleFontScale ?? this.titleFontScale,
       metaFontScale: metaFontScale ?? this.metaFontScale,
+      imageShrinkTriggerMaxEdgeDp:
+          imageShrinkTriggerMaxEdgeDp ?? this.imageShrinkTriggerMaxEdgeDp,
+      imageShrinkTargetMaxEdgeDp:
+          imageShrinkTargetMaxEdgeDp ?? this.imageShrinkTargetMaxEdgeDp,
       apiVersionOverride: identical(apiVersionOverride, _unset)
           ? this.apiVersionOverride
           : apiVersionOverride as String?,
@@ -112,6 +148,16 @@ class AppSettings {
 
   static int _normalizeSeedColorValue(int value) {
     return value | 0xFF000000;
+  }
+
+  static double _normalizeImageEdgeDp({
+    required double value,
+    required double min,
+    required double max,
+  }) {
+    final normalizedValue = value.isFinite ? value : min;
+    final clampedValue = normalizedValue.clamp(min, max).toDouble();
+    return (clampedValue / _imageEdgeStepDp).roundToDouble() * _imageEdgeStepDp;
   }
 
   static String? _normalizeApiVersionOverride(String? value) {
@@ -134,6 +180,8 @@ class AppSettings {
         other.contentFontScale == contentFontScale &&
         other.titleFontScale == titleFontScale &&
         other.metaFontScale == metaFontScale &&
+        other.imageShrinkTriggerMaxEdgeDp == imageShrinkTriggerMaxEdgeDp &&
+        other.imageShrinkTargetMaxEdgeDp == imageShrinkTargetMaxEdgeDp &&
         other.apiVersionOverride == apiVersionOverride;
   }
 
@@ -144,6 +192,8 @@ class AppSettings {
     contentFontScale,
     titleFontScale,
     metaFontScale,
+    imageShrinkTriggerMaxEdgeDp,
+    imageShrinkTargetMaxEdgeDp,
     apiVersionOverride,
   );
 }

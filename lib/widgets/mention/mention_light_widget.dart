@@ -3,13 +3,16 @@
 // TODO: check vibe results.
 
 import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/theme/bluefish_semantic_colors.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget_factory.dart';
 import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class MentionLightCard extends StatefulWidget {
   final MentionLight light;
@@ -384,11 +387,23 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
 
   Widget _buildHtmlWidget() {
     final linkColor = context.semanticColors.mentionQuoteAccent;
+    final settings = context.select<AppSettingsViewModel?, AppSettings?>(
+      (vm) => vm?.settings,
+    );
+    final imageShrinkTriggerMaxEdgeDp =
+        settings?.imageShrinkTriggerMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
+    final imageShrinkTargetMaxEdgeDp =
+        settings?.imageShrinkTargetMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
 
     return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
-      factoryBuilder: () => BluefishHtmlWidgetFactory(),
+      factoryBuilder: () => BluefishHtmlWidgetFactory(
+        imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
+        imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+      ),
       customStylesBuilder: (element) {
         if (element.localName == 'a') {
           final colorInt = linkColor.toARGB32();

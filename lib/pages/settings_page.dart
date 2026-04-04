@@ -1,6 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/models/app_settings.dart';
-import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/pages/about_page.dart';
 import 'package:bluefish/pages/debug_cookie_page.dart';
 import 'package:bluefish/router/app_routes.dart';
@@ -52,6 +53,10 @@ class SettingsPage extends StatelessWidget {
     return Consumer2<AppSettingsViewModel, AuthSessionManager>(
       builder: (context, settingsViewModel, authSessionManager, _) {
         final settings = settingsViewModel.settings;
+        final imageShrinkTargetSliderMax = math.min(
+          AppSettings.maxImageShrinkTargetMaxEdgeDp,
+          settings.imageShrinkTriggerMaxEdgeDp,
+        );
 
         return Scaffold(
           appBar: AppBar(title: const Text('设置')),
@@ -131,6 +136,50 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SettingsSection(
+                title: '图片',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '控制 HTML 大图初始缩小策略。',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _ImageEdgeSlider(
+                      icon: Icons.photo_size_select_large_rounded,
+                      label: '大图触发最长边',
+                      helperText: '超过此值时，图片会先按比例缩小显示。',
+                      value: settings.imageShrinkTriggerMaxEdgeDp,
+                      min: AppSettings.minImageShrinkTriggerMaxEdgeDp,
+                      max: AppSettings.maxImageShrinkTriggerMaxEdgeDp,
+                      onChanged:
+                          settingsViewModel.updateImageShrinkTriggerMaxEdgeDp,
+                    ),
+                    const SizedBox(height: 12),
+                    _ImageEdgeSlider(
+                      icon: Icons.fit_screen_rounded,
+                      label: '缩小后最长边',
+                      helperText: '首次点击图片会还原到未缩小时的尺寸。',
+                      value: settings.imageShrinkTargetMaxEdgeDp,
+                      min: AppSettings.minImageShrinkTargetMaxEdgeDp,
+                      max: imageShrinkTargetSliderMax,
+                      onChanged:
+                          settingsViewModel.updateImageShrinkTargetMaxEdgeDp,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '默认值：触发 640dp，目标 360dp。',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _SettingsSection(
                 title: '关于',
                 child: Column(
                   children: [
@@ -183,6 +232,20 @@ class SettingsPage extends StatelessWidget {
                         ),
                       );
                     },
+                  ),
+                ),
+              ],
+              if (authSessionManager.isLoggedIn) ...[
+                const SizedBox(height: 16),
+                _SettingsSection(
+                  title: '账户',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('退出登录'),
+                    ),
                   ),
                 ),
               ],
@@ -551,6 +614,60 @@ class _TextPreviewCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ImageEdgeSlider extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String helperText;
+  final double value;
+  final double min;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  const _ImageEdgeSlider({
+    required this.icon,
+    required this.label,
+    required this.helperText,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = value.clamp(min, max).toDouble();
+    final divisions = ((max - min) / 10).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(label)),
+            Text('${safeValue.toStringAsFixed(0)}dp'),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          helperText,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Slider(
+          value: safeValue,
+          min: min,
+          max: max,
+          divisions: divisions > 0 ? divisions : null,
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }
