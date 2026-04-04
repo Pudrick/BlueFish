@@ -10,11 +10,10 @@ class MePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthSessionManager>(
       builder: (context, authSessionManager, _) {
-        final hasActiveSession =
-            authSessionManager.activeSource != AuthCookieSource.none;
-        final sessionSummary = hasActiveSession
+        final isLoggedIn = authSessionManager.isLoggedIn;
+        final sessionSummary = isLoggedIn
             ? '当前会话：${authSessionManager.activeSource.label}'
-            : '当前未检测到登录会话';
+            : '当前未检测到登录会话，点击后前往登录页';
 
         return Scaffold(
           appBar: AppBar(title: const Text('我'), centerTitle: true),
@@ -32,8 +31,10 @@ class MePage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     children: [
                       _MeHeaderCard(
-                        hasActiveSession: hasActiveSession,
+                        title: isLoggedIn ? '个人中心' : '未登录',
+                        hasActiveSession: isLoggedIn,
                         sessionSummary: sessionSummary,
+                        onTap: isLoggedIn ? null : () => context.pushLogin(),
                       ),
                       const SizedBox(height: 24),
                       _NotchedSection(
@@ -43,22 +44,15 @@ class MePage extends StatelessWidget {
                           items: [
                             _MeFeatureItemData(
                               key: 'profile',
-                              title: '个人资料',
+                              title: '编辑资料',
                               icon: Icons.account_circle_outlined,
-                              statusLabel: '待接入',
+                              statusLabel: isLoggedIn ? '待接入' : '先登录',
                               tone: _MeFeatureTone.primary,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: '个人资料',
-                                  icon: Icons.account_circle_outlined,
-                                  statusLabel: '待接入',
-                                  description: '这里后续会接入当前登录用户的个人主页和资料编辑能力。',
-                                  supportingText: hasActiveSession
-                                      ? '已检测到 ${authSessionManager.activeSource.label}，但当前项目里还没有稳定的登录用户 euid 映射。'
-                                      : '当前还没有检测到可用于定位个人主页的登录会话，先把入口和页面结构预留出来。',
-                                );
-                              },
+                              onTap: isLoggedIn
+                                  ? null
+                                  : () {
+                                      context.pushLogin();
+                                    },
                             ),
                             _MeFeatureItemData(
                               key: 'settings',
@@ -200,79 +194,111 @@ class MePage extends StatelessWidget {
 }
 
 class _MeHeaderCard extends StatelessWidget {
+  final String title;
   final bool hasActiveSession;
   final String sessionSummary;
+  final VoidCallback? onTap;
 
   const _MeHeaderCard({
+    required this.title,
     required this.hasActiveSession,
     required this.sessionSummary,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final indicatorColor = onTap == null
+        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.55)
+        : colorScheme.onSurfaceVariant;
 
-    return Container(
-      key: const ValueKey('me-header-card'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        key: const ValueKey('me-header-button'),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 28,
-                  color: colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '个人中心',
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      sessionSummary,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              _HeaderStatusPill(
-                label: hasActiveSession ? '已检测到会话' : '未登录',
-                active: hasActiveSession,
-              ),
-            ],
+        child: Ink(
+          key: const ValueKey('me-header-card'),
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
           ),
-        ],
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_rounded,
+                    size: 28,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        key: const ValueKey('me-header-title'),
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        sessionSummary,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _HeaderStatusPill(
+                  label: hasActiveSession ? '已登录' : '未登录',
+                  active: hasActiveSession,
+                ),
+                const SizedBox(width: 8),
+                Center(
+                  child: Container(
+                    key: const ValueKey('me-header-chevron'),
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: indicatorColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -624,7 +650,7 @@ class _MeFeatureItemData {
   final IconData icon;
   final String? statusLabel;
   final _MeFeatureTone tone;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _MeFeatureItemData({
     required this.key,

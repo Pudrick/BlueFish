@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -257,7 +258,21 @@ class _LoginPageViewState extends State<LoginPageView> {
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 440),
-                    child: _buildFormCard(context),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IconButton.filledTonal(
+                          tooltip: '返回',
+                          onPressed: () {
+                            context.popOrGoThreadList();
+                          },
+                          icon: const Icon(Icons.arrow_back_rounded),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFormCard(context),
+                      ],
+                    ),
                   ),
                 ),
               ),

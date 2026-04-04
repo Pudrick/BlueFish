@@ -11,6 +11,7 @@ import 'package:bluefish/router/routes/mention_routes.dart';
 import 'package:bluefish/router/routes/message_routes.dart';
 import 'package:bluefish/router/routes/thread_routes.dart';
 import 'package:bluefish/router/routes/user_routes.dart';
+import 'package:bluefish/widgets/auth/login_page_view.dart';
 import 'package:bluefish/widgets/navigation/main_shell.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -102,6 +103,11 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.createThreadPath,
       name: AppRouteNames.createThread,
       builder: (context, state) => const CreateThreadPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.loginPath,
+      name: AppRouteNames.login,
+      builder: (context, state) => const LoginPageView(),
     ),
     ...threadRoutes,
     ...userRoutes,

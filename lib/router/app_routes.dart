@@ -1,3 +1,5 @@
+import 'package:bluefish/network/http_client.dart';
+import 'package:bluefish/router/auth_guard.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,6 +29,7 @@ class AppRouteNames {
 
   static const String threadList = 'threadList';
   static const String createThread = 'createThread';
+  static const String login = 'login';
   static const String messages = 'messages';
   static const String me = 'me';
   static const String settings = 'settings';
@@ -45,6 +48,7 @@ class AppRoutes {
 
   static const String threadListPath = '/';
   static const String createThreadPath = '/compose/thread';
+  static const String loginPath = '/login';
   static const String messagesPath = '/messages';
   static const String mePath = '/me';
   static const String settingsPathSegment = 'settings';
@@ -131,6 +135,10 @@ class AppRoutes {
 
   static String createThreadLocation() {
     return createThreadPath;
+  }
+
+  static String loginLocation() {
+    return loginPath;
   }
 
   static String settingsLocation() {
@@ -406,6 +414,15 @@ extension AppNavigationExtensions on BuildContext {
     return router.push<T>(AppRoutes.createThreadLocation());
   }
 
+  Future<T?> pushLogin<T>() {
+    final router = maybeGoRouter;
+    if (router == null) {
+      return Future<T?>.value(null);
+    }
+
+    return router.push<T>(AppRoutes.loginLocation());
+  }
+
   Future<T?> pushSettings<T>() {
     final router = maybeGoRouter;
     if (router == null) {
@@ -489,10 +506,24 @@ extension AppNavigationExtensions on BuildContext {
     );
   }
 
-  Future<T?> pushUserHome<T>({required Object euid}) {
+  Future<T?> pushUserHome<T>({required Object euid}) async {
     final router = maybeGoRouter;
     if (router == null) {
       return Future<T?>.value(null);
+    }
+
+    final guardDecision = await AuthNavigationGuard.checkAccess(
+      context: this,
+      isLoggedIn: authSessionManager.isLoggedIn,
+      policy: AuthGuardPolicies.userHome,
+    );
+
+    if (guardDecision == AuthGuardDecision.goToLogin) {
+      await router.push<void>(AppRoutes.loginLocation());
+      return null;
+    }
+    if (guardDecision == AuthGuardDecision.stay) {
+      return null;
     }
 
     return router.push<T>(AppRoutes.userHomeLocation(euid: euid.toString()));

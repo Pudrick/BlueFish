@@ -125,6 +125,8 @@ class AuthSessionManager extends ChangeNotifier {
 
   AuthCookieSource get activeSource => _activeSource;
 
+  bool get isLoggedIn => _activeSource != AuthCookieSource.none;
+
   String? get activeCookies => _activeCookies.isEmpty ? null : _activeCookies;
 
   String? get loginCookies => _loginCookies;
