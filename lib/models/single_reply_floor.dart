@@ -99,6 +99,7 @@ class SingleReplyFloor implements ReplyContent {
   @override
   final String pid;
   final String authorId;
+  final int? serverFloorNumber;
   final int lightCount;
   // The source JSON uses `isStarter` to indicate whether the reply author is the OP.
   @override
@@ -126,6 +127,7 @@ class SingleReplyFloor implements ReplyContent {
   const SingleReplyFloor({
     required this.pid,
     required this.authorId,
+    required this.serverFloorNumber,
     required this.lightCount,
     required this.isOp,
     required this.replyNum,
@@ -143,10 +145,25 @@ class SingleReplyFloor implements ReplyContent {
 
   bool get canDisplay => visibility.canDisplay;
 
+  int resolveFloorNumber({
+    required int currentPage,
+    required int repliesPerPage,
+    required int indexInPage,
+  }) {
+    final fallbackFloorNumber =
+        ((currentPage - 1) * repliesPerPage) + indexInPage + 1;
+    final resolvedServerFloorNumber = serverFloorNumber;
+    if (resolvedServerFloorNumber != null && resolvedServerFloorNumber > 0) {
+      return resolvedServerFloorNumber;
+    }
+    return fallbackFloorNumber;
+  }
+
   factory SingleReplyFloor.fromJson(Map<String, dynamic> json) {
     return SingleReplyFloor(
       pid: parseString(json['pid']),
       authorId: parseString(json['authorId']),
+      serverFloorNumber: _parseServerFloorNumber(json),
       lightCount: parseInt(json['count']),
       isOp: parseBool(json['isStarter']),
       replyNum: parseInt(json['replyNum']),
@@ -184,4 +201,25 @@ ReplyQuote? _parseQuote(Object? value) {
   }
 
   return ReplyQuote.fromJson(quoteJson);
+}
+
+int? _parseServerFloorNumber(Map<String, dynamic> json) {
+  const candidateKeys = <String>[
+    'floor',
+    'floorNum',
+    'floorNo',
+    'postFloor',
+    'louNum',
+    'replyFloor',
+    'sequence',
+  ];
+
+  for (final key in candidateKeys) {
+    final value = parseNullableInt(json[key]);
+    if (value != null && value > 0) {
+      return value;
+    }
+  }
+
+  return null;
 }

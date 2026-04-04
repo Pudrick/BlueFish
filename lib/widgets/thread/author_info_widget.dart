@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 class AuthorInfoWidget extends StatelessWidget {
   final FloorMeta meta;
   final bool showOpBadge;
+  final bool showClientBadge;
 
   const AuthorInfoWidget({
     super.key,
     required this.meta,
     this.showOpBadge = false,
+    this.showClientBadge = true,
   });
 
   void _navigateToUserHome(BuildContext context) {
@@ -30,12 +32,7 @@ class AuthorInfoWidget extends StatelessWidget {
       if (meta.postLocation.trim().isNotEmpty) 'IP:${meta.postLocation}',
     ];
 
-    final IconData? clientIcon = switch (meta.client) {
-      PostClient.android => Icons.android,
-      PostClient.iphone => Icons.apple,
-      PostClient.pc => Icons.desktop_windows_outlined,
-      PostClient.unknown => null,
-    };
+    final IconData? clientIcon = iconForPostClient(meta.client);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +123,7 @@ class AuthorInfoWidget extends StatelessWidget {
             ],
           ),
         ),
-        if (clientIcon != null) ...[
+        if (showClientBadge && clientIcon != null) ...[
           const SizedBox(width: 8),
           Container(
             width: 28,
@@ -146,6 +143,15 @@ class AuthorInfoWidget extends StatelessWidget {
       ],
     );
   }
+}
+
+IconData? iconForPostClient(PostClient client) {
+  return switch (client) {
+    PostClient.android => Icons.android,
+    PostClient.iphone => Icons.apple,
+    PostClient.pc => Icons.desktop_windows_outlined,
+    PostClient.unknown => null,
+  };
 }
 
 class _MetaBadge extends StatelessWidget {

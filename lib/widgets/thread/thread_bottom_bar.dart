@@ -6,6 +6,8 @@ class ThreadBottomBar extends StatelessWidget {
   final bool hasFavorated;
   final String threadTid;
   final String threadTitle;
+  final bool isOnlyOpMode;
+  final VoidCallback? onOnlyOpTap;
 
   const ThreadBottomBar({
     super.key,
@@ -13,6 +15,8 @@ class ThreadBottomBar extends StatelessWidget {
     required this.hasFavorated,
     required this.threadTid,
     required this.threadTitle,
+    this.isOnlyOpMode = false,
+    this.onOnlyOpTap,
   });
 
   Future<void> _togglePinnedShortcut(BuildContext context) async {
@@ -71,41 +75,54 @@ class ThreadBottomBar extends StatelessWidget {
                       ),
                     ),
                   ),
-                  child: Row(
-                    children: <Widget>[
-                      _BottomActionPill(
-                        icon: hasRecommended
-                            ? Icons.thumb_up
-                            : Icons.thumb_up_outlined,
-                        label: '推荐',
-                        selected: hasRecommended,
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 8),
-                      _BottomActionPill(
-                        icon: hasFavorated ? Icons.star : Icons.star_outline,
-                        label: '收藏',
-                        selected: hasFavorated,
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 8),
-                      _BottomActionPill(
-                        icon: Icons.push_pin_rounded,
-                        label: '固定',
-                        selected: hasPinned,
-                        onTap: () async {
-                          await _togglePinnedShortcut(context);
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _BottomActionPill(
-                        icon: Icons.share_outlined,
-                        label: '分享',
-                        selected: false,
-                        onTap: () {},
-                      ),
-                      const Spacer(),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: <Widget>[
+                        _BottomActionPill(
+                          icon: hasRecommended
+                              ? Icons.thumb_up
+                              : Icons.thumb_up_outlined,
+                          label: '推荐',
+                          selected: hasRecommended,
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 8),
+                        _BottomActionPill(
+                          icon: hasFavorated ? Icons.star : Icons.star_outline,
+                          label: '收藏',
+                          selected: hasFavorated,
+                          onTap: () {},
+                        ),
+                        if (onOnlyOpTap != null) ...[
+                          const SizedBox(width: 8),
+                          _BottomActionPill(
+                            icon: isOnlyOpMode
+                                ? Icons.filter_alt_rounded
+                                : Icons.filter_alt_outlined,
+                            label: isOnlyOpMode ? '看全部' : '只看楼主',
+                            selected: isOnlyOpMode,
+                            onTap: onOnlyOpTap!,
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        _BottomActionPill(
+                          icon: Icons.push_pin_rounded,
+                          label: '固定',
+                          selected: hasPinned,
+                          onTap: () async {
+                            await _togglePinnedShortcut(context);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _BottomActionPill(
+                          icon: Icons.share_outlined,
+                          label: '分享',
+                          selected: false,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

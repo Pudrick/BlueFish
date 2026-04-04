@@ -1,4 +1,5 @@
 import 'package:bluefish/network/http_client.dart';
+import 'package:bluefish/models/floor_meta.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ class ReplyFloor extends StatelessWidget {
   final double contentMaxWidth;
   final String? imageHeroScope;
   final VoidCallback? onReplyTap;
+  final VoidCallback? onOnlySeeAuthorTap;
 
   const ReplyFloor({
     super.key,
@@ -21,6 +23,7 @@ class ReplyFloor extends StatelessWidget {
     this.contentMaxWidth = double.infinity,
     this.imageHeroScope,
     this.onReplyTap,
+    this.onOnlySeeAuthorTap,
   });
 
   @override
@@ -37,6 +40,7 @@ class ReplyFloor extends StatelessWidget {
       imageHeroScope: imageHeroScope,
       replyCount: replyFloor.replyNum,
       onReplyTap: onReplyTap,
+      onOnlySeeAuthorTap: onOnlySeeAuthorTap,
       isMine:
           currentUserPuid != null &&
           currentUserPuid == replyFloor.meta.author.puid,
@@ -54,6 +58,7 @@ class _ReplyFloorContent extends StatelessWidget {
   final String? imageHeroScope;
   final int? replyCount;
   final VoidCallback? onReplyTap;
+  final VoidCallback? onOnlySeeAuthorTap;
   final bool isMine;
 
   const _ReplyFloorContent({
@@ -66,6 +71,7 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.imageHeroScope,
     required this.replyCount,
     required this.onReplyTap,
+    required this.onOnlySeeAuthorTap,
     required this.isMine,
   });
 
@@ -121,6 +127,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 imageHeroScope: '$resolvedImageHeroScope:quote',
                 replyCount: null,
                 onReplyTap: null,
+                onOnlySeeAuthorTap: null,
                 isMine: false,
               ),
             ),
@@ -166,14 +173,20 @@ class _ReplyFloorContent extends StatelessWidget {
               child: AuthorInfoWidget(
                 meta: content.meta,
                 showOpBadge: showOpBadge,
+                showClientBadge: isQuote,
               ),
             ),
             if (!isQuote) ...[
               const SizedBox(width: 8),
               _ReplyHeaderActions(
+                client: content.meta.client,
                 floor: displayFloorNumber,
                 onMoreTap: () {
-                  _showReplyOverflowActionsSheet(context, isMine: isMine);
+                  _showReplyOverflowActionsSheet(
+                    context,
+                    isMine: isMine,
+                    onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+                  );
                 },
               ),
             ],
@@ -281,10 +294,13 @@ class _FloorNumberPill extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      key: const ValueKey('reply-header-floor-pill'),
+      constraints: const BoxConstraints(minHeight: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         '#$floor',
@@ -298,16 +314,27 @@ class _FloorNumberPill extends StatelessWidget {
 }
 
 class _ReplyHeaderActions extends StatelessWidget {
+  final PostClient client;
   final int floor;
   final VoidCallback onMoreTap;
 
-  const _ReplyHeaderActions({required this.floor, required this.onMoreTap});
+  const _ReplyHeaderActions({
+    required this.client,
+    required this.floor,
+    required this.onMoreTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final IconData? clientIcon = iconForPostClient(client);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (clientIcon != null) ...[
+          _HeaderClientBadge(client: client, icon: clientIcon),
+          const SizedBox(width: 6),
+        ],
         _FloorNumberPill(floor: floor),
         const SizedBox(width: 6),
         _HeaderIconButton(
@@ -318,6 +345,42 @@ class _ReplyHeaderActions extends StatelessWidget {
       ],
     );
   }
+}
+
+class _HeaderClientBadge extends StatelessWidget {
+  final PostClient client;
+  final IconData icon;
+
+  const _HeaderClientBadge({required this.client, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: _clientTooltip(client),
+      child: Container(
+        key: const ValueKey('reply-header-client-badge'),
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+String _clientTooltip(PostClient client) {
+  return switch (client) {
+    PostClient.android => 'Android 客户端',
+    PostClient.iphone => 'iPhone 客户端',
+    PostClient.pc => 'PC 客户端',
+    PostClient.unknown => '未知设备',
+  };
 }
 
 // TODO: add a button that can directly reply to quote.
@@ -579,14 +642,15 @@ class _HeaderIconButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
+        key: const ValueKey('reply-header-more-button'),
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
-            width: 34,
-            height: 34,
+            width: 32,
+            height: 32,
             child: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
           ),
         ),
@@ -729,6 +793,7 @@ class _PrimaryIconActionChip extends StatelessWidget {
 void _showReplyOverflowActionsSheet(
   BuildContext context, {
   required bool isMine,
+  VoidCallback? onOnlySeeAuthorTap,
 }) {
   showModalBottomSheet<void>(
     context: context,
@@ -736,15 +801,22 @@ void _showReplyOverflowActionsSheet(
     barrierColor: Colors.black54,
     useSafeArea: true,
     builder: (context) {
-      return _ReplyOverflowActionsSheet(isMine: isMine);
+      return _ReplyOverflowActionsSheet(
+        isMine: isMine,
+        onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+      );
     },
   );
 }
 
 class _ReplyOverflowActionsSheet extends StatelessWidget {
   final bool isMine;
+  final VoidCallback? onOnlySeeAuthorTap;
 
-  const _ReplyOverflowActionsSheet({required this.isMine});
+  const _ReplyOverflowActionsSheet({
+    required this.isMine,
+    this.onOnlySeeAuthorTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -795,6 +867,15 @@ class _ReplyOverflowActionsSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (onOnlySeeAuthorTap != null)
+                      _OverflowActionTile(
+                        icon: Icons.filter_alt_outlined,
+                        label: '只看TA',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onOnlySeeAuthorTap!();
+                        },
+                      ),
                     if (!isMine)
                       _OverflowActionTile(
                         icon: Icons.flag_outlined,

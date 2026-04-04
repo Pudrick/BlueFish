@@ -19,7 +19,10 @@ final threadRoutes = <RouteBase>[
       final page = AppRoutes.parseThreadPage(
         state.uri.queryParameters[AppRoutes.threadPageQueryParameter],
       );
-      return ThreadPage(tid: tid, page: page);
+      final onlyEuid = AppRoutes.parseThreadOnlyEuid(
+        state.uri.queryParameters[AppRoutes.threadOnlyEuidQueryParameter],
+      );
+      return ThreadPage(tid: tid, page: page, onlyEuid: onlyEuid);
     },
     routes: [
       GoRoute(

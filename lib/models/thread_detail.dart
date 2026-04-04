@@ -21,6 +21,10 @@ class ThreadDetail {
     required this.replies,
   });
 
+  String get opEuid => mainFloor.meta.author.euid;
+
+  String get opName => mainFloor.meta.author.name;
+
   int get totalPagesNum {
     final pages = (totalRepliesNum / repliesPerPage).ceil();
     return pages < 1 ? 1 : pages;

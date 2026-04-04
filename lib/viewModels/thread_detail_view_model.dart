@@ -16,12 +16,15 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetail? _data;
   String? _errorMessage;
   int _currentPage;
+  String? _filterEuid;
 
   ThreadDetailViewModel({
     required this.tid,
     int initialPage = 1,
+    String? initialFilterEuid,
     ThreadDetailService? service,
   }) : _currentPage = initialPage,
+       _filterEuid = _normalizeFilterEuid(initialFilterEuid),
        _service = service ?? ThreadDetailService();
 
   // ===== Getters =====
@@ -30,10 +33,14 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetail? get data => _data;
   String? get errorMessage => _errorMessage;
   int get currentPage => _currentPage;
+  String? get filterEuid => _filterEuid;
 
   bool get isLoading => _state == ThreadDetailState.loading;
   bool get isLoaded => _state == ThreadDetailState.loaded;
   bool get isError => _state == ThreadDetailState.error;
+  bool get hasAuthorFilter => _filterEuid != null;
+  bool get isOnlyOp =>
+      _filterEuid != null && _data != null && _filterEuid == _data!.opEuid;
 
   /// Total number of pages (returns 1 if data not loaded).
   int get totalPages => _data?.totalPagesNum ?? 1;
@@ -46,6 +53,8 @@ class ThreadDetailViewModel extends ChangeNotifier {
 
   /// Main floor data (null if not loaded).
   get mainFloor => _data?.mainFloor;
+
+  String? get opEuid => _data?.opEuid;
 
   /// Reply list for current page (empty if not loaded).
   List get replies => _data?.replies ?? [];
@@ -66,6 +75,35 @@ class ThreadDetailViewModel extends ChangeNotifier {
   /// Refreshes current page (forces network fetch, ignores cache).
   Future<void> refresh() async {
     await _loadPage(_currentPage, forceRefresh: true);
+  }
+
+  Future<void> applyAuthorFilter(String euid) async {
+    final normalizedEuid = _normalizeFilterEuid(euid);
+    if (normalizedEuid == null) {
+      return;
+    }
+
+    if (_filterEuid == normalizedEuid &&
+        _currentPage == 1 &&
+        _state == ThreadDetailState.loaded) {
+      return;
+    }
+
+    _filterEuid = normalizedEuid;
+    _currentPage = 1;
+    await _loadPage(1, forceRefresh: false);
+  }
+
+  Future<void> clearAuthorFilter() async {
+    if (_filterEuid == null &&
+        _currentPage == 1 &&
+        _state == ThreadDetailState.loaded) {
+      return;
+    }
+
+    _filterEuid = null;
+    _currentPage = 1;
+    await _loadPage(1, forceRefresh: false);
   }
 
   /// Jumps to a specific page.
@@ -108,6 +146,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
     final result = await _service.getThreadDetail(
       tid,
       page,
+      authorEuid: _filterEuid,
       forceRefresh: forceRefresh,
     );
 
@@ -124,5 +163,13 @@ class ThreadDetailViewModel extends ChangeNotifier {
     );
 
     notifyListeners();
+  }
+
+  static String? _normalizeFilterEuid(String? value) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 }

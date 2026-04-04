@@ -1,5 +1,5 @@
 import 'package:bluefish/auth/auth_session_manager.dart';
-import 'package:bluefish/pages/settings_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -66,11 +66,7 @@ class MePage extends StatelessWidget {
                               icon: Icons.settings_outlined,
                               tone: _MeFeatureTone.secondary,
                               onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (context) => const SettingsPage(),
-                                  ),
-                                );
+                                context.pushSettings();
                               },
                             ),
                           ],

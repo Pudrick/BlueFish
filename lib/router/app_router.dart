@@ -1,6 +1,8 @@
+import 'package:bluefish/pages/advanced_settings_page.dart';
 import 'package:bluefish/pages/me_page.dart';
 import 'package:bluefish/pages/messages_page.dart';
 import 'package:bluefish/pages/create_thread_page.dart';
+import 'package:bluefish/pages/settings_page.dart';
 import 'package:bluefish/pages/thread_list_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/route_error_page.dart';
@@ -76,6 +78,20 @@ final GoRouter appRouter = GoRouter(
               path: AppRoutes.mePath,
               name: AppRouteNames.me,
               builder: (context, state) => const MePage(),
+              routes: [
+                GoRoute(
+                  path: AppRoutes.settingsPathSegment,
+                  name: AppRouteNames.settings,
+                  builder: (context, state) => const SettingsPage(),
+                  routes: [
+                    GoRoute(
+                      path: AppRoutes.advancedSettingsPathSegment,
+                      name: AppRouteNames.advancedSettings,
+                      builder: (context, state) => const AdvancedSettingsPage(),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

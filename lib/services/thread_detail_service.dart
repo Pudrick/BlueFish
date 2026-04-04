@@ -24,17 +24,32 @@ class ThreadDetailService {
 
   ThreadDetailService();
 
+  static Uri buildThreadUri({
+    required String tid,
+    required int page,
+    String? authorEuid,
+  }) {
+    final normalizedTid = tid.trim();
+    final normalizedAuthorEuid = _normalizeAuthorEuid(authorEuid);
+    final baseSlug = normalizedAuthorEuid == null
+        ? normalizedTid
+        : '${normalizedTid}_$normalizedAuthorEuid';
+    final pageSlug = page <= 1 ? baseSlug : '$baseSlug-$page';
+    return Uri.parse('https://bbs.hupu.com/$pageSlug.html');
+  }
+
   /// Fetches thread detail for given tid and page.
   ///
   /// Uses cache unless [forceRefresh] is true.
   Future<Result<ThreadDetail>> getThreadDetail(
     String tid,
     int page, {
+    String? authorEuid,
     bool forceRefresh = false,
   }) async {
     // Check cache first (unless forced refresh)
     if (!forceRefresh) {
-      final cached = _getFromCache(tid, page);
+      final cached = _getFromCache(tid, page, authorEuid: authorEuid);
       if (cached != null) {
         return Success(cached);
       }
@@ -42,8 +57,8 @@ class ThreadDetailService {
 
     // Fetch from network
     try {
-      final data = await _fetchFromNetwork(tid, page);
-      _addToCache(tid, page, data);
+      final data = await _fetchFromNetwork(tid, page, authorEuid: authorEuid);
+      _addToCache(tid, page, data, authorEuid: authorEuid);
       return Success(data);
     } on Exception catch (e) {
       return Failure('加载帖子失败: ${e.toString()}', e);
@@ -54,7 +69,10 @@ class ThreadDetailService {
 
   /// Clears all cached pages for a specific thread.
   void clearCache(String tid) {
-    _pageCache.remove(tid);
+    final normalizedTid = tid.trim();
+    _pageCache.removeWhere(
+      (cacheKey, value) => cacheKey.startsWith('$normalizedTid|'),
+    );
     _mainFloorCache.remove(tid);
   }
 
@@ -68,16 +86,17 @@ class ThreadDetailService {
   void updateCachedData(
     String tid,
     int page,
-    ThreadDetail Function(ThreadDetail) updater,
-  ) {
-    final threadCache = _pageCache[tid];
+    ThreadDetail Function(ThreadDetail) updater, {
+    String? authorEuid,
+  }) {
+    final threadCache = _pageCache[_cacheKey(tid, authorEuid)];
     if (threadCache != null && threadCache.containsKey(page)) {
       threadCache[page] = updater(threadCache[page]!);
     }
   }
 
-  ThreadDetail? _getFromCache(String tid, int page) {
-    final threadCache = _pageCache[tid];
+  ThreadDetail? _getFromCache(String tid, int page, {String? authorEuid}) {
+    final threadCache = _pageCache[_cacheKey(tid, authorEuid)];
     if (threadCache == null || !threadCache.containsKey(page)) {
       return null;
     }
@@ -89,9 +108,15 @@ class ThreadDetailService {
     return data;
   }
 
-  void _addToCache(String tid, int page, ThreadDetail data) {
-    _pageCache[tid] ??= LinkedHashMap<int, ThreadDetail>();
-    final threadCache = _pageCache[tid]!;
+  void _addToCache(
+    String tid,
+    int page,
+    ThreadDetail data, {
+    String? authorEuid,
+  }) {
+    final cacheKey = _cacheKey(tid, authorEuid);
+    _pageCache[cacheKey] ??= LinkedHashMap<int, ThreadDetail>();
+    final threadCache = _pageCache[cacheKey]!;
 
     // Evict oldest if at capacity
     while (threadCache.length >= _maxCachedPagesPerThread) {
@@ -104,8 +129,16 @@ class ThreadDetailService {
     _mainFloorCache[tid] = data.mainFloor;
   }
 
-  Future<ThreadDetail> _fetchFromNetwork(String tid, int page) async {
-    final threadInfo = await _fetchThreadInfoMap(tid, page);
+  Future<ThreadDetail> _fetchFromNetwork(
+    String tid,
+    int page, {
+    String? authorEuid,
+  }) async {
+    final threadInfo = await _fetchThreadInfoMap(
+      tid,
+      page,
+      authorEuid: authorEuid,
+    );
 
     // Use cached main floor if available and not first page
     ThreadMain mainFloor;
@@ -133,8 +166,16 @@ class ThreadDetailService {
     );
   }
 
-  Future<Map<String, dynamic>> _fetchThreadInfoMap(String tid, int page) async {
-    final threadUrl = Uri.parse('https://bbs.hupu.com/$tid-$page.html');
+  Future<Map<String, dynamic>> _fetchThreadInfoMap(
+    String tid,
+    int page, {
+    String? authorEuid,
+  }) async {
+    final threadUrl = buildThreadUri(
+      tid: tid,
+      page: page,
+      authorEuid: authorEuid,
+    );
     final response = await httpClient.get(threadUrl);
 
     if (response.statusCode != 200) {
@@ -187,5 +228,19 @@ class ThreadDetailService {
       for (final replyMap in repliesMap)
         SingleReplyFloor.fromJson(Map<String, dynamic>.from(replyMap as Map)),
     ];
+  }
+
+  static String _cacheKey(String tid, String? authorEuid) {
+    final normalizedTid = tid.trim();
+    final normalizedAuthorEuid = _normalizeAuthorEuid(authorEuid) ?? '';
+    return '$normalizedTid|$normalizedAuthorEuid';
+  }
+
+  static String? _normalizeAuthorEuid(String? authorEuid) {
+    final normalized = authorEuid?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 }

@@ -3,6 +3,7 @@ import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/pages/about_page.dart';
 import 'package:bluefish/pages/debug_cookie_page.dart';
+import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:flutter/foundation.dart';
@@ -20,16 +21,13 @@ class SettingsPage extends StatelessWidget {
     0xFF5A3E9E,
   ];
 
-  Future<void> _openAdvancedSettings(
-    BuildContext context,
-    AppSettingsViewModel settingsViewModel,
-  ) async {
+  Future<void> _confirmAndOpenAdvancedSettings(BuildContext context) async {
     final shouldContinue = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('打开高级设置'),
-          content: const Text('高级设置会直接影响 API 请求路径。只有在你明确知道目标版本片段时再继续。'),
+          content: const Text('通常不需要手动修改这些设置，除非你知道这是什么。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -44,24 +42,9 @@ class SettingsPage extends StatelessWidget {
       },
     );
 
-    if (shouldContinue != true || !context.mounted) {
-      return;
+    if (shouldContinue == true && context.mounted) {
+      context.pushAdvancedSettings();
     }
-
-    final submittedValue = await showDialog<String?>(
-      context: context,
-      builder: (dialogContext) {
-        return _ApiVersionOverrideDialog(
-          initialValue: settingsViewModel.settings.apiVersionOverride,
-        );
-      },
-    );
-
-    if (submittedValue == null) {
-      return;
-    }
-
-    await settingsViewModel.updateApiVersionOverride(submittedValue);
   }
 
   @override
@@ -167,14 +150,10 @@ class SettingsPage extends StatelessWidget {
                     _SettingsActionTile(
                       leading: const Icon(Icons.tune_rounded),
                       title: const Text('高级设置'),
-                      subtitle: Text(
-                        settings.apiVersionOverride == null
-                            ? '当前使用默认 API 版本片段：${ApiConfig.apiVersion}'
-                            : '当前自定义 API 版本片段：${settings.apiVersionOverride}',
-                      ),
+                      subtitle: const Text('通常来说不需要手动更改'),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () {
-                        _openAdvancedSettings(context, settingsViewModel);
+                        _confirmAndOpenAdvancedSettings(context);
                       },
                     ),
                     _SettingsActionTile(
@@ -380,75 +359,6 @@ class _SettingsActionTile extends StatelessWidget {
         trailing: trailing,
         onTap: onTap,
       ),
-    );
-  }
-}
-
-class _ApiVersionOverrideDialog extends StatefulWidget {
-  final String? initialValue;
-
-  const _ApiVersionOverrideDialog({this.initialValue});
-
-  @override
-  State<_ApiVersionOverrideDialog> createState() =>
-      _ApiVersionOverrideDialogState();
-}
-
-class _ApiVersionOverrideDialogState extends State<_ApiVersionOverrideDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialValue ?? '');
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('高级设置'),
-      content: SingleChildScrollView(
-        child: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '请输入 API URL 中的 APP 版本号片段。',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: 'API 请求版本号',
-                  hintText: ApiConfig.defaultApiVersion,
-                  helperText: '留空会恢复默认值 ${ApiConfig.defaultApiVersion}',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('保存'),
-        ),
-      ],
     );
   }
 }

@@ -29,6 +29,8 @@ class AppRouteNames {
   static const String createThread = 'createThread';
   static const String messages = 'messages';
   static const String me = 'me';
+  static const String settings = 'settings';
+  static const String advancedSettings = 'advancedSettings';
   static const String threadDetail = 'threadDetail';
   static const String threadReplyComposer = 'threadReplyComposer';
   static const String userHome = 'userHome';
@@ -45,10 +47,16 @@ class AppRoutes {
   static const String createThreadPath = '/compose/thread';
   static const String messagesPath = '/messages';
   static const String mePath = '/me';
+  static const String settingsPathSegment = 'settings';
+  static const String settingsPath = '$mePath/$settingsPathSegment';
+  static const String advancedSettingsPathSegment = 'advanced';
+  static const String advancedSettingsPath =
+      '$settingsPath/$advancedSettingsPathSegment';
 
   static const String threadIdParameter = 'tid';
   static const String threadReplyIdParameter = 'pid';
   static const String threadPageQueryParameter = 'page';
+  static const String threadOnlyEuidQueryParameter = 'onlyEuid';
   static const String threadDetailPath = '/thread/:$threadIdParameter';
   static const String threadReplyComposerPathSegment =
       'reply/:$threadReplyIdParameter';
@@ -80,6 +88,14 @@ class AppRoutes {
     return parsed;
   }
 
+  static String? parseThreadOnlyEuid(String? rawValue) {
+    final normalized = rawValue?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
+  }
+
   static int? parsePositiveInt(String? rawValue) {
     final parsed = int.tryParse(rawValue ?? '');
     if (parsed == null || parsed < 1) {
@@ -90,10 +106,14 @@ class AppRoutes {
 
   static String threadDetailPathForTid(String tid) => '/thread/${tid.trim()}';
 
-  static String threadDetailLocation({required String tid, int page = 1}) {
+  static String threadDetailLocation({
+    required String tid,
+    int page = 1,
+    String? onlyEuid,
+  }) {
     return Uri(
       path: threadDetailPathForTid(tid),
-      queryParameters: _threadQueryParameters(page),
+      queryParameters: _threadQueryParameters(page, onlyEuid: onlyEuid),
     ).toString();
   }
 
@@ -101,15 +121,24 @@ class AppRoutes {
     required String tid,
     required String pid,
     int page = 1,
+    String? onlyEuid,
   }) {
     return Uri(
       path: '${threadDetailPathForTid(tid)}/reply/${pid.trim()}',
-      queryParameters: _threadQueryParameters(page),
+      queryParameters: _threadQueryParameters(page, onlyEuid: onlyEuid),
     ).toString();
   }
 
   static String createThreadLocation() {
     return createThreadPath;
+  }
+
+  static String settingsLocation() {
+    return settingsPath;
+  }
+
+  static String advancedSettingsLocation() {
+    return advancedSettingsPath;
   }
 
   static String userHomeLocation({required String euid}) {
@@ -153,11 +182,26 @@ class AppRoutes {
     ).toString();
   }
 
-  static Map<String, String>? _threadQueryParameters(int page) {
-    if (page <= 1) {
+  static Map<String, String>? _threadQueryParameters(
+    int page, {
+    String? onlyEuid,
+  }) {
+    final queryParameters = <String, String>{};
+
+    if (page > 1) {
+      queryParameters[threadPageQueryParameter] = '$page';
+    }
+
+    final normalizedOnlyEuid = parseThreadOnlyEuid(onlyEuid);
+    if (normalizedOnlyEuid != null) {
+      queryParameters[threadOnlyEuidQueryParameter] = normalizedOnlyEuid;
+    }
+
+    if (queryParameters.isEmpty) {
       return null;
     }
-    return <String, String>{threadPageQueryParameter: '$page'};
+
+    return queryParameters;
   }
 
   static Map<String, String>? _mentionQueryParameters(MentionTab tab) {
@@ -362,25 +406,59 @@ extension AppNavigationExtensions on BuildContext {
     return router.push<T>(AppRoutes.createThreadLocation());
   }
 
-  Future<T?> pushThreadDetail<T>({required Object tid, int page = 1}) {
+  Future<T?> pushSettings<T>() {
+    final router = maybeGoRouter;
+    if (router == null) {
+      return Future<T?>.value(null);
+    }
+
+    return router.push<T>(AppRoutes.settingsLocation());
+  }
+
+  Future<T?> pushAdvancedSettings<T>() {
+    final router = maybeGoRouter;
+    if (router == null) {
+      return Future<T?>.value(null);
+    }
+
+    return router.push<T>(AppRoutes.advancedSettingsLocation());
+  }
+
+  Future<T?> pushThreadDetail<T>({
+    required Object tid,
+    int page = 1,
+    String? onlyEuid,
+  }) {
     final router = maybeGoRouter;
     if (router == null) {
       return Future<T?>.value(null);
     }
 
     return router.push<T>(
-      AppRoutes.threadDetailLocation(tid: tid.toString(), page: page),
+      AppRoutes.threadDetailLocation(
+        tid: tid.toString(),
+        page: page,
+        onlyEuid: onlyEuid,
+      ),
     );
   }
 
-  void replaceThreadDetail({required Object tid, int page = 1}) {
+  void replaceThreadDetail({
+    required Object tid,
+    int page = 1,
+    String? onlyEuid,
+  }) {
     final router = maybeGoRouter;
     if (router == null) {
       return;
     }
 
     router.replace(
-      AppRoutes.threadDetailLocation(tid: tid.toString(), page: page),
+      AppRoutes.threadDetailLocation(
+        tid: tid.toString(),
+        page: page,
+        onlyEuid: onlyEuid,
+      ),
     );
   }
 
@@ -388,6 +466,7 @@ extension AppNavigationExtensions on BuildContext {
     required Object tid,
     required Object pid,
     int page = 1,
+    String? onlyEuid,
     String? contextLabel,
     String? contextPreview,
   }) {
@@ -401,6 +480,7 @@ extension AppNavigationExtensions on BuildContext {
         tid: tid.toString(),
         pid: pid.toString(),
         page: page,
+        onlyEuid: onlyEuid,
       ),
       extra: ThreadReplyComposerRouteData(
         contextLabel: contextLabel,

@@ -1,3 +1,4 @@
+import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
@@ -16,14 +17,36 @@ import 'package:provider/provider.dart';
 class ThreadPage extends StatelessWidget {
   final String tid;
   final int page;
+  final String? onlyEuid;
 
-  const ThreadPage._({super.key, required this.tid, required this.page});
+  const ThreadPage._({
+    super.key,
+    required this.tid,
+    required this.page,
+    this.onlyEuid,
+  });
 
-  factory ThreadPage({Key? key, required dynamic tid, int page = 1}) {
+  factory ThreadPage({
+    Key? key,
+    required dynamic tid,
+    int page = 1,
+    String? onlyEuid,
+  }) {
+    final normalizedOnlyEuid = AppRoutes.parseThreadOnlyEuid(onlyEuid);
     if (tid is String) {
-      return ThreadPage._(key: key, tid: tid, page: page);
+      return ThreadPage._(
+        key: key,
+        tid: tid,
+        page: page,
+        onlyEuid: normalizedOnlyEuid,
+      );
     } else if (tid is int) {
-      return ThreadPage._(key: key, tid: tid.toString(), page: page);
+      return ThreadPage._(
+        key: key,
+        tid: tid.toString(),
+        page: page,
+        onlyEuid: normalizedOnlyEuid,
+      );
     } else {
       throw ArgumentError(
         "tid only can be String or int, but get ${tid.runtimeType}",
@@ -34,8 +57,11 @@ class ThreadPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) =>
-          ThreadDetailViewModel(tid: tid, initialPage: page)..loadInitial(),
+      create: (_) => ThreadDetailViewModel(
+        tid: tid,
+        initialPage: page,
+        initialFilterEuid: onlyEuid,
+      )..loadInitial(),
       child: const _ThreadPageContent(),
     );
   }
@@ -74,10 +100,47 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     viewModel.jumpToPage(page);
   }
 
+  void _scrollToTopIfNeeded() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _applyAuthorFilter(String euid) async {
+    final viewModel = context.read<ThreadDetailViewModel>();
+    if (viewModel.filterEuid == euid.trim() &&
+        viewModel.currentPage == 1 &&
+        viewModel.isLoaded) {
+      return;
+    }
+
+    _scrollToTopIfNeeded();
+    await viewModel.applyAuthorFilter(euid);
+  }
+
+  Future<void> _clearAuthorFilter() async {
+    final viewModel = context.read<ThreadDetailViewModel>();
+    if (!viewModel.hasAuthorFilter &&
+        viewModel.currentPage == 1 &&
+        viewModel.isLoaded) {
+      return;
+    }
+
+    _scrollToTopIfNeeded();
+    await viewModel.clearAuthorFilter();
+  }
+
   void _syncRouteIfNeeded(ThreadDetailViewModel viewModel) {
     final targetLocation = AppRoutes.threadDetailLocation(
       tid: viewModel.tid,
       page: viewModel.currentPage,
+      onlyEuid: viewModel.filterEuid,
     );
     if (_lastSyncedLocation == targetLocation) {
       return;
@@ -103,6 +166,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         context.replaceThreadDetail(
           tid: viewModel.tid,
           page: viewModel.currentPage,
+          onlyEuid: viewModel.filterEuid,
         );
       }
     });
@@ -187,6 +251,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         final data = viewModel.data!;
         final bool canPrev = viewModel.canGoPrev;
         final bool canNext = viewModel.canGoNext;
+        final activeFilterLabel = _resolveActiveFilterLabel(viewModel, data);
 
         return Scaffold(
           body: LayoutBuilder(
@@ -228,6 +293,24 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                 ),
                                 pinned: true,
                               ),
+
+                              if (viewModel.hasAuthorFilter)
+                                SliverPadding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    horizontalPadding,
+                                    8,
+                                    horizontalPadding,
+                                    0,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: _ThreadAuthorFilterBanner(
+                                      label: activeFilterLabel,
+                                      onClearTap: () {
+                                        _clearAuthorFilter();
+                                      },
+                                    ),
+                                  ),
+                                ),
 
                               if (viewModel.totalPages >= 1)
                                 SliverPadding(
@@ -293,29 +376,42 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                     context,
                                     index,
                                   ) {
-                                    final int fallbackFloorNumber =
-                                        ((viewModel.currentPage - 1) *
-                                            viewModel.repliesPerPage) +
-                                        index +
-                                        1;
+                                    final reply = data.replies[index];
+                                    final displayFloorNumber = reply
+                                        .resolveFloorNumber(
+                                          currentPage: viewModel.currentPage,
+                                          repliesPerPage:
+                                              viewModel.repliesPerPage,
+                                          indexInPage: index,
+                                        );
 
                                     return Padding(
                                       padding: const EdgeInsets.only(
                                         bottom: 10,
                                       ),
                                       child: ReplyFloor(
-                                        replyFloor: data.replies[index],
+                                        replyFloor: reply,
                                         isQuote: false,
-                                        floorNumber: fallbackFloorNumber,
+                                        floorNumber: displayFloorNumber,
                                         contentMaxWidth: contentBodyMaxWidth,
+                                        onOnlySeeAuthorTap:
+                                            reply.meta.author.euid
+                                                .trim()
+                                                .isEmpty
+                                            ? null
+                                            : () {
+                                                _applyAuthorFilter(
+                                                  reply.meta.author.euid,
+                                                );
+                                              },
                                         onReplyTap: () {
-                                          final reply = data.replies[index];
                                           context.pushThreadReplyComposer(
                                             tid: viewModel.tid,
                                             pid: reply.pid,
                                             page: viewModel.currentPage,
+                                            onlyEuid: viewModel.filterEuid,
                                             contextLabel:
-                                                '回复给 $fallbackFloorNumber 楼 · ${reply.meta.author.name}',
+                                                '回复给 $displayFloorNumber 楼 · ${reply.meta.author.name}',
                                             contextPreview:
                                                 _replyContextPreviewFromHtml(
                                                   reply.contentHtml,
@@ -413,6 +509,14 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
             hasFavorated: false,
             threadTid: viewModel.tid,
             threadTitle: data.mainFloor.title,
+            isOnlyOpMode: viewModel.isOnlyOp,
+            onOnlyOpTap: () {
+              if (viewModel.isOnlyOp) {
+                _clearAuthorFilter();
+                return;
+              }
+              _applyAuthorFilter(data.opEuid);
+            },
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
@@ -441,6 +545,76 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       },
     );
   }
+}
+
+class _ThreadAuthorFilterBanner extends StatelessWidget {
+  final String label;
+  final VoidCallback onClearTap;
+
+  const _ThreadAuthorFilterBanner({
+    required this.label,
+    required this.onClearTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      key: const ValueKey('thread-author-filter-banner'),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.secondary.withValues(alpha: 0.15),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_alt_rounded,
+            size: 18,
+            color: colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '当前仅看：$label',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton(onPressed: onClearTap, child: const Text('查看全部')),
+        ],
+      ),
+    );
+  }
+}
+
+String _resolveActiveFilterLabel(
+  ThreadDetailViewModel viewModel,
+  ThreadDetail data,
+) {
+  if (viewModel.isOnlyOp) {
+    return '楼主 ${data.opName}';
+  }
+
+  final filterEuid = viewModel.filterEuid;
+  if (filterEuid == null) {
+    return data.opName;
+  }
+
+  for (final reply in data.replies) {
+    if (reply.meta.author.euid == filterEuid) {
+      return reply.meta.author.name;
+    }
+  }
+
+  return '指定用户';
 }
 
 String _replyContextPreviewFromHtml(String html) {
