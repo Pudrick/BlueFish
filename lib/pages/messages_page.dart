@@ -279,6 +279,7 @@ class _MessagesTabBar extends StatelessWidget {
             Tab(
               height: 46,
               child: _MessagesTabLabel(
+                badgeKeySuffix: 'reply',
                 icon: Icons.reply_rounded,
                 label: '回复',
                 unreadCount: replyUnreadCount,
@@ -288,6 +289,7 @@ class _MessagesTabBar extends StatelessWidget {
             Tab(
               height: 46,
               child: _MessagesTabLabel(
+                badgeKeySuffix: 'light',
                 icon: Icons.thumb_up_alt_outlined,
                 label: '点亮',
                 unreadCount: lightUnreadCount,
@@ -297,6 +299,7 @@ class _MessagesTabBar extends StatelessWidget {
             Tab(
               height: 46,
               child: _MessagesTabLabel(
+                badgeKeySuffix: 'private',
                 icon: Icons.mail_outline_rounded,
                 label: '私信',
                 unreadCount: privateUnreadCount,
@@ -311,12 +314,14 @@ class _MessagesTabBar extends StatelessWidget {
 }
 
 class _MessagesTabLabel extends StatelessWidget {
+  final String badgeKeySuffix;
   final IconData icon;
   final String label;
   final int unreadCount;
   final _MessagesTabBadgeTone badgeTone;
 
   const _MessagesTabLabel({
+    required this.badgeKeySuffix,
     required this.icon,
     required this.label,
     required this.unreadCount,
@@ -333,7 +338,11 @@ class _MessagesTabLabel extends StatelessWidget {
         Text(label),
         if (unreadCount > 0) ...[
           const SizedBox(width: 8),
-          _MessagesTabBadge(count: unreadCount, tone: badgeTone),
+          _MessagesTabBadge(
+            key: ValueKey('messages-tab-badge-$badgeKeySuffix'),
+            count: unreadCount,
+            tone: badgeTone,
+          ),
         ],
       ],
     );
@@ -346,7 +355,7 @@ class _MessagesTabBadge extends StatelessWidget {
   final int count;
   final _MessagesTabBadgeTone tone;
 
-  const _MessagesTabBadge({required this.count, required this.tone});
+  const _MessagesTabBadge({super.key, required this.count, required this.tone});
 
   String get _label => count > 99 ? '99+' : '$count';
 
@@ -364,11 +373,12 @@ class _MessagesTabBadge extends StatelessWidget {
     };
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 22, minHeight: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      constraints: const BoxConstraints(minWidth: 18),
+      height: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(999),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -376,6 +386,7 @@ class _MessagesTabBadge extends StatelessWidget {
         style: textTheme.labelSmall?.copyWith(
           color: foregroundColor,
           fontWeight: FontWeight.w800,
+          fontSize: 10,
           height: 1,
         ),
       ),
