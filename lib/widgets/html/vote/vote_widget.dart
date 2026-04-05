@@ -1,5 +1,5 @@
 import 'package:bluefish/models/vote.dart';
-import 'package:bluefish/services/vote_service.dart';
+import 'package:bluefish/services/vote/vote_service.dart';
 import 'package:bluefish/widgets/html/vote/dual_image_vote_widget.dart';
 import 'package:bluefish/widgets/html/vote/no_image_vote_widget.dart';
 import 'package:bluefish/widgets/html/vote/vote_card_shell.dart';

@@ -1,6 +1,6 @@
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/private_message/private_message_detail.dart';
-import 'package:bluefish/services/private_message_service_helper.dart';
+import 'package:bluefish/services/private_message/private_message_service_helper.dart';
 import 'package:http/http.dart' as http;
 
 class PrivateMessageDetailService {

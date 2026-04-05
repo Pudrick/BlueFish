@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../models/composer/reply_draft.dart';
-import '../models/composer/thread_draft.dart';
+import 'package:bluefish/models/composer/reply_draft.dart';
+import 'package:bluefish/models/composer/thread_draft.dart';
 
 @immutable
 class ComposerSubmissionReceipt {

@@ -9,8 +9,8 @@ import '../models/composer/quill_draft_utils.dart';
 import '../models/composer/thread_draft.dart';
 import '../services/composer/composer_image_picker_service.dart';
 import '../services/composer/html_export_service.dart';
-import '../services/thread_publish_service.dart';
-import '../services/thread_video_upload_service.dart';
+import 'package:bluefish/services/composer/thread_publish_service.dart';
+import 'package:bluefish/services/composer/thread_video_upload_service.dart';
 
 class ThreadComposeViewModel extends ChangeNotifier {
   final ThreadPublishService _publishService;

@@ -1,6 +1,6 @@
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 
-import '../../models/composer/quill_embed_models.dart';
+import 'package:bluefish/models/composer/quill_embed_models.dart';
 
 class HtmlExportService {
   const HtmlExportService();

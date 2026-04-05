@@ -1,4 +1,4 @@
-import 'package:bluefish/services/mention_service.dart';
+import 'package:bluefish/services/mention/mention_service.dart';
 import 'package:flutter/material.dart';
 
 abstract class MentionViewModel<T> extends ChangeNotifier {

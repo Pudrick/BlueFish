@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import '../models/composer/composer_attachment.dart';
+import 'package:bluefish/models/composer/composer_attachment.dart';
 
 abstract class ThreadVideoUploadService {
   Future<ComposerAttachment> uploadVideo(ComposerAttachment attachment);

@@ -1,7 +1,7 @@
 import 'package:bluefish/models/internal_settings.dart';
 import 'package:bluefish/models/thread/single_thread_title.dart';
 import 'package:bluefish/models/thread/thread_list.dart';
-import 'package:bluefish/services/thread_list_service.dart';
+import 'package:bluefish/services/thread/thread_list_service.dart';
 import 'package:flutter/material.dart';
 
 class ThreadListViewModel extends ChangeNotifier {

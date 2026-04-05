@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
-import 'package:bluefish/services/thread_reply_service.dart';
+import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
