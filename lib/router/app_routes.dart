@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/router/auth_guard.dart';
 import 'package:flutter/widgets.dart';
@@ -61,11 +62,13 @@ class AppRoutes {
   static const String threadReplyIdParameter = 'pid';
   static const String threadPageQueryParameter = 'page';
   static const String threadOnlyEuidQueryParameter = 'onlyEuid';
+  static const String threadOnlyPuidQueryParameter = 'onlyPuid';
   static const String threadDetailPath = '/thread/:$threadIdParameter';
   static const String threadReplyComposerPathSegment =
       'reply/:$threadReplyIdParameter';
 
-  static const String userIdParameter = 'euid';
+  static const String userIdParameter = 'userId';
+  static const String userIdTypeQueryParameter = 'idType';
   static const String userHomePath = '/user/:$userIdParameter';
 
   static const String messagesTabQueryParameter = 'tab';
@@ -93,6 +96,41 @@ class AppRoutes {
   }
 
   static String? parseThreadOnlyEuid(String? rawValue) {
+    return _normalizeAuthorId(rawValue);
+  }
+
+  static String? parseThreadOnlyPuid(String? rawValue) {
+    return _normalizeAuthorId(rawValue);
+  }
+
+  static AuthorIdentity? parseThreadAuthorIdentity({
+    String? onlyEuid,
+    String? onlyPuid,
+  }) {
+    return AuthorIdentity.fromTyped(
+      euid: parseThreadOnlyEuid(onlyEuid),
+      puid: parseThreadOnlyPuid(onlyPuid),
+    );
+  }
+
+  static AuthorIdentity? parseUserHomeIdentity(
+    String? rawValue, {
+    String? rawType,
+  }) {
+    final normalizedValue = _normalizeAuthorId(rawValue);
+    if (normalizedValue == null) {
+      return null;
+    }
+
+    return switch (rawType?.trim()) {
+      'euid' => AuthorIdentity.fromTyped(euid: normalizedValue),
+      'puid' => AuthorIdentity.fromTyped(puid: normalizedValue),
+      null || '' => AuthorIdentity.infer(normalizedValue),
+      _ => null,
+    };
+  }
+
+  static String? _normalizeAuthorId(String? rawValue) {
     final normalized = rawValue?.trim();
     if (normalized == null || normalized.isEmpty) {
       return null;
@@ -114,10 +152,15 @@ class AppRoutes {
     required String tid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
   }) {
     return Uri(
       path: threadDetailPathForTid(tid),
-      queryParameters: _threadQueryParameters(page, onlyEuid: onlyEuid),
+      queryParameters: _threadQueryParameters(
+        page,
+        onlyEuid: onlyEuid,
+        onlyPuid: onlyPuid,
+      ),
     ).toString();
   }
 
@@ -126,10 +169,15 @@ class AppRoutes {
     required String pid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
   }) {
     return Uri(
       path: '${threadDetailPathForTid(tid)}/reply/${pid.trim()}',
-      queryParameters: _threadQueryParameters(page, onlyEuid: onlyEuid),
+      queryParameters: _threadQueryParameters(
+        page,
+        onlyEuid: onlyEuid,
+        onlyPuid: onlyPuid,
+      ),
     ).toString();
   }
 
@@ -149,8 +197,22 @@ class AppRoutes {
     return advancedSettingsPath;
   }
 
-  static String userHomeLocation({required String euid}) {
-    return '/user/${euid.trim()}';
+  static String userHomeLocation({Object? euid, Object? puid, Object? userId}) {
+    final resolvedIdentity = _resolveExplicitOrInferredAuthorIdentity(
+      euid: euid?.toString(),
+      puid: puid?.toString(),
+      rawId: userId?.toString(),
+    );
+    if (resolvedIdentity == null) {
+      throw ArgumentError('User home identity must be a valid euid or puid.');
+    }
+
+    return Uri(
+      path: '/user/${resolvedIdentity.id}',
+      queryParameters: <String, String>{
+        userIdTypeQueryParameter: resolvedIdentity.kind.name,
+      },
+    ).toString();
   }
 
   static String mentionLocation({MentionTab tab = MentionTab.reply}) {
@@ -193,6 +255,7 @@ class AppRoutes {
   static Map<String, String>? _threadQueryParameters(
     int page, {
     String? onlyEuid,
+    String? onlyPuid,
   }) {
     final queryParameters = <String, String>{};
 
@@ -201,8 +264,15 @@ class AppRoutes {
     }
 
     final normalizedOnlyEuid = parseThreadOnlyEuid(onlyEuid);
+    final normalizedOnlyPuid = parseThreadOnlyPuid(onlyPuid);
+    if (normalizedOnlyEuid != null && normalizedOnlyPuid != null) {
+      throw ArgumentError('onlyEuid and onlyPuid are mutually exclusive.');
+    }
     if (normalizedOnlyEuid != null) {
       queryParameters[threadOnlyEuidQueryParameter] = normalizedOnlyEuid;
+    }
+    if (normalizedOnlyPuid != null) {
+      queryParameters[threadOnlyPuidQueryParameter] = normalizedOnlyPuid;
     }
 
     if (queryParameters.isEmpty) {
@@ -210,6 +280,30 @@ class AppRoutes {
     }
 
     return queryParameters;
+  }
+
+  static AuthorIdentity? _resolveExplicitOrInferredAuthorIdentity({
+    String? euid,
+    String? puid,
+    String? rawId,
+  }) {
+    final normalizedEuid = _normalizeAuthorId(euid);
+    final normalizedPuid = _normalizeAuthorId(puid);
+    final normalizedRawId = _normalizeAuthorId(rawId);
+
+    final explicitIdentity = AuthorIdentity.fromTyped(
+      euid: normalizedEuid,
+      puid: normalizedPuid,
+    );
+    if (explicitIdentity != null) {
+      return explicitIdentity;
+    }
+
+    if (normalizedEuid != null && normalizedPuid != null) {
+      return null;
+    }
+
+    return AuthorIdentity.infer(normalizedRawId);
   }
 
   static Map<String, String>? _mentionQueryParameters(MentionTab tab) {
@@ -445,6 +539,7 @@ extension AppNavigationExtensions on BuildContext {
     required Object tid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
   }) {
     final router = maybeGoRouter;
     if (router == null) {
@@ -456,6 +551,7 @@ extension AppNavigationExtensions on BuildContext {
         tid: tid.toString(),
         page: page,
         onlyEuid: onlyEuid,
+        onlyPuid: onlyPuid,
       ),
     );
   }
@@ -464,6 +560,7 @@ extension AppNavigationExtensions on BuildContext {
     required Object tid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
   }) {
     final router = maybeGoRouter;
     if (router == null) {
@@ -475,6 +572,7 @@ extension AppNavigationExtensions on BuildContext {
         tid: tid.toString(),
         page: page,
         onlyEuid: onlyEuid,
+        onlyPuid: onlyPuid,
       ),
     );
   }
@@ -484,6 +582,7 @@ extension AppNavigationExtensions on BuildContext {
     required Object pid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
     String? contextLabel,
     String? contextPreview,
   }) {
@@ -498,6 +597,7 @@ extension AppNavigationExtensions on BuildContext {
         pid: pid.toString(),
         page: page,
         onlyEuid: onlyEuid,
+        onlyPuid: onlyPuid,
       ),
       extra: ThreadReplyComposerRouteData(
         contextLabel: contextLabel,
@@ -506,7 +606,11 @@ extension AppNavigationExtensions on BuildContext {
     );
   }
 
-  Future<T?> pushUserHome<T>({required Object euid}) async {
+  Future<T?> pushUserHome<T>({
+    Object? euid,
+    Object? puid,
+    Object? userId,
+  }) async {
     final router = maybeGoRouter;
     if (router == null) {
       return Future<T?>.value(null);
@@ -526,7 +630,9 @@ extension AppNavigationExtensions on BuildContext {
       return null;
     }
 
-    return router.push<T>(AppRoutes.userHomeLocation(euid: euid.toString()));
+    return router.push<T>(
+      AppRoutes.userHomeLocation(euid: euid, puid: puid, userId: userId),
+    );
   }
 
   Future<T?> pushMention<T>({MentionTab tab = MentionTab.reply}) {

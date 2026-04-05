@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/internal_settings.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/user_homepage/user_home.dart';
@@ -34,9 +35,8 @@ class UserHomeService {
     throw const FormatException('window.\$\$data not found in <script>');
   }
 
-  Future<UserHome> getAuthorHomeByEuid(dynamic euid) async {
-    if (euid is int) euid = euid.toString();
-    Uri homepageUrl = Uri.parse("https://my.hupu.com/$euid");
+  Future<UserHome> getAuthorHomeByIdentity(AuthorIdentity identity) async {
+    Uri homepageUrl = Uri.parse("https://my.hupu.com/${identity.id}");
     var response = await _client.get(homepageUrl);
     if (response.statusCode != 200) {
       throw const HttpException("Failed to get http response.");
@@ -64,6 +64,14 @@ class UserHomeService {
     userData['euid'] = rawJson['euid'] as String;
     final authorHome = UserHome.fromJson(userData);
     return authorHome;
+  }
+
+  Future<UserHome> getAuthorHomeByEuid(dynamic euid) {
+    return getAuthorHomeByIdentity(AuthorIdentity.euid(euid.toString()));
+  }
+
+  Future<UserHome> getAuthorHomeByPuid(dynamic puid) {
+    return getAuthorHomeByIdentity(AuthorIdentity.puid(puid.toString()));
   }
 
   Future<({List<UserHomeThreadTitle> threads, int rawCount})> loadThreadsPage({

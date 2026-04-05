@@ -23,6 +23,8 @@ class ThreadDetail {
 
   String get opEuid => mainFloor.meta.author.euid;
 
+  String get opPuid => mainFloor.meta.author.puid;
+
   String get opName => mainFloor.meta.author.name;
 
   int get totalPagesNum {

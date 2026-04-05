@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'dart:math' as math;
 
 import 'package:bluefish/models/user_homepage/user_home.dart';
@@ -12,13 +13,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class UserHomePage extends StatelessWidget {
-  final int euid;
-  const UserHomePage({super.key, required this.euid});
+  final AuthorIdentity userIdentity;
+
+  const UserHomePage({super.key, required this.userIdentity});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<UserHomeViewModel>(
-      create: (_) => UserHomeViewModel(euid: euid)..init(),
+      create: (_) => UserHomeViewModel(userIdentity: userIdentity)..init(),
       child: const UserHomePageView(),
     );
   }

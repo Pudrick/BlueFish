@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/pages/user_home_page.dart';
 import 'package:bluefish/router/app_routes.dart';
@@ -11,10 +12,11 @@ final userRoutes = <RouteBase>[
     path: AppRoutes.userHomePath,
     name: AppRouteNames.userHome,
     builder: (context, state) {
-      final euid = AppRoutes.parsePositiveInt(
+      final AuthorIdentity? userIdentity = AppRoutes.parseUserHomeIdentity(
         state.pathParameters[AppRoutes.userIdParameter],
+        rawType: state.uri.queryParameters[AppRoutes.userIdTypeQueryParameter],
       );
-      if (euid == null) {
+      if (userIdentity == null) {
         return const RouteErrorPage(message: '用户参数无效，无法打开主页。');
       }
 
@@ -30,7 +32,7 @@ final userRoutes = <RouteBase>[
         );
       }
 
-      return UserHomePage(euid: euid);
+      return UserHomePage(userIdentity: userIdentity);
     },
   ),
 ];

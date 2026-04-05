@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/single_reply_floor.dart';
 import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/models/thread_main.dart';
@@ -27,13 +28,19 @@ class ThreadDetailService {
   static Uri buildThreadUri({
     required String tid,
     required int page,
+    AuthorIdentity? authorIdentity,
     String? authorEuid,
+    String? authorPuid,
   }) {
     final normalizedTid = tid.trim();
-    final normalizedAuthorEuid = _normalizeAuthorEuid(authorEuid);
-    final baseSlug = normalizedAuthorEuid == null
+    final resolvedAuthorIdentity = _resolveAuthorIdentity(
+      authorIdentity: authorIdentity,
+      authorEuid: authorEuid,
+      authorPuid: authorPuid,
+    );
+    final baseSlug = resolvedAuthorIdentity == null
         ? normalizedTid
-        : '${normalizedTid}_$normalizedAuthorEuid';
+        : '${normalizedTid}_${resolvedAuthorIdentity.id}';
     final pageSlug = page <= 1 ? baseSlug : '$baseSlug-$page';
     return Uri.parse('https://bbs.hupu.com/$pageSlug.html');
   }
@@ -44,12 +51,12 @@ class ThreadDetailService {
   Future<Result<ThreadDetail>> getThreadDetail(
     String tid,
     int page, {
-    String? authorEuid,
+    AuthorIdentity? authorIdentity,
     bool forceRefresh = false,
   }) async {
     // Check cache first (unless forced refresh)
     if (!forceRefresh) {
-      final cached = _getFromCache(tid, page, authorEuid: authorEuid);
+      final cached = _getFromCache(tid, page, authorIdentity: authorIdentity);
       if (cached != null) {
         return Success(cached);
       }
@@ -57,8 +64,12 @@ class ThreadDetailService {
 
     // Fetch from network
     try {
-      final data = await _fetchFromNetwork(tid, page, authorEuid: authorEuid);
-      _addToCache(tid, page, data, authorEuid: authorEuid);
+      final data = await _fetchFromNetwork(
+        tid,
+        page,
+        authorIdentity: authorIdentity,
+      );
+      _addToCache(tid, page, data, authorIdentity: authorIdentity);
       return Success(data);
     } on Exception catch (e) {
       return Failure('加载帖子失败: ${e.toString()}', e);
@@ -87,16 +98,20 @@ class ThreadDetailService {
     String tid,
     int page,
     ThreadDetail Function(ThreadDetail) updater, {
-    String? authorEuid,
+    AuthorIdentity? authorIdentity,
   }) {
-    final threadCache = _pageCache[_cacheKey(tid, authorEuid)];
+    final threadCache = _pageCache[_cacheKey(tid, authorIdentity)];
     if (threadCache != null && threadCache.containsKey(page)) {
       threadCache[page] = updater(threadCache[page]!);
     }
   }
 
-  ThreadDetail? _getFromCache(String tid, int page, {String? authorEuid}) {
-    final threadCache = _pageCache[_cacheKey(tid, authorEuid)];
+  ThreadDetail? _getFromCache(
+    String tid,
+    int page, {
+    AuthorIdentity? authorIdentity,
+  }) {
+    final threadCache = _pageCache[_cacheKey(tid, authorIdentity)];
     if (threadCache == null || !threadCache.containsKey(page)) {
       return null;
     }
@@ -112,9 +127,9 @@ class ThreadDetailService {
     String tid,
     int page,
     ThreadDetail data, {
-    String? authorEuid,
+    AuthorIdentity? authorIdentity,
   }) {
-    final cacheKey = _cacheKey(tid, authorEuid);
+    final cacheKey = _cacheKey(tid, authorIdentity);
     _pageCache[cacheKey] ??= LinkedHashMap<int, ThreadDetail>();
     final threadCache = _pageCache[cacheKey]!;
 
@@ -132,12 +147,12 @@ class ThreadDetailService {
   Future<ThreadDetail> _fetchFromNetwork(
     String tid,
     int page, {
-    String? authorEuid,
+    AuthorIdentity? authorIdentity,
   }) async {
     final threadInfo = await _fetchThreadInfoMap(
       tid,
       page,
-      authorEuid: authorEuid,
+      authorIdentity: authorIdentity,
     );
 
     // Use cached main floor if available and not first page
@@ -169,12 +184,12 @@ class ThreadDetailService {
   Future<Map<String, dynamic>> _fetchThreadInfoMap(
     String tid,
     int page, {
-    String? authorEuid,
+    AuthorIdentity? authorIdentity,
   }) async {
     final threadUrl = buildThreadUri(
       tid: tid,
       page: page,
-      authorEuid: authorEuid,
+      authorIdentity: authorIdentity,
     );
     final response = await httpClient.get(threadUrl);
 
@@ -230,17 +245,22 @@ class ThreadDetailService {
     ];
   }
 
-  static String _cacheKey(String tid, String? authorEuid) {
+  static String _cacheKey(String tid, AuthorIdentity? authorIdentity) {
     final normalizedTid = tid.trim();
-    final normalizedAuthorEuid = _normalizeAuthorEuid(authorEuid) ?? '';
-    return '$normalizedTid|$normalizedAuthorEuid';
+    final normalizedAuthorIdentity = authorIdentity == null
+        ? ''
+        : '${authorIdentity.kind.name}:${authorIdentity.id}';
+    return '$normalizedTid|$normalizedAuthorIdentity';
   }
 
-  static String? _normalizeAuthorEuid(String? authorEuid) {
-    final normalized = authorEuid?.trim();
-    if (normalized == null || normalized.isEmpty) {
-      return null;
+  static AuthorIdentity? _resolveAuthorIdentity({
+    AuthorIdentity? authorIdentity,
+    String? authorEuid,
+    String? authorPuid,
+  }) {
+    if (authorIdentity != null) {
+      return authorIdentity;
     }
-    return normalized;
+    return AuthorIdentity.fromTyped(euid: authorEuid, puid: authorPuid);
   }
 }

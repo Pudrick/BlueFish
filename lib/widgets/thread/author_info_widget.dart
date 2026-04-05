@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/floor_meta.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +17,19 @@ class AuthorInfoWidget extends StatelessWidget {
   });
 
   void _navigateToUserHome(BuildContext context) {
-    context.pushUserHome(euid: meta.author.euid);
+    final preferredIdentity = meta.author.preferredIdentity();
+    if (preferredIdentity == null) {
+      return;
+    }
+
+    switch (preferredIdentity.kind) {
+      case AuthorIdentityKind.euid:
+        context.pushUserHome(euid: preferredIdentity.id);
+        return;
+      case AuthorIdentityKind.puid:
+        context.pushUserHome(puid: preferredIdentity.id);
+        return;
+    }
   }
 
   @override

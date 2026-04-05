@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/services/thread_detail_service.dart';
 import 'package:flutter/foundation.dart';
@@ -16,15 +17,15 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetail? _data;
   String? _errorMessage;
   int _currentPage;
-  String? _filterEuid;
+  AuthorIdentity? _authorFilter;
 
   ThreadDetailViewModel({
     required this.tid,
     int initialPage = 1,
-    String? initialFilterEuid,
+    AuthorIdentity? initialAuthorFilter,
     ThreadDetailService? service,
   }) : _currentPage = initialPage,
-       _filterEuid = _normalizeFilterEuid(initialFilterEuid),
+       _authorFilter = initialAuthorFilter,
        _service = service ?? ThreadDetailService();
 
   // ===== Getters =====
@@ -33,14 +34,20 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetail? get data => _data;
   String? get errorMessage => _errorMessage;
   int get currentPage => _currentPage;
-  String? get filterEuid => _filterEuid;
+  AuthorIdentity? get authorFilter => _authorFilter;
+  String? get filterEuid =>
+      _authorFilter?.kind == AuthorIdentityKind.euid ? _authorFilter!.id : null;
+  String? get filterPuid =>
+      _authorFilter?.kind == AuthorIdentityKind.puid ? _authorFilter!.id : null;
 
   bool get isLoading => _state == ThreadDetailState.loading;
   bool get isLoaded => _state == ThreadDetailState.loaded;
   bool get isError => _state == ThreadDetailState.error;
-  bool get hasAuthorFilter => _filterEuid != null;
+  bool get hasAuthorFilter => _authorFilter != null;
   bool get isOnlyOp =>
-      _filterEuid != null && _data != null && _filterEuid == _data!.opEuid;
+      _authorFilter != null &&
+      _data != null &&
+      _authorFilter!.matchesAuthor(_data!.mainFloor.meta.author);
 
   /// Total number of pages (returns 1 if data not loaded).
   int get totalPages => _data?.totalPagesNum ?? 1;
@@ -55,6 +62,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
   get mainFloor => _data?.mainFloor;
 
   String? get opEuid => _data?.opEuid;
+  String? get opPuid => _data?.opPuid;
 
   /// Reply list for current page (empty if not loaded).
   List get replies => _data?.replies ?? [];
@@ -77,31 +85,26 @@ class ThreadDetailViewModel extends ChangeNotifier {
     await _loadPage(_currentPage, forceRefresh: true);
   }
 
-  Future<void> applyAuthorFilter(String euid) async {
-    final normalizedEuid = _normalizeFilterEuid(euid);
-    if (normalizedEuid == null) {
-      return;
-    }
-
-    if (_filterEuid == normalizedEuid &&
+  Future<void> applyAuthorFilter(AuthorIdentity identity) async {
+    if (_authorFilter == identity &&
         _currentPage == 1 &&
         _state == ThreadDetailState.loaded) {
       return;
     }
 
-    _filterEuid = normalizedEuid;
+    _authorFilter = identity;
     _currentPage = 1;
     await _loadPage(1, forceRefresh: false);
   }
 
   Future<void> clearAuthorFilter() async {
-    if (_filterEuid == null &&
+    if (_authorFilter == null &&
         _currentPage == 1 &&
         _state == ThreadDetailState.loaded) {
       return;
     }
 
-    _filterEuid = null;
+    _authorFilter = null;
     _currentPage = 1;
     await _loadPage(1, forceRefresh: false);
   }
@@ -146,7 +149,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
     final result = await _service.getThreadDetail(
       tid,
       page,
-      authorEuid: _filterEuid,
+      authorIdentity: _authorFilter,
       forceRefresh: forceRefresh,
     );
 
@@ -163,13 +166,5 @@ class ThreadDetailViewModel extends ChangeNotifier {
     );
 
     notifyListeners();
-  }
-
-  static String? _normalizeFilterEuid(String? value) {
-    final normalized = value?.trim();
-    if (normalized == null || normalized.isEmpty) {
-      return null;
-    }
-    return normalized;
   }
 }

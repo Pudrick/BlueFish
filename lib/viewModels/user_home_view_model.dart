@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/user_homepage/user_home.dart';
 import 'package:bluefish/services/user_home_service.dart';
 import 'package:flutter/foundation.dart';
@@ -7,9 +8,9 @@ enum DisplayStatus { threads, replies, recommends }
 class UserHomeViewModel extends ChangeNotifier {
   UserHome? _data;
   final UserHomeService _service = UserHomeService();
-  final int euid;
+  final AuthorIdentity userIdentity;
 
-  UserHomeViewModel({required this.euid});
+  UserHomeViewModel({required this.userIdentity});
 
   DisplayStatus _displayStatus = DisplayStatus.threads;
   DisplayStatus get displayStatus => _displayStatus;
@@ -63,7 +64,7 @@ class UserHomeViewModel extends ChangeNotifier {
   bool get isLoadingReplies => _isLoadingReplies;
 
   Future<void> init() async {
-    _data = await _service.getAuthorHomeByEuid(euid);
+    _data = await _service.getAuthorHomeByIdentity(userIdentity);
     await loadMoreThreads();
     notifyListeners();
   }
