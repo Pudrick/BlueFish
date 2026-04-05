@@ -13,7 +13,10 @@ class ReplyFloor extends StatelessWidget {
   final double contentMaxWidth;
   final String? imageHeroScope;
   final VoidCallback? onReplyTap;
+  final VoidCallback? onReplyChainTap;
   final VoidCallback? onOnlySeeAuthorTap;
+  final bool showActionRow;
+  final bool showOverflowAction;
 
   const ReplyFloor({
     super.key,
@@ -23,7 +26,10 @@ class ReplyFloor extends StatelessWidget {
     this.contentMaxWidth = double.infinity,
     this.imageHeroScope,
     this.onReplyTap,
+    this.onReplyChainTap,
     this.onOnlySeeAuthorTap,
+    this.showActionRow = true,
+    this.showOverflowAction = true,
   });
 
   @override
@@ -33,14 +39,17 @@ class ReplyFloor extends StatelessWidget {
     return _ReplyFloorContent(
       content: replyFloor,
       isQuote: isQuote,
-      floorNumber: floorNumber ?? replyFloor.replyNum,
+      floorNumber: floorNumber ?? replyFloor.serverFloorNumber,
       lightCount: replyFloor.lightCount,
       showOpBadge: replyFloor.isOp,
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
       replyCount: replyFloor.replyNum,
       onReplyTap: onReplyTap,
+      onReplyChainTap: onReplyChainTap,
       onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+      showActionRow: showActionRow,
+      showOverflowAction: showOverflowAction,
       isMine:
           currentUserPuid != null &&
           currentUserPuid == replyFloor.meta.author.puid,
@@ -58,7 +67,10 @@ class _ReplyFloorContent extends StatelessWidget {
   final String? imageHeroScope;
   final int? replyCount;
   final VoidCallback? onReplyTap;
+  final VoidCallback? onReplyChainTap;
   final VoidCallback? onOnlySeeAuthorTap;
+  final bool showActionRow;
+  final bool showOverflowAction;
   final bool isMine;
 
   const _ReplyFloorContent({
@@ -71,7 +83,10 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.imageHeroScope,
     required this.replyCount,
     required this.onReplyTap,
+    required this.onReplyChainTap,
     required this.onOnlySeeAuthorTap,
+    required this.showActionRow,
+    required this.showOverflowAction,
     required this.isMine,
   });
 
@@ -94,11 +109,27 @@ class _ReplyFloorContent extends StatelessWidget {
         ? notDisplayReasonText
         : '其他用户当前无法显示该内容。原因：$notDisplayReasonText';
 
-    final int displayFloorNumber = floorNumber != null && floorNumber! > 0
-        ? floorNumber!
-        : 1;
+    final int? displayFloorNumber = floorNumber != null && floorNumber! > 0
+        ? floorNumber
+        : null;
     final resolvedImageHeroScope =
         imageHeroScope ?? 'thread-reply:${content.pid}';
+    final VoidCallback? resolvedOnMoreTap = !isQuote && showOverflowAction
+        ? () {
+            _showReplyOverflowActionsSheet(
+              context,
+              isMine: isMine,
+              onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+            );
+          }
+        : null;
+    final bool showHeaderActions =
+        !isQuote &&
+        _ReplyHeaderActions.hasVisibleActions(
+          client: content.meta.client,
+          floor: displayFloorNumber,
+          onMoreTap: resolvedOnMoreTap,
+        );
 
     final Widget bodyContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +158,10 @@ class _ReplyFloorContent extends StatelessWidget {
                 imageHeroScope: '$resolvedImageHeroScope:quote',
                 replyCount: null,
                 onReplyTap: null,
+                onReplyChainTap: null,
                 onOnlySeeAuthorTap: null,
+                showActionRow: false,
+                showOverflowAction: false,
                 isMine: false,
               ),
             ),
@@ -148,14 +182,14 @@ class _ReplyFloorContent extends StatelessWidget {
               ),
             ),
           ),
-        if (!isQuote && lightCount != null)
+        if (showActionRow && !isQuote && lightCount != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: _ReplyActionRow(
               lightCount: lightCount!,
               replyCount: replyCount ?? 0,
               onLightTap: () {},
-              onReplyChainTap: () {},
+              onReplyChainTap: onReplyChainTap,
               onGiftTap: () {},
               onReplyTap: onReplyTap ?? () {},
             ),
@@ -176,18 +210,12 @@ class _ReplyFloorContent extends StatelessWidget {
                 showClientBadge: isQuote,
               ),
             ),
-            if (!isQuote) ...[
+            if (showHeaderActions) ...[
               const SizedBox(width: 8),
               _ReplyHeaderActions(
                 client: content.meta.client,
                 floor: displayFloorNumber,
-                onMoreTap: () {
-                  _showReplyOverflowActionsSheet(
-                    context,
-                    isMine: isMine,
-                    onOnlySeeAuthorTap: onOnlySeeAuthorTap,
-                  );
-                },
+                onMoreTap: resolvedOnMoreTap,
               ),
             ],
           ],
@@ -315,8 +343,8 @@ class _FloorNumberPill extends StatelessWidget {
 
 class _ReplyHeaderActions extends StatelessWidget {
   final PostClient client;
-  final int floor;
-  final VoidCallback onMoreTap;
+  final int? floor;
+  final VoidCallback? onMoreTap;
 
   const _ReplyHeaderActions({
     required this.client,
@@ -324,26 +352,44 @@ class _ReplyHeaderActions extends StatelessWidget {
     required this.onMoreTap,
   });
 
+  static bool hasVisibleActions({
+    required PostClient client,
+    required int? floor,
+    required VoidCallback? onMoreTap,
+  }) {
+    return iconForPostClient(client) != null ||
+        (floor != null && floor > 0) ||
+        onMoreTap != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final IconData? clientIcon = iconForPostClient(client);
+    final actions = <Widget>[];
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (clientIcon != null) ...[
-          _HeaderClientBadge(client: client, icon: clientIcon),
-          const SizedBox(width: 6),
-        ],
-        _FloorNumberPill(floor: floor),
-        const SizedBox(width: 6),
+    if (clientIcon != null) {
+      actions.add(_HeaderClientBadge(client: client, icon: clientIcon));
+    }
+    if (floor != null && floor! > 0) {
+      if (actions.isNotEmpty) {
+        actions.add(const SizedBox(width: 6));
+      }
+      actions.add(_FloorNumberPill(floor: floor!));
+    }
+    if (onMoreTap != null) {
+      if (actions.isNotEmpty) {
+        actions.add(const SizedBox(width: 6));
+      }
+      actions.add(
         _HeaderIconButton(
           icon: Icons.more_horiz_rounded,
           tooltip: '更多操作',
-          onTap: onMoreTap,
+          onTap: onMoreTap!,
         ),
-      ],
-    );
+      );
+    }
+
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
   }
 }
 
@@ -546,7 +592,7 @@ class _ReplyActionRow extends StatelessWidget {
   final int lightCount;
   final int replyCount;
   final VoidCallback onLightTap;
-  final VoidCallback onReplyChainTap;
+  final VoidCallback? onReplyChainTap;
   final VoidCallback onGiftTap;
   final VoidCallback onReplyTap;
 
@@ -568,12 +614,12 @@ class _ReplyActionRow extends StatelessWidget {
         tooltip: '亮了 $lightCount',
         onTap: onLightTap,
       ),
-      if (replyCount > 0)
+      if (replyCount > 0 && onReplyChainTap != null)
         _CountActionChip(
           icon: Icons.format_quote_rounded,
           count: replyCount,
           tooltip: '查看回复 $replyCount',
-          onTap: onReplyChainTap,
+          onTap: onReplyChainTap!,
         ),
       _IconActionChip(
         icon: Icons.card_giftcard_rounded,

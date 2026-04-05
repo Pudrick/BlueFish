@@ -1,3 +1,4 @@
+import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
@@ -8,6 +9,7 @@ import 'package:bluefish/widgets/thread/thread_main_widget.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:bluefish/widgets/thread/page_pill.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';
+import 'package:bluefish/widgets/thread/thread_reply_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:provider/provider.dart';
@@ -18,13 +20,13 @@ import 'package:provider/provider.dart';
 class ThreadPage extends StatelessWidget {
   final String tid;
   final int page;
-  final String? onlyEuid;
+  final AuthorIdentity? authorFilter;
 
   const ThreadPage._({
     super.key,
     required this.tid,
     required this.page,
-    this.onlyEuid,
+    this.authorFilter,
   });
 
   factory ThreadPage({
@@ -32,21 +34,29 @@ class ThreadPage extends StatelessWidget {
     required dynamic tid,
     int page = 1,
     String? onlyEuid,
+    String? onlyPuid,
   }) {
-    final normalizedOnlyEuid = AppRoutes.parseThreadOnlyEuid(onlyEuid);
+    if (AppRoutes.parseThreadOnlyEuid(onlyEuid) != null &&
+        AppRoutes.parseThreadOnlyPuid(onlyPuid) != null) {
+      throw ArgumentError('onlyEuid and onlyPuid are mutually exclusive.');
+    }
+    final resolvedAuthorFilter = AppRoutes.parseThreadAuthorIdentity(
+      onlyEuid: onlyEuid,
+      onlyPuid: onlyPuid,
+    );
     if (tid is String) {
       return ThreadPage._(
         key: key,
         tid: tid,
         page: page,
-        onlyEuid: normalizedOnlyEuid,
+        authorFilter: resolvedAuthorFilter,
       );
     } else if (tid is int) {
       return ThreadPage._(
         key: key,
         tid: tid.toString(),
         page: page,
-        onlyEuid: normalizedOnlyEuid,
+        authorFilter: resolvedAuthorFilter,
       );
     } else {
       throw ArgumentError(
@@ -61,7 +71,7 @@ class ThreadPage extends StatelessWidget {
       create: (_) => ThreadDetailViewModel(
         tid: tid,
         initialPage: page,
-        initialFilterEuid: onlyEuid,
+        initialAuthorFilter: authorFilter,
       )..loadInitial(),
       child: const _ThreadPageContent(),
     );
@@ -243,16 +253,16 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     });
   }
 
-  Future<void> _applyAuthorFilter(String euid) async {
+  Future<void> _applyAuthorFilter(AuthorIdentity identity) async {
     final viewModel = context.read<ThreadDetailViewModel>();
-    if (viewModel.filterEuid == euid.trim() &&
+    if (viewModel.authorFilter == identity &&
         viewModel.currentPage == 1 &&
         viewModel.isLoaded) {
       return;
     }
 
     _scrollToTopIfNeeded();
-    await viewModel.applyAuthorFilter(euid);
+    await viewModel.applyAuthorFilter(identity);
   }
 
   Future<void> _clearAuthorFilter() async {
@@ -272,6 +282,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       tid: viewModel.tid,
       page: viewModel.currentPage,
       onlyEuid: viewModel.filterEuid,
+      onlyPuid: viewModel.filterPuid,
     );
     if (_lastSyncedLocation == targetLocation) {
       return;
@@ -298,6 +309,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
           tid: viewModel.tid,
           page: viewModel.currentPage,
           onlyEuid: viewModel.filterEuid,
+          onlyPuid: viewModel.filterPuid,
         );
       }
     });
@@ -519,13 +531,14 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                         floorNumber: displayFloorNumber,
                                         contentMaxWidth: contentBodyMaxWidth,
                                         onOnlySeeAuthorTap:
-                                            reply.meta.author.euid
-                                                .trim()
-                                                .isEmpty
+                                            reply.meta.author
+                                                    .preferredIdentity() ==
+                                                null
                                             ? null
                                             : () {
                                                 _applyAuthorFilter(
-                                                  reply.meta.author.euid,
+                                                  reply.meta.author
+                                                      .preferredIdentity()!,
                                                 );
                                               },
                                         onReplyTap: () {
@@ -534,6 +547,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                             pid: reply.pid,
                                             page: viewModel.currentPage,
                                             onlyEuid: viewModel.filterEuid,
+                                            onlyPuid: viewModel.filterPuid,
                                             contextLabel:
                                                 '回复给 $displayFloorNumber 楼 · ${reply.meta.author.name}',
                                             contextPreview:
@@ -542,6 +556,23 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                                 ),
                                           );
                                         },
+                                        onReplyChainTap: reply.replyNum > 0
+                                            ? () {
+                                                showThreadReplySheet(
+                                                  context: context,
+                                                  tid: viewModel.tid,
+                                                  rootReply: reply,
+                                                  rootFloorNumber:
+                                                      displayFloorNumber,
+                                                  threadPage:
+                                                      viewModel.currentPage,
+                                                  onlyEuid:
+                                                      viewModel.filterEuid,
+                                                  onlyPuid:
+                                                      viewModel.filterPuid,
+                                                );
+                                              }
+                                            : null,
                                       ),
                                     );
                                   }, childCount: data.replies.length),
@@ -639,7 +670,11 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                 _clearAuthorFilter();
                 return;
               }
-              _applyAuthorFilter(data.opEuid);
+              final opIdentity = data.mainFloor.meta.author.preferredIdentity();
+              if (opIdentity == null) {
+                return;
+              }
+              _applyAuthorFilter(opIdentity);
             },
           ),
           floatingActionButton: Padding(
@@ -754,13 +789,13 @@ String _resolveActiveFilterLabel(
     return '楼主 ${data.opName}';
   }
 
-  final filterEuid = viewModel.filterEuid;
-  if (filterEuid == null) {
+  final authorFilter = viewModel.authorFilter;
+  if (authorFilter == null) {
     return data.opName;
   }
 
   for (final reply in data.replies) {
-    if (reply.meta.author.euid == filterEuid) {
+    if (authorFilter.matchesAuthor(reply.meta.author)) {
       return reply.meta.author.name;
     }
   }
