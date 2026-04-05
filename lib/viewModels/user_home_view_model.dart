@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/models/user_home/user_home.dart';
 import 'package:bluefish/services/user_home_service.dart';
 import 'package:flutter/foundation.dart';
 

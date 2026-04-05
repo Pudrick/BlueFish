@@ -1,6 +1,6 @@
 // this widget is fully from vibe. so is it reliable?
 
-import 'package:bluefish/models/mention_reply.dart';
+import 'package:bluefish/models/mention/mention_reply.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/widgets/mention/mention_card_components.dart';
 import 'package:bluefish/widgets/mention/mention_grouped_sliver_list.dart';

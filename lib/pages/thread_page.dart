@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/models/thread_detail.dart';
+import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';

@@ -1,7 +1,7 @@
 import 'package:bluefish/models/author_identity.dart';
 import 'dart:math' as math;
 
-import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/models/user_home/user_home.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';

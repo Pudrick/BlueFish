@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/models/floor_meta.dart';
+import 'package:bluefish/models/thread/floor_meta.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

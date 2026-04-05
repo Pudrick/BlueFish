@@ -1,5 +1,5 @@
 import 'package:bluefish/models/model_parsing.dart';
-import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/models/thread/single_reply_floor.dart';
 
 class ThreadReplyPage {
   final List<SingleReplyFloor> replies;

@@ -1,4 +1,4 @@
-import 'package:bluefish/models/user_homepage/user_home_reply.dart';
+import 'package:bluefish/models/user_home/user_home_reply.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'user_home_thread_title.dart';

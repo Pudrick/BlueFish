@@ -1,5 +1,5 @@
-import 'package:bluefish/models/user_homepage/thread_pic_peek.dart';
-import 'package:bluefish/models/user_homepage/thread_video_peek.dart';
+import 'package:bluefish/models/user_home/thread_pic_peek.dart';
+import 'package:bluefish/models/user_home/thread_video_peek.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'user_home_thread_title.g.dart';

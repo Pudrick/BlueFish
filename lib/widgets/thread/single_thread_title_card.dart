@@ -1,4 +1,4 @@
-import 'package:bluefish/models/single_thread_title.dart';
+import 'package:bluefish/models/thread/single_thread_title.dart';
 import 'package:bluefish/widgets/thread/thread_title_blur_mask.dart';
 import 'package:flutter/material.dart';
 

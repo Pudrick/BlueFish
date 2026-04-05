@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/network/http_client.dart';
-import 'package:bluefish/models/single_thread_title.dart';
+import 'package:bluefish/models/thread/single_thread_title.dart';
 import 'package:http/http.dart' as http;
 
 class ThreadListService {

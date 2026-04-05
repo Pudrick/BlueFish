@@ -1,4 +1,4 @@
-import 'package:bluefish/models/thread_list.dart';
+import 'package:bluefish/models/thread/thread_list.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/thread_list_view_model.dart';
 import 'package:bluefish/widgets/thread/thread_pagination_bar.dart';

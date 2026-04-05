@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:bluefish/models/private_message_detail.dart';
+import 'package:bluefish/models/private_message/private_message_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/private_message_detail_view_model.dart';
 import 'package:bluefish/widgets/private_message/detail/private_message_detail_bubble.dart';

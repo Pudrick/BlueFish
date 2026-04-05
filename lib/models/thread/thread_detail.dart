@@ -1,5 +1,5 @@
-import 'package:bluefish/models/thread_main.dart';
-import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/models/thread/thread_main.dart';
+import 'package:bluefish/models/thread/single_reply_floor.dart';
 
 /// Data container for thread detail page.
 class ThreadDetail {

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:bluefish/models/mention_light.dart';
-import 'package:bluefish/models/mention_reply.dart';
-import 'package:bluefish/models/private_message_list.dart';
+import 'package:bluefish/models/mention/mention_light.dart';
+import 'package:bluefish/models/mention/mention_reply.dart';
+import 'package:bluefish/models/private_message/private_message_list.dart';
 import 'package:bluefish/pages/mention_list_page_base.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/mention_light_view_model.dart';

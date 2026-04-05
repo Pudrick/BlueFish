@@ -2,7 +2,7 @@
 
 // TODO: check vibe results.
 
-import 'package:bluefish/models/mention_light.dart';
+import 'package:bluefish/models/mention/mention_light.dart';
 import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/theme/bluefish_semantic_colors.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';

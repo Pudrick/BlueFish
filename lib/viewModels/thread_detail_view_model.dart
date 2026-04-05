@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/models/thread_detail.dart';
+import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/services/thread_detail_service.dart';
 import 'package:flutter/foundation.dart';
 

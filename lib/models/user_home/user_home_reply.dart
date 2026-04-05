@@ -1,4 +1,4 @@
-import 'package:bluefish/models/user_homepage/user_home_reply_video_peek.dart';
+import 'package:bluefish/models/user_home/user_home_reply_video_peek.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:php_serializer/php_serializer.dart';
 

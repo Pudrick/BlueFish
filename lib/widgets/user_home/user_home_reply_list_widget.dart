@@ -1,4 +1,4 @@
-import 'package:bluefish/models/user_homepage/user_home_reply.dart';
+import 'package:bluefish/models/user_home/user_home_reply.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/utils/remove_string_tag_suffix.dart';
 import 'package:flutter/material.dart';

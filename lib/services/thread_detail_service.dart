@@ -3,9 +3,9 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/models/single_reply_floor.dart';
-import 'package:bluefish/models/thread_detail.dart';
-import 'package:bluefish/models/thread_main.dart';
+import 'package:bluefish/models/thread/single_reply_floor.dart';
+import 'package:bluefish/models/thread/thread_detail.dart';
+import 'package:bluefish/models/thread/thread_main.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/utils/result.dart';
 import 'package:html/dom.dart';

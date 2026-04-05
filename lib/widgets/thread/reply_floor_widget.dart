@@ -1,10 +1,10 @@
 import 'package:bluefish/network/http_client.dart';
-import 'package:bluefish/models/floor_meta.dart';
+import 'package:bluefish/models/thread/floor_meta.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:flutter/material.dart';
 
-import 'package:bluefish/models/single_reply_floor.dart';
+import 'package:bluefish/models/thread/single_reply_floor.dart';
 
 class ReplyFloor extends StatelessWidget {
   final SingleReplyFloor replyFloor;

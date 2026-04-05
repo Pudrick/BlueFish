@@ -1,4 +1,4 @@
-import 'package:bluefish/models/user_homepage/user_home.dart';
+import 'package:bluefish/models/user_home/user_home.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 

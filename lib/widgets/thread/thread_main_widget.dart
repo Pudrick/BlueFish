@@ -1,4 +1,4 @@
-import 'package:bluefish/models/thread_main.dart';
+import 'package:bluefish/models/thread/thread_main.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/thread/thread_inline_video_widget.dart';

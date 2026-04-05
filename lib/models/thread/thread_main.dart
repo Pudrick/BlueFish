@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author.dart';
-import 'package:bluefish/models/floor_meta.dart';
+import 'package:bluefish/models/thread/floor_meta.dart';
 import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/vote.dart';
 import 'package:html/parser.dart';

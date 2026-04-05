@@ -1,4 +1,4 @@
-import 'package:bluefish/models/private_message_detail.dart';
+import 'package:bluefish/models/private_message/private_message_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';

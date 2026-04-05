@@ -1,4 +1,4 @@
-import 'package:bluefish/models/private_message_detail.dart';
+import 'package:bluefish/models/private_message/private_message_detail.dart';
 import 'package:html/parser.dart' as html_parser;
 
 String buildPrivateMessageCopyableText(SinglePrivateMessage message) {

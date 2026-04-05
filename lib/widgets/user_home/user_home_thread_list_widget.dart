@@ -1,4 +1,4 @@
-import 'package:bluefish/models/user_homepage/user_home_thread_title.dart';
+import 'package:bluefish/models/user_home/user_home_thread_title.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/widgets/thread/thread_title_blur_mask.dart';
 import 'package:flutter/material.dart';

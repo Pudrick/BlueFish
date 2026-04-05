@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bluefish/models/model_parsing.dart';
-import 'package:bluefish/models/thread_reply_page.dart';
+import 'package:bluefish/models/thread/thread_reply_page.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:http/http.dart' as http;
 
