@@ -1,6 +1,6 @@
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/network/http_client.dart';
-import 'package:bluefish/pages/user_home_page.dart';
+import 'package:bluefish/pages/user/user_home_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/auth_guard.dart';
 import 'package:bluefish/router/route_error_page.dart';

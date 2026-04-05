@@ -1,9 +1,9 @@
-import 'package:bluefish/pages/advanced_settings_page.dart';
-import 'package:bluefish/pages/me_page.dart';
-import 'package:bluefish/pages/messages_page.dart';
-import 'package:bluefish/pages/create_thread_page.dart';
-import 'package:bluefish/pages/settings_page.dart';
-import 'package:bluefish/pages/thread_list_page.dart';
+import 'package:bluefish/pages/settings/advanced_settings_page.dart';
+import 'package:bluefish/pages/user/me_page.dart';
+import 'package:bluefish/pages/message/messages_page.dart';
+import 'package:bluefish/pages/composer/create_thread_page.dart';
+import 'package:bluefish/pages/settings/settings_page.dart';
+import 'package:bluefish/pages/thread/thread_list_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/route_error_page.dart';
 import 'package:bluefish/router/routes/media_routes.dart';

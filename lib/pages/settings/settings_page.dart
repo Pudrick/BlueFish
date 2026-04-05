@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/models/app_settings.dart';
-import 'package:bluefish/pages/about_page.dart';
-import 'package:bluefish/pages/debug_cookie_page.dart';
+import 'package:bluefish/pages/settings/about_page.dart';
+import 'package:bluefish/pages/settings/debug_cookie_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';

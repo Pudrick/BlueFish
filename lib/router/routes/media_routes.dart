@@ -1,4 +1,4 @@
-import 'package:bluefish/pages/photo_gallery_page.dart';
+import 'package:bluefish/pages/media/photo_gallery_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

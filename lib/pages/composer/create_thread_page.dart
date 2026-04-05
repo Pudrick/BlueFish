@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/composer/composer_attachment.dart';
-import '../models/composer/thread_draft.dart';
-import '../router/app_routes.dart';
-import '../viewModels/thread_compose_view_model.dart';
-import '../widgets/composer/composer_accessory_panel.dart';
-import '../widgets/composer/composer_toolbar.dart';
-import '../widgets/composer/quill_composer_editor.dart';
-import '../widgets/composer/quill_composer_toolbar.dart';
+import 'package:bluefish/models/composer/composer_attachment.dart';
+import 'package:bluefish/models/composer/thread_draft.dart';
+import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/viewModels/thread_compose_view_model.dart';
+import 'package:bluefish/widgets/composer/composer_accessory_panel.dart';
+import 'package:bluefish/widgets/composer/composer_toolbar.dart';
+import 'package:bluefish/widgets/composer/quill_composer_editor.dart';
+import 'package:bluefish/widgets/composer/quill_composer_toolbar.dart';
 
 class CreateThreadPage extends StatelessWidget {
   final ThreadComposeViewModel? viewModel;

@@ -1,4 +1,4 @@
-import 'package:bluefish/pages/messages_page.dart';
+import 'package:bluefish/pages/message/messages_page.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:flutter/material.dart';
 
