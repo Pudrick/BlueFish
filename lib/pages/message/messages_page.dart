@@ -156,6 +156,30 @@ class _MessagesPageState extends State<MessagesPage>
     };
   }
 
+  String? _buildRefreshLabel() {
+    return switch (_currentTab) {
+      MentionTab.reply => '刷新回复',
+      MentionTab.light => '刷新点亮',
+      MentionTab.privateMessage => null,
+    };
+  }
+
+  bool get _isRefreshingCurrentTab {
+    return switch (_currentTab) {
+      MentionTab.reply => _replyViewModel.isLoading,
+      MentionTab.light => _lightViewModel.isLoading,
+      MentionTab.privateMessage => false,
+    };
+  }
+
+  Future<void> _refreshCurrentTab() {
+    return switch (_currentTab) {
+      MentionTab.reply => _replyViewModel.init(),
+      MentionTab.light => _lightViewModel.init(),
+      MentionTab.privateMessage => Future<void>.value(),
+    };
+  }
+
   void _openConversation(PrivateMessagePeek messagePeek) {
     context.pushPrivateMessageDetail(
       puid: messagePeek.puid,
@@ -179,7 +203,12 @@ class _MessagesPageState extends State<MessagesPage>
           builder: (context, _) {
             return Column(
               children: [
-                _MessagesHeader(subtitle: _buildSubtitle()),
+                _MessagesHeader(
+                  subtitle: _buildSubtitle(),
+                  refreshLabel: _buildRefreshLabel(),
+                  isRefreshing: _isRefreshingCurrentTab,
+                  onRefresh: _refreshCurrentTab,
+                ),
                 _MessagesTabBar(
                   controller: _tabController,
                   onTap: _setCurrentTab,
@@ -211,8 +240,16 @@ class _MessagesPageState extends State<MessagesPage>
 
 class _MessagesHeader extends StatelessWidget {
   final String subtitle;
+  final String? refreshLabel;
+  final bool isRefreshing;
+  final Future<void> Function() onRefresh;
 
-  const _MessagesHeader({required this.subtitle});
+  const _MessagesHeader({
+    required this.subtitle,
+    required this.refreshLabel,
+    required this.isRefreshing,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -223,11 +260,49 @@ class _MessagesHeader extends StatelessWidget {
       color: colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Text(
-          subtitle,
-          style: textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              subtitle,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (refreshLabel != null) ...[
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const ValueKey('messages-manual-refresh-button'),
+                onPressed: isRefreshing
+                    ? null
+                    : () {
+                        unawaited(onRefresh());
+                      },
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: isRefreshing
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: colorScheme.onSecondaryContainer,
+                        ),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(isRefreshing ? '刷新中' : refreshLabel!),
+              ),
+            ],
+          ],
         ),
       ),
     );
