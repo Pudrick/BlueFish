@@ -81,3 +81,4 @@ lib/auth/cookie_manager_dev.dart
 
 # Files related with vibe
 AGENTS.md
+.claude/

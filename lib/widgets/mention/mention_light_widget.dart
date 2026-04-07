@@ -385,18 +385,11 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
     return plainText.length > 90;
   }
 
-  Widget _buildHtmlWidget() {
-    final linkColor = context.semanticColors.mentionQuoteAccent;
-    final settings = context.select<AppSettingsViewModel?, AppSettings?>(
-      (vm) => vm?.settings,
-    );
-    final imageShrinkTriggerMaxEdgeDp =
-        settings?.imageShrinkTriggerMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
-    final imageShrinkTargetMaxEdgeDp =
-        settings?.imageShrinkTargetMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
-
+  Widget _buildHtmlWidget({
+    required Color linkColor,
+    required double imageShrinkTriggerMaxEdgeDp,
+    required double imageShrinkTargetMaxEdgeDp,
+  }) {
     return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
@@ -420,6 +413,16 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final semanticColors = context.semanticColors;
+    final settings = context.select<AppSettingsViewModel?, AppSettings?>(
+      (vm) => vm?.settings,
+    );
+    final imageShrinkTriggerMaxEdgeDp =
+        settings?.imageShrinkTriggerMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
+    final imageShrinkTargetMaxEdgeDp =
+        settings?.imageShrinkTargetMaxEdgeDp ??
+        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
+    final linkColor = semanticColors.mentionQuoteAccent;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -440,7 +443,13 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                       maxWidth: constraints.maxWidth,
                       minHeight: widget.collapsedMaxHeight,
                       maxHeight: double.infinity,
-                      child: _buildHtmlWidget(),
+                      child: _buildHtmlWidget(
+                        linkColor: linkColor,
+                        imageShrinkTriggerMaxEdgeDp:
+                            imageShrinkTriggerMaxEdgeDp,
+                        imageShrinkTargetMaxEdgeDp:
+                            imageShrinkTargetMaxEdgeDp,
+                      ),
                     ),
                   ),
                 ),
@@ -491,10 +500,18 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                     ? CrossFadeState.showSecond
                     : CrossFadeState.showFirst,
                 firstChild: collapsedHtml,
-                secondChild: _buildHtmlWidget(),
+                secondChild: _buildHtmlWidget(
+                  linkColor: linkColor,
+                  imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
+                  imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+                ),
               )
             else
-              _buildHtmlWidget(),
+              _buildHtmlWidget(
+                linkColor: linkColor,
+                imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
+                imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+              ),
             if (_shouldCollapse && _expanded)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

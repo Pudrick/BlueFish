@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,9 +10,7 @@ import 'package:bluefish/userdata/theme_settings.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:provider/provider.dart';
 
-void main() {
-  launchApp();
-}
+Future<void> main() async => launchApp();
 
 Future<void> launchApp() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,6 @@ Future<void> launchApp() async {
 
   // Initialize the auth-aware HTTP client before the widget tree mounts.
   await initializeHttpClient();
-
   runApp(BluefishApp(settingsViewModel: settingsViewModel));
 }
 
