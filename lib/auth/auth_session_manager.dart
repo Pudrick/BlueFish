@@ -2,9 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'auth_cookie_jar.dart';
+
 const String debugCookieDefineName = 'BLUEFISH_DEBUG_COOKIE';
 const String _debugCookieFromEnvironment = String.fromEnvironment(
   debugCookieDefineName,
+);
+const String startWithoutAuthDefineName = 'BLUEFISH_START_WITHOUT_AUTH';
+const bool _startWithoutAuthFromEnvironment = bool.fromEnvironment(
+  startWithoutAuthDefineName,
 );
 
 enum AuthCookieSource {
@@ -92,11 +98,12 @@ class AuthSessionManager extends ChangeNotifier {
   final AuthCookiePersistence _loginPersistence;
   final AuthCookiePersistence? _debugOverridePersistence;
   final String? _debugCookieFromEnvironmentOverride;
+  final bool _startWithoutAuth;
 
   Future<void>? _initialization;
   bool _isInitialized = false;
 
-  String? _loginCookies;
+  AuthCookieJar _loginCookieJar = AuthCookieJar.empty;
   String? _debugOverrideCookies;
   String _activeCookies = '';
   AuthCookieSource _activeSource = AuthCookieSource.none;
@@ -105,6 +112,7 @@ class AuthSessionManager extends ChangeNotifier {
     AuthCookiePersistence? loginPersistence,
     AuthCookiePersistence? debugOverridePersistence,
     String? debugCookieFromEnvironmentOverride,
+    bool? startWithoutAuthOverride,
   }) : _loginPersistence = loginPersistence ?? SecureAuthCookiePersistence(),
        _debugOverridePersistence =
            debugOverridePersistence ??
@@ -113,12 +121,15 @@ class AuthSessionManager extends ChangeNotifier {
                    storageKey: debugOverrideStorageKey,
                  )
                : null),
-       _debugCookieFromEnvironmentOverride =
-           debugCookieFromEnvironmentOverride {
+       _debugCookieFromEnvironmentOverride = debugCookieFromEnvironmentOverride,
+       _startWithoutAuth =
+           startWithoutAuthOverride ?? _startWithoutAuthFromEnvironment {
     _resolveActiveCookies();
   }
 
   bool get isInitialized => _isInitialized;
+
+  bool get startWithoutAuth => _startWithoutAuth;
 
   bool get canUseDebugOverride =>
       kDebugMode && _debugOverridePersistence != null;
@@ -129,13 +140,22 @@ class AuthSessionManager extends ChangeNotifier {
 
   String? get activeCookies => _activeCookies.isEmpty ? null : _activeCookies;
 
-  String? get loginCookies => _loginCookies;
+  String? get loginCookies => _loginCookieJar.buildAllCookiesHeader().isEmpty
+      ? null
+      : _loginCookieJar.buildAllCookiesHeader();
+
+  List<AuthCookieEntry> get loginCookieEntries => _loginCookieJar.cookies;
 
   String? get debugOverrideCookies => _debugOverrideCookies;
 
-  String? get debugCookieFromEnvironment => _normalizeCookies(
-    _debugCookieFromEnvironmentOverride ?? _debugCookieFromEnvironment,
-  );
+  String? get debugCookieFromEnvironment {
+    if (_startWithoutAuth) {
+      return null;
+    }
+    return _normalizeCookies(
+      _debugCookieFromEnvironmentOverride ?? _debugCookieFromEnvironment,
+    );
+  }
 
   Future<void> initialize() {
     return _initialization ??= _loadPersistedState();
@@ -143,21 +163,48 @@ class AuthSessionManager extends ChangeNotifier {
 
   String getCookiesSync() => _activeCookies;
 
+  String getCookieHeaderForUriSync(Uri uri) {
+    return switch (_activeSource) {
+      AuthCookieSource.login => _buildLoginCookieHeaderForUri(uri),
+      _ => _activeCookies,
+    };
+  }
+
+  bool hasCookieNamedSync(String name) {
+    return switch (_activeSource) {
+      AuthCookieSource.login => _loginCookieJar.containsCookieNamed(name),
+      _ => _headerContainsCookie(_activeCookies, name),
+    };
+  }
+
   Future<void> saveLoginCookies(String cookies) async {
-    final normalizedCookies = _normalizeCookies(cookies);
-    if (normalizedCookies == null) {
+    final nextJar = AuthCookieJar.fromHeader(cookies);
+    if (nextJar.isEmpty) {
       await clearLoginCookies();
       return;
     }
 
-    _loginCookies = normalizedCookies;
-    await _loginPersistence.write(normalizedCookies);
+    _loginCookieJar = nextJar;
+    await _loginPersistence.write(nextJar.toPersistenceValue()!);
+    _resolveActiveCookies();
+    notifyListeners();
+  }
+
+  Future<void> saveLoginCookieEntries(Iterable<AuthCookieEntry> cookies) async {
+    final nextJar = AuthCookieJar.fromCookies(cookies);
+    if (nextJar.isEmpty) {
+      await clearLoginCookies();
+      return;
+    }
+
+    _loginCookieJar = nextJar;
+    await _loginPersistence.write(nextJar.toPersistenceValue()!);
     _resolveActiveCookies();
     notifyListeners();
   }
 
   Future<void> clearLoginCookies() async {
-    _loginCookies = null;
+    _loginCookieJar = AuthCookieJar.empty;
     await _loginPersistence.clear();
     _resolveActiveCookies();
     notifyListeners();
@@ -192,15 +239,27 @@ class AuthSessionManager extends ChangeNotifier {
   }
 
   Future<void> _loadPersistedState() async {
-    _loginCookies = _normalizeCookies(await _loginPersistence.read());
-    if (_debugOverridePersistence != null) {
-      _debugOverrideCookies = _normalizeCookies(
-        await _debugOverridePersistence.read(),
+    if (!_startWithoutAuth) {
+      _loginCookieJar = AuthCookieJar.fromPersistedValue(
+        await _loginPersistence.read(),
       );
+      if (_debugOverridePersistence != null) {
+        _debugOverrideCookies = _normalizeCookies(
+          await _debugOverridePersistence.read(),
+        );
+      }
     }
     _resolveActiveCookies();
     _isInitialized = true;
     notifyListeners();
+  }
+
+  String _buildLoginCookieHeaderForUri(Uri uri) {
+    if (_isHupuHost(uri.host)) {
+      return _loginCookieJar.buildAllCookiesHeader();
+    }
+
+    return _loginCookieJar.buildCookieHeaderForUri(uri);
   }
 
   void _resolveActiveCookies() {
@@ -218,8 +277,8 @@ class AuthSessionManager extends ChangeNotifier {
       return;
     }
 
-    if (_loginCookies != null) {
-      _activeCookies = _loginCookies!;
+    if (!_loginCookieJar.isEmpty) {
+      _activeCookies = _loginCookieJar.buildAllCookiesHeader();
       _activeSource = AuthCookieSource.login;
       return;
     }
@@ -234,5 +293,28 @@ class AuthSessionManager extends ChangeNotifier {
       return null;
     }
     return normalizedCookies;
+  }
+
+  bool _headerContainsCookie(String header, String name) {
+    final normalizedName = name.trim();
+    if (header.trim().isEmpty || normalizedName.isEmpty) {
+      return false;
+    }
+
+    for (final segment in header.split(';')) {
+      final separatorIndex = segment.indexOf('=');
+      if (separatorIndex <= 0) {
+        continue;
+      }
+      if (segment.substring(0, separatorIndex).trim() == normalizedName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isHupuHost(String host) {
+    final normalizedHost = host.trim().toLowerCase();
+    return normalizedHost == 'hupu.com' || normalizedHost.endsWith('.hupu.com');
   }
 }

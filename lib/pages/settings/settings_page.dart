@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:bluefish/auth/auth_session_manager.dart';
+import 'package:bluefish/auth/web_login_session_service.dart';
 import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/pages/settings/about_page.dart';
 import 'package:bluefish/pages/settings/debug_cookie_page.dart';
@@ -45,6 +46,58 @@ class SettingsPage extends StatelessWidget {
 
     if (shouldContinue == true && context.mounted) {
       context.pushAdvancedSettings();
+    }
+  }
+
+  Future<void> _confirmAndLogout(
+    BuildContext context,
+    AuthSessionManager authSessionManager,
+  ) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('退出登录'),
+          content: const Text('这会清除应用保存的登录会话和内嵌网页登录 Cookie。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('退出登录'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true) {
+      return;
+    }
+
+    try {
+      await WebLoginCookieStore().clearAllCookies();
+      await authSessionManager.clearLoginCookies();
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('已退出登录。')));
+    } catch (_) {
+      await authSessionManager.clearLoginCookies();
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('已清除应用会话，内嵌网页登录态可能仍需手动刷新。')),
+        );
     }
   }
 
@@ -242,7 +295,9 @@ class SettingsPage extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        _confirmAndLogout(context, authSessionManager);
+                      },
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('退出登录'),
                     ),

@@ -12,7 +12,9 @@ class AuthInterceptor implements RequestInterceptor {
   @override
   Future<void> onRequest(http.BaseRequest request) async {
     request.headers['user-agent'] = ApiConfig.userAgent;
-    final cookies = _authSessionManager.getCookiesSync().trim();
+    final cookies = _authSessionManager
+        .getCookieHeaderForUriSync(request.url)
+        .trim();
     if (cookies.isEmpty) {
       return;
     }

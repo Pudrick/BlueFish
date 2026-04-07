@@ -1,179 +1,397 @@
 import 'dart:async';
 
+import 'package:bluefish/auth/auth_cookie_jar.dart';
+import 'package:bluefish/auth/auth_session_manager.dart';
+import 'package:bluefish/auth/web_login_session_service.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:provider/provider.dart';
 
-enum LoginPageAuthMode { smsCode, password }
+String _describeWebUri(WebUri? uri) => uri?.toString() ?? '-';
 
-@immutable
-class SmsCodeRequest {
-  final String areaCode;
-  final String phoneNumber;
-
-  const SmsCodeRequest({required this.areaCode, required this.phoneNumber});
-
-  String get fullPhoneNumber => '$areaCode$phoneNumber';
+Uri? _tryParseWebUri(WebUri? uri) {
+  final rawValue = uri?.toString().trim();
+  if (rawValue == null || rawValue.isEmpty) {
+    return null;
+  }
+  return Uri.tryParse(rawValue);
 }
 
-@immutable
-class SmsCodeLoginSubmission {
-  final String areaCode;
-  final String phoneNumber;
-  final String verificationCode;
+const Set<String> _postLoginLandingHosts = <String>{
+  'www.hupu.com',
+  'm.hupu.com',
+  'bbs.hupu.com',
+  'my.hupu.com',
+};
 
-  const SmsCodeLoginSubmission({
-    required this.areaCode,
-    required this.phoneNumber,
-    required this.verificationCode,
-  });
+bool _looksLikePostLoginLanding(WebUri? uri) {
+  if (uri == null) {
+    return false;
+  }
 
-  String get fullPhoneNumber => '$areaCode$phoneNumber';
+  final scheme = uri.scheme.toLowerCase();
+  if (scheme != 'http' && scheme != 'https') {
+    return false;
+  }
+
+  final host = uri.host.toLowerCase();
+  if (host.isEmpty || host == 'passport.hupu.com') {
+    return false;
+  }
+
+  return _postLoginLandingHosts.contains(host);
 }
 
-@immutable
-class PasswordLoginSubmission {
-  final String account;
-  final String password;
-
-  const PasswordLoginSubmission({
-    required this.account,
-    required this.password,
-  });
+bool _hasLikelyLoginSessionCookie(AuthCookieJar cookieJar) {
+  return cookieJar.containsCookieNamed('u') ||
+      cookieJar.containsCookieNamed('us') ||
+      cookieJar.containsCookieNamed('_HUPUSSOID');
 }
 
 class LoginPageView extends StatefulWidget {
-  final LoginPageAuthMode initialMode;
-  final FutureOr<void> Function(SmsCodeRequest request)?
-  onRequestVerificationCode;
-  final FutureOr<void> Function(SmsCodeLoginSubmission submission)?
-  onSubmitSmsCodeLogin;
-  final FutureOr<void> Function(PasswordLoginSubmission submission)?
-  onSubmitPasswordLogin;
+  static final Uri loginUri = Uri.parse(
+    'https://passport.hupu.com/v2/login?pcPhone=1',
+  );
 
-  const LoginPageView({
-    super.key,
-    this.initialMode = LoginPageAuthMode.smsCode,
-    this.onRequestVerificationCode,
-    this.onSubmitSmsCodeLogin,
-    this.onSubmitPasswordLogin,
-  });
+  const LoginPageView({super.key});
 
   @override
   State<LoginPageView> createState() => _LoginPageViewState();
 }
 
 class _LoginPageViewState extends State<LoginPageView> {
-  final _formKey = GlobalKey<FormState>();
-  final _areaCodeController = TextEditingController(text: '86');
-  final _phoneController = TextEditingController();
-  final _smsCodeController = TextEditingController();
-  final _accountController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final WebLoginCookieStore _cookieStore = WebLoginCookieStore();
+  final WebLoginSessionValidator _validator = WebLoginSessionValidator();
 
-  late LoginPageAuthMode _mode;
-  bool _obscurePassword = true;
-  bool _isSendingCode = false;
-  bool _isSubmitting = false;
-  int _countdown = 0;
-  Timer? _countdownTimer;
+  InAppWebViewController? _webViewController;
+  double _loadingProgress = 0;
+  bool _isPageLoading = true;
+  bool _isSyncingCookies = false;
+  String _statusText = '在网页中完成登录后，应用会自动尝试同步 Cookie。';
+  DateTime? _lastAutoSyncAt;
+  DateTime? _lastLandingInterceptionAt;
+  bool _isInterceptAutoSyncScheduled = false;
+  int _interceptAutoSyncToken = 0;
+
+  bool get _useManualSyncAfterLoginOnWindows {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.windows;
+  }
+
+  bool get _isSupportedPlatform {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.windows;
+  }
 
   @override
   void initState() {
     super.initState();
-    _mode = widget.initialMode;
+    _cookieStore.resetSessionCapture();
+    if (_useManualSyncAfterLoginOnWindows) {
+      _statusText = 'Windows 端登录完成后会自动同步登录状态，若失败可手动点击“同步登录状态”。';
+    }
   }
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
-    _areaCodeController.dispose();
-    _phoneController.dispose();
-    _smsCodeController.dispose();
-    _accountController.dispose();
-    _passwordController.dispose();
+    _cancelPendingInterceptAutoSync();
+    _validator.dispose();
     super.dispose();
   }
 
-  bool get _canRequestCode =>
-      !_isSendingCode &&
-      _countdown == 0 &&
-      _normalizeAreaCode(_areaCodeController.text) != null &&
-      _normalizePhoneNumber(_phoneController.text) != null;
-
-  Future<void> _requestVerificationCode() async {
-    final areaCode = _normalizeAreaCode(_areaCodeController.text);
-    final phoneNumber = _normalizePhoneNumber(_phoneController.text);
-    if (areaCode == null || phoneNumber == null) {
-      _showMessage('请输入正确的区号和手机号');
+  Future<void> _syncLoginState({bool autoTriggered = false}) async {
+    if (_isSyncingCookies) {
       return;
     }
 
-    setState(() => _isSendingCode = true);
+    final authSessionManager = context.read<AuthSessionManager>();
+
+    setState(() {
+      _isSyncingCookies = true;
+      _statusText = autoTriggered ? '正在检测网页登录状态...' : '正在同步登录状态...';
+    });
+
     try {
-      final request = SmsCodeRequest(
-        areaCode: areaCode,
-        phoneNumber: phoneNumber,
-      );
-      await (widget.onRequestVerificationCode?.call(request) ??
-          Future<void>.delayed(const Duration(milliseconds: 450)));
-      if (!mounted) return;
-      _startCountdown();
-      if (widget.onRequestVerificationCode == null) {
-        _showMessage('验证码已发送至 ${request.fullPhoneNumber}');
+      final cookies = await _cookieStore.getAllCookies();
+      final cookieJar = AuthCookieJar.fromCookies(cookies);
+      if (cookieJar.isEmpty) {
+        _updateStatus(
+          autoTriggered
+              ? '还没有检测到可用 Cookie，登录完成后会继续自动检测。'
+              : '当前还没有读取到任何 Cookie。',
+        );
+        if (!autoTriggered && mounted) {
+          _showMessage('当前还没有读取到任何 Cookie。');
+        }
+        return;
       }
+
+      if (autoTriggered &&
+          !cookieJar.containsCookieNamed('u') &&
+          !cookieJar.containsCookieNamed('us') &&
+          !cookieJar.containsCookieNamed('_HUPUSSOID')) {
+        _updateStatus('已读取到 Cookie，等待登录态稳定后继续检测。');
+        return;
+      }
+
+      final isValid = await _validator.validate(cookieJar);
+      if (!isValid) {
+        _updateStatus(
+          autoTriggered
+              ? '已检测到网页登录痕迹，但应用会话校验尚未通过。'
+              : 'Cookie 已读取，但应用会话校验未通过，请确认已经登录成功。',
+        );
+        if (!autoTriggered && mounted) {
+          _showMessage('Cookie 已读取，但应用会话校验未通过，请确认已经登录成功。');
+        }
+        return;
+      }
+
+      await authSessionManager.saveLoginCookieEntries(cookieJar.cookies);
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('登录成功，已同步 Cookie。');
+      await _completeLoginFlow();
     } catch (_) {
-      if (mounted) {
-        _showMessage('验证码发送失败，请稍后重试');
+      _updateStatus('同步登录状态失败，请稍后重试。');
+      if (!autoTriggered && mounted) {
+        _showMessage('同步登录状态失败，请稍后重试。');
       }
     } finally {
       if (mounted) {
-        setState(() => _isSendingCode = false);
+        setState(() {
+          _isSyncingCookies = false;
+        });
       }
     }
   }
 
-  Future<void> _submit() async {
-    final formState = _formKey.currentState;
-    if (formState == null || !formState.validate()) {
+  Future<void> _restartLoginFlow() async {
+    if (_isSyncingCookies) {
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    final authSessionManager = context.read<AuthSessionManager>();
+    _cancelPendingInterceptAutoSync();
+
+    setState(() {
+      _isSyncingCookies = true;
+      _statusText = '正在清空网页登录状态...';
+    });
+
     try {
-      if (_mode == LoginPageAuthMode.smsCode) {
-        final submission = SmsCodeLoginSubmission(
-          areaCode: _normalizeAreaCode(_areaCodeController.text)!,
-          phoneNumber: _normalizePhoneNumber(_phoneController.text)!,
-          verificationCode: _normalizeVerificationCode(
-            _smsCodeController.text,
-          )!,
-        );
-        await (widget.onSubmitSmsCodeLogin?.call(submission) ??
-            Future<void>.delayed(const Duration(milliseconds: 550)));
-        if (mounted && widget.onSubmitSmsCodeLogin == null) {
-          _showMessage('已提交验证码登录');
-        }
-      } else {
-        final submission = PasswordLoginSubmission(
-          account: _normalizeAccount(_accountController.text)!,
-          password: _passwordController.text,
-        );
-        await (widget.onSubmitPasswordLogin?.call(submission) ??
-            Future<void>.delayed(const Duration(milliseconds: 550)));
-        if (mounted && widget.onSubmitPasswordLogin == null) {
-          _showMessage('已提交密码登录');
-        }
-      }
+      await _cookieStore.clearAllCookies();
+      await authSessionManager.clearLoginCookies();
+      await InAppWebViewController.clearAllCache();
+      await _webViewController?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(LoginPageView.loginUri.toString())),
+      );
+      _updateStatus('已清空网页登录状态，请重新登录。');
     } catch (_) {
+      _updateStatus('清空网页登录状态失败，请稍后重试。');
       if (mounted) {
-        _showMessage('登录失败，请检查信息后重试');
+        _showMessage('清空网页登录状态失败，请稍后重试。');
       }
     } finally {
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        setState(() {
+          _isSyncingCookies = false;
+        });
       }
     }
+  }
+
+  Future<void> _reloadPage() async {
+    await _webViewController?.reload();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _statusText = '正在重新加载登录页...';
+    });
+  }
+
+  void _notifyInterceptedLanding(
+    WebUri? targetUrl, {
+    required bool hasLikelySessionCookie,
+  }) {
+    final targetText = _describeWebUri(targetUrl);
+    _cookieStore.freezeCapturedCookies();
+    final nextStatus = hasLikelySessionCookie
+        ? '检测到登录成功跳转，正在自动同步登录状态...'
+        : '已拦截离开登录页的跳转，正在自动尝试同步登录状态...';
+    _updateStatus(nextStatus);
+
+    final now = DateTime.now();
+    final lastLandingInterceptionAt = _lastLandingInterceptionAt;
+    if (lastLandingInterceptionAt != null &&
+        now.difference(lastLandingInterceptionAt) <
+            const Duration(seconds: 2)) {
+      return;
+    }
+
+    _lastLandingInterceptionAt = now;
+    final message = hasLikelySessionCookie
+        ? '已拦截登录成功后的页面跳转，正在自动同步登录状态。'
+        : '已阻止跳出登录页：$targetText';
+    _showMessage(message);
+    _scheduleInterceptAutoSync(hasLikelySessionCookie: hasLikelySessionCookie);
+  }
+
+  Future<NavigationActionPolicy> _handleShouldOverrideUrlLoading(
+    InAppWebViewController _,
+    NavigationAction navigationAction,
+  ) async {
+    final targetUrl = navigationAction.request.url;
+    await _cookieStore.captureCookiesForUri(_tryParseWebUri(targetUrl));
+    final isCandidate =
+        _useManualSyncAfterLoginOnWindows &&
+        navigationAction.isForMainFrame &&
+        _looksLikePostLoginLanding(targetUrl);
+    if (!isCandidate) {
+      return NavigationActionPolicy.ALLOW;
+    }
+
+    try {
+      final cookieJar = AuthCookieJar.fromCookies(
+        await _cookieStore.getAllCookies(),
+      );
+      final hasLikelySessionCookie = _hasLikelyLoginSessionCookie(cookieJar);
+      _notifyInterceptedLanding(
+        targetUrl,
+        hasLikelySessionCookie: hasLikelySessionCookie,
+      );
+    } catch (_) {
+      _notifyInterceptedLanding(targetUrl, hasLikelySessionCookie: false);
+    }
+
+    return NavigationActionPolicy.CANCEL;
+  }
+
+  void _scheduleAutoSync() {
+    if (_useManualSyncAfterLoginOnWindows) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final lastAutoSyncAt = _lastAutoSyncAt;
+    if (lastAutoSyncAt != null &&
+        now.difference(lastAutoSyncAt) < const Duration(seconds: 2)) {
+      return;
+    }
+
+    _lastAutoSyncAt = now;
+    unawaited(_syncLoginState(autoTriggered: true));
+  }
+
+  void _scheduleInterceptAutoSync({required bool hasLikelySessionCookie}) {
+    if (!_useManualSyncAfterLoginOnWindows) {
+      return;
+    }
+    if (_isInterceptAutoSyncScheduled) {
+      return;
+    }
+
+    final delay = hasLikelySessionCookie
+        ? const Duration(milliseconds: 250)
+        : const Duration(milliseconds: 500);
+    _interceptAutoSyncToken += 1;
+    final currentToken = _interceptAutoSyncToken;
+    _isInterceptAutoSyncScheduled = true;
+    unawaited(() async {
+      try {
+        await Future<void>.delayed(delay);
+        if (!mounted || currentToken != _interceptAutoSyncToken) {
+          return;
+        }
+        await _syncLoginState(autoTriggered: true);
+      } finally {
+        if (currentToken == _interceptAutoSyncToken) {
+          _isInterceptAutoSyncScheduled = false;
+        }
+      }
+    }());
+  }
+
+  void _cancelPendingInterceptAutoSync() {
+    if (!_isInterceptAutoSyncScheduled && _interceptAutoSyncToken == 0) {
+      return;
+    }
+
+    _interceptAutoSyncToken += 1;
+    _isInterceptAutoSyncScheduled = false;
+  }
+
+  void _captureCookiesForWebUri(WebUri? url) {
+    unawaited(_cookieStore.captureCookiesForUri(_tryParseWebUri(url)));
+  }
+
+  void _captureCookiesForUri(Uri? uri) {
+    unawaited(_cookieStore.captureCookiesForUri(uri));
+  }
+
+  Future<void> _completeLoginFlow() async {
+    // On Windows, the flutter_inappwebview native destructor calls
+    // DestroyWindow before webViewController->Close, which is the
+    // reverse of what WebView2 requires. Stop the WebView first to
+    // put it in a quiescent state and reduce the chance of a native
+    // crash during disposal.
+    final controller = _webViewController;
+    if (controller != null) {
+      try {
+        await controller.stopLoading();
+      } catch (_) {}
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final router = context.maybeGoRouter;
+    if (router != null && router.canPop()) {
+      router.pop<bool>(true);
+      return;
+    }
+
+    context.goThreadList();
+  }
+
+  Future<bool> _handleCreateWindow(
+    InAppWebViewController _,
+    CreateWindowAction createWindowAction,
+  ) async {
+    final popupUrl = createWindowAction.request.url;
+    _captureCookiesForWebUri(popupUrl);
+    if (popupUrl == null || popupUrl.toString().trim().isEmpty) {
+      _updateStatus('检测到登录弹窗请求，但地址为空，已忽略。');
+    } else {
+      _updateStatus('检测到登录弹窗，已在当前页面继续打开。');
+    }
+    // Must return false so the native WebView2 layer completes its deferral
+    // and loads the popup URL in the current webview. Returning true would
+    // skip the native defaultBehaviour, leaving the deferral uncompleted
+    // and crashing the WebView2 process on Windows.
+    return false;
+  }
+
+  void _updateStatus(String nextStatus) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _statusText = nextStatus;
+    });
   }
 
   void _showMessage(String message) {
@@ -182,388 +400,214 @@ class _LoginPageViewState extends State<LoginPageView> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _startCountdown() {
-    _countdownTimer?.cancel();
-    setState(() => _countdown = 60);
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted || _countdown <= 1) {
-        timer.cancel();
-        if (mounted) {
-          setState(() => _countdown = 0);
-        }
-        return;
-      }
-      setState(() => _countdown -= 1);
-    });
-  }
-
-  String? _normalizeAreaCode(String value) {
-    final normalized = value.replaceAll(RegExp(r'\s+'), '').trim();
-    return RegExp(r'^\d{1,4}$').hasMatch(normalized) ? '+$normalized' : null;
-  }
-
-  String? _normalizePhoneNumber(String value) {
-    final normalized = value.replaceAll(RegExp(r'\s+'), '').trim();
-    return RegExp(r'^\d{6,15}$').hasMatch(normalized) ? normalized : null;
-  }
-
-  String? _normalizeVerificationCode(String value) {
-    final normalized = value.replaceAll(RegExp(r'\s+'), '').trim();
-    return RegExp(r'^\d{4,8}$').hasMatch(normalized) ? normalized : null;
-  }
-
-  String? _normalizeAccount(String value) {
-    final normalized = value.trim();
-    return normalized.isEmpty ? null : normalized;
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final loginGuideText = _useManualSyncAfterLoginOnWindows
+        ? 'Windows 端会从打开登录页开始持续累计这期间拿到的全部 Cookie；检测到登录成功跳转后会自动同步并校验，若失败仍可手动点击“同步登录状态”。'
+        : '打开虎扑登录页后，应用会保存 WebView 中返回的全部 Cookie，再自动校验登录是否生效。';
+
+    if (!_isSupportedPlatform) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('网页登录')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              '当前平台暂不支持内嵌网页登录，请使用 Windows 或 Android 版本。',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primaryContainer.withValues(alpha: 0.7),
-              colorScheme.surface,
-              colorScheme.tertiaryContainer.withValues(alpha: 0.45),
-            ],
-          ),
+      appBar: AppBar(
+        title: const Text('网页登录'),
+        leading: IconButton(
+          tooltip: '返回',
+          onPressed: () {
+            context.popOrGoThreadList();
+          },
+          icon: const Icon(Icons.arrow_back_rounded),
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -80,
-              right: -40,
-              child: _BackgroundOrb(
-                size: 220,
-                color: colorScheme.primary.withValues(alpha: 0.12),
-              ),
-            ),
-            Positioned(
-              left: -50,
-              bottom: -30,
-              child: _BackgroundOrb(
-                size: 190,
-                color: colorScheme.tertiary.withValues(alpha: 0.12),
-              ),
-            ),
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loginGuideText,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(height: 1.45),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _statusText,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
                       children: [
-                        IconButton.filledTonal(
-                          tooltip: '返回',
-                          onPressed: () {
-                            context.popOrGoThreadList();
-                          },
-                          icon: const Icon(Icons.arrow_back_rounded),
+                        FilledButton.icon(
+                          onPressed: _isSyncingCookies
+                              ? null
+                              : () => _syncLoginState(),
+                          icon: _isSyncingCookies
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.cookie_outlined),
+                          label: const Text('同步登录状态'),
                         ),
-                        const SizedBox(height: 12),
-                        _buildFormCard(context),
+                        OutlinedButton.icon(
+                          onPressed: _isSyncingCookies ? null : _reloadPage,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('刷新页面'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _isSyncingCookies
+                              ? null
+                              : _restartLoginFlow,
+                          icon: const Icon(Icons.restart_alt_rounded),
+                          label: const Text('重新开始登录'),
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormCard(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Material(
-      color: colorScheme.surface.withValues(alpha: 0.88),
-      borderRadius: BorderRadius.circular(32),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.42),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '登录',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSecondaryContainer,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '欢迎回来',
-                  style: textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SegmentedButton<LoginPageAuthMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: LoginPageAuthMode.smsCode,
-                      icon: Icon(Icons.sms_outlined),
-                      label: Text('验证码登录'),
-                    ),
-                    ButtonSegment(
-                      value: LoginPageAuthMode.password,
-                      icon: Icon(Icons.lock_outline_rounded),
-                      label: Text('密码登录'),
-                    ),
                   ],
-                  selected: {_mode},
-                  onSelectionChanged: (selection) {
-                    setState(() => _mode = selection.first);
-                  },
-                  showSelectedIcon: false,
-                  multiSelectionEnabled: false,
                 ),
-                const SizedBox(height: 22),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _mode == LoginPageAuthMode.smsCode
-                      ? _buildSmsForm()
-                      : _buildPasswordForm(),
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: LinearProgressIndicator(
+                  minHeight: 4,
+                  value: _isPageLoading ? _loadingProgress.clamp(0, 1) : null,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
                 ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _isSubmitting ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.42),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.2),
-                          )
-                        : Text(
-                            _mode == LoginPageAuthMode.smsCode
-                                ? '验证码登录'
-                                : '密码登录',
-                          ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: InAppWebView(
+                      initialUrlRequest: URLRequest(
+                        url: WebUri(LoginPageView.loginUri.toString()),
+                      ),
+                      initialSettings: InAppWebViewSettings(
+                        javaScriptEnabled: true,
+                        transparentBackground: false,
+                        useShouldOverrideUrlLoading:
+                            _useManualSyncAfterLoginOnWindows,
+                        mediaPlaybackRequiresUserGesture: false,
+                        allowsBackForwardNavigationGestures: true,
+                        thirdPartyCookiesEnabled: true,
+                      ),
+                      onWebViewCreated: (controller) {
+                        _webViewController = controller;
+                        _cookieStore.resetSessionCapture();
+                        _captureCookiesForUri(LoginPageView.loginUri);
+                      },
+                      onLoadStart: (controller, url) {
+                        if (!mounted) {
+                          return;
+                        }
+                        setState(() {
+                          _isPageLoading = true;
+                          _loadingProgress = 0;
+                        });
+                        _captureCookiesForWebUri(url);
+                      },
+                      onLoadStop: (controller, url) {
+                        if (!mounted) {
+                          return;
+                        }
+                        setState(() {
+                          _isPageLoading = false;
+                          _loadingProgress = 1;
+                        });
+                        _captureCookiesForWebUri(url);
+                        _scheduleAutoSync();
+                      },
+                      onProgressChanged: (controller, progress) {
+                        if (!mounted) {
+                          return;
+                        }
+                        setState(() {
+                          _loadingProgress = progress / 100;
+                          _isPageLoading = progress < 100;
+                        });
+                      },
+                      onUpdateVisitedHistory: (controller, url, isReload) {
+                        _captureCookiesForWebUri(url);
+                        _scheduleAutoSync();
+                      },
+                      onCreateWindow: _handleCreateWindow,
+                      onLoadResource: (controller, resource) {
+                        _captureCookiesForWebUri(resource.url);
+                      },
+                      shouldOverrideUrlLoading:
+                          _useManualSyncAfterLoginOnWindows
+                          ? _handleShouldOverrideUrlLoading
+                          : null,
+                      onCloseWindow: (controller) {
+                        if (_useManualSyncAfterLoginOnWindows) {
+                          _cookieStore.freezeCapturedCookies();
+                          _updateStatus('检测到网页登录流程结束，请点击“同步登录状态”。');
+                          return;
+                        }
 
-  Widget _buildSmsForm() {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      key: const ValueKey('login-sms-form'),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 112,
-              child: TextFormField(
-                key: const ValueKey('login-area-code-field'),
-                controller: _areaCodeController,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(4),
-                ],
-                decoration: const InputDecoration(
-                  labelText: '区号',
-                  prefixIcon: Icon(Icons.public_rounded),
-                  prefixText: '+',
-                ),
-                validator: (value) {
-                  if (_normalizeAreaCode(value ?? '') == null) {
-                    return '格式错误';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                key: const ValueKey('login-phone-field'),
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: '手机号',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                onChanged: (_) => setState(() {}),
-                validator: (value) {
-                  if (_normalizePhoneNumber(value ?? '') == null) {
-                    return '请输入手机号';
-                  }
-                  return null;
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextFormField(
-                key: const ValueKey('login-sms-code-field'),
-                controller: _smsCodeController,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: '短信验证码',
-                  hintText: '输入 4-8 位验证码',
-                  prefixIcon: Icon(Icons.mark_email_unread_outlined),
-                ),
-                validator: (value) {
-                  if (_normalizeVerificationCode(value ?? '') == null) {
-                    return '请输入有效验证码';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 128, maxWidth: 148),
-              child: FilledButton.tonal(
-                key: const ValueKey('login-send-code-button'),
-                onPressed: _canRequestCode ? _requestVerificationCode : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(56),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+                        _updateStatus('网页登录触发关闭请求，正在校验登录状态...');
+                        _scheduleAutoSync();
+                      },
+                      onReceivedError: (controller, request, error) {
+                        _updateStatus('页面加载失败，请检查网络后重试。');
+                      },
+                      onReceivedHttpError:
+                          (controller, request, errorResponse) {
+                            _updateStatus(
+                              '登录页返回异常状态码 ${errorResponse.statusCode ?? '-'}。',
+                            );
+                          },
                     ),
                   ),
                 ),
-                child: Text(
-                  _isSendingCode
-                      ? '发送中...'
-                      : _countdown > 0
-                      ? '${_countdown}s'
-                      : '发送验证码',
-                ),
               ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordForm() {
-    return Column(
-      key: const ValueKey('login-password-form'),
-      children: [
-        TextFormField(
-          key: const ValueKey('login-account-field'),
-          controller: _accountController,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            labelText: '账号或手机号',
-            hintText: '输入账号或手机号',
-            prefixIcon: Icon(Icons.person_outline_rounded),
+            ],
           ),
-          validator: (value) {
-            if (_normalizeAccount(value ?? '') == null) {
-              return '请输入账号或手机号';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          key: const ValueKey('login-password-field'),
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            labelText: '密码',
-            hintText: '输入登录密码',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            suffixIcon: IconButton(
-              tooltip: _obscurePassword ? '显示密码' : '隐藏密码',
-              onPressed: () {
-                setState(() => _obscurePassword = !_obscurePassword);
-              },
-              icon: Icon(
-                _obscurePassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-              ),
-            ),
-          ),
-          validator: (value) {
-            if ((value ?? '').trim().length < 6) {
-              return '密码至少 6 位';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _BackgroundOrb extends StatelessWidget {
-  final double size;
-  final Color color;
-
-  const _BackgroundOrb({required this.size, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
       ),
     );
