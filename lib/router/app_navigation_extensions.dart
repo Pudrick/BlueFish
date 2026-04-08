@@ -2,10 +2,17 @@ import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/router/auth_guard.dart';
 import 'package:bluefish/router/models/photo_gallery_route_data.dart';
 import 'package:bluefish/router/models/thread_reply_composer_route_data.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_routes.dart' show AppRoutes, MentionTab;
+
+@immutable
+class ThreadDetailBlockedNavigationResult {
+  final String message;
+
+  const ThreadDetailBlockedNavigationResult(this.message);
+}
 
 extension AppNavigationExtensions on BuildContext {
   GoRouter? get maybeGoRouter => GoRouter.maybeOf(this);
@@ -77,13 +84,13 @@ extension AppNavigationExtensions on BuildContext {
     int page = 1,
     String? onlyEuid,
     String? onlyPuid,
-  }) {
+  }) async {
     final router = maybeGoRouter;
     if (router == null) {
-      return Future<T?>.value(null);
+      return null;
     }
 
-    return router.push<T>(
+    final result = await router.push<Object?>(
       AppRoutes.threadDetailLocation(
         tid: tid.toString(),
         page: page,
@@ -91,6 +98,26 @@ extension AppNavigationExtensions on BuildContext {
         onlyPuid: onlyPuid,
       ),
     );
+
+    if (result is ThreadDetailBlockedNavigationResult) {
+      if (mounted) {
+        final messenger = ScaffoldMessenger.maybeOf(this);
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
+      return null;
+    }
+
+    if (result is T) {
+      return result;
+    }
+    return null;
   }
 
   void replaceThreadDetail({

@@ -218,12 +218,13 @@ class ThreadDetailService {
     final thread = Map<String, dynamic>.from(
       detailInfo['thread'] as Map<dynamic, dynamic>,
     );
+
     // TODO: add isrec check instead of this
     thread['isRecommended'] = detailInfo['isRecommended'];
 
     return {
       'thread': thread,
-      'topicId': detailInfo['topicId'],
+      'topicId': thread['topicId'],
       'lights': detailInfo['lights'],
       'replies': detailInfo['replies'],
     };

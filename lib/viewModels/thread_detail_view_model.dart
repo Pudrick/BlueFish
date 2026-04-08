@@ -17,6 +17,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetailState _state = ThreadDetailState.initial;
   ThreadDetail? _data;
   String? _errorMessage;
+  String? _pendingInterceptMessage;
   int _currentPage;
   AuthorIdentity? _authorFilter;
 
@@ -64,6 +65,12 @@ class ThreadDetailViewModel extends ChangeNotifier {
 
   String? get opEuid => _data?.opEuid;
   String? get opPuid => _data?.opPuid;
+
+  String? consumeInterceptMessage() {
+    final message = _pendingInterceptMessage;
+    _pendingInterceptMessage = null;
+    return message;
+  }
 
   /// Reply list for current page (empty if not loaded).
   List get replies => _data?.replies ?? [];
@@ -145,6 +152,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
   Future<void> _loadPage(int page, {required bool forceRefresh}) async {
     _state = ThreadDetailState.loading;
     _errorMessage = null;
+    _pendingInterceptMessage = null;
     notifyListeners();
 
     final result = await _service.getThreadDetail(
@@ -158,7 +166,8 @@ class ThreadDetailViewModel extends ChangeNotifier {
       success: (data) {
         if (data.topicId != mainTopicID) {
           _data = null;
-          _errorMessage = '仅支持打开崩版';
+          _errorMessage = null;
+          _pendingInterceptMessage = '仅支持打开崩版';
           _state = ThreadDetailState.error;
           return;
         }

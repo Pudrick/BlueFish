@@ -348,6 +348,33 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
+        final interceptMessage = viewModel.consumeInterceptMessage();
+        if (interceptMessage != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) {
+              return;
+            }
+
+            final router = context.maybeGoRouter;
+            if (router != null && router.canPop()) {
+              router.pop(ThreadDetailBlockedNavigationResult(interceptMessage));
+              return;
+            }
+
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            messenger
+              ?..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(interceptMessage),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+          });
+
+          return const Scaffold(body: SizedBox.expand());
+        }
+
         _syncRouteIfNeeded(viewModel);
         _scheduleQuickActionSync();
 
