@@ -58,6 +58,7 @@ dependencies:
   vsc_quill_delta_to_html: ^1.0.5
   image_picker: ^1.2.1
   flutter_inappwebview: ^6.1.5
+  cached_network_image_ce: ^4.6.4
 
 
 dependency_overrides:

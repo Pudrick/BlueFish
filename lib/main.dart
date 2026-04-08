@@ -8,6 +8,7 @@ import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/router/app_router.dart';
 import 'package:bluefish/userdata/theme_settings.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
+import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async => launchApp();
@@ -36,6 +37,15 @@ class BluefishApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AuthSessionManager>.value(
           value: authSessionManager,
+        ),
+        ChangeNotifierProvider<CurrentUserProfileViewModel>(
+          create: (_) {
+            final viewModel = CurrentUserProfileViewModel(
+              authSessionManager: authSessionManager,
+            );
+            unawaited(viewModel.initialize());
+            return viewModel;
+          },
         ),
       ],
       child: Consumer<AppSettingsViewModel>(

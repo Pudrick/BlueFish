@@ -4,6 +4,7 @@ import 'package:bluefish/auth/auth_cookie_jar.dart';
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/auth/web_login_session_service.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -161,7 +162,8 @@ class _LoginPageViewState extends State<LoginPageView> {
         return;
       }
 
-      _showMessage('登录成功，已同步 Cookie。');
+      _triggerCurrentUserProfileRefresh();
+      _showMessage('登录成功。');
       await _completeLoginFlow();
     } catch (_) {
       _updateStatus('同步登录状态失败，请稍后重试。');
@@ -398,6 +400,18 @@ class _LoginPageViewState extends State<LoginPageView> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _triggerCurrentUserProfileRefresh() {
+    final profileViewModel = Provider.of<CurrentUserProfileViewModel?>(
+      context,
+      listen: false,
+    );
+    if (profileViewModel == null) {
+      return;
+    }
+
+    unawaited(profileViewModel.refreshProfile(force: true));
   }
 
   @override

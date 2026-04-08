@@ -1,5 +1,7 @@
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,12 +10,30 @@ class MePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthSessionManager>(
-      builder: (context, authSessionManager, _) {
+    return Consumer2<AuthSessionManager, CurrentUserProfileViewModel>(
+      builder: (context, authSessionManager, currentUserProfileViewModel, _) {
         final isLoggedIn = authSessionManager.isLoggedIn;
-        final sessionSummary = isLoggedIn
-            ? '当前会话：${authSessionManager.activeSource.label}'
-            : '当前未检测到登录会话，点击后前往登录页';
+        final profile = isLoggedIn ? currentUserProfileViewModel.profile : null;
+        final supportingText = isLoggedIn ? null : '当前未检测到登录会话，点击后前往登录页';
+        final currentUserEuid = profile?.euid;
+        final currentUserPuid = currentUserEuid == null
+            ? _resolveCurrentUserPuidFromCookies(
+                authSessionManager.getCookiesSync(),
+              )
+            : null;
+
+        final VoidCallback? onHeaderTap = switch (isLoggedIn) {
+          false => () => context.pushLogin(),
+          true when currentUserEuid != null =>
+            () => context.maybeGoRouter?.push<void>(
+              AppRoutes.userHomeLocation(euid: currentUserEuid),
+            ),
+          true when currentUserPuid != null =>
+            () => context.maybeGoRouter?.push<void>(
+              AppRoutes.userHomeLocation(puid: currentUserPuid),
+            ),
+          _ => null,
+        };
 
         return Scaffold(
           appBar: AppBar(title: const Text('我'), centerTitle: true),
@@ -31,10 +51,13 @@ class MePage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     children: [
                       _MeHeaderCard(
-                        title: isLoggedIn ? '个人中心' : '未登录',
+                        title: isLoggedIn
+                            ? (profile?.username ?? '个人中心')
+                            : '未登录',
+                        avatarUrl: isLoggedIn ? profile?.avatarUrl : null,
                         hasActiveSession: isLoggedIn,
-                        sessionSummary: sessionSummary,
-                        onTap: isLoggedIn ? null : () => context.pushLogin(),
+                        supportingText: supportingText,
+                        onTap: onHeaderTap,
                       ),
                       const SizedBox(height: 24),
                       _NotchedSection(
@@ -195,21 +218,80 @@ class MePage extends StatelessWidget {
 
 class _MeHeaderCard extends StatelessWidget {
   final String title;
+  final String? avatarUrl;
   final bool hasActiveSession;
-  final String sessionSummary;
+  final String? supportingText;
   final VoidCallback? onTap;
 
   const _MeHeaderCard({
     required this.title,
+    required this.avatarUrl,
     required this.hasActiveSession,
-    required this.sessionSummary,
+    required this.supportingText,
     required this.onTap,
   });
+
+  Widget _buildAvatar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final normalizedAvatarUrl = avatarUrl?.trim();
+
+    if (normalizedAvatarUrl == null || normalizedAvatarUrl.isEmpty) {
+      return Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: colorScheme.primaryContainer,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.person_rounded,
+          size: 28,
+          color: colorScheme.onPrimaryContainer,
+        ),
+      );
+    }
+
+    return Container(
+      width: 56,
+      height: 56,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(shape: BoxShape.circle),
+      child: CachedNetworkImage(
+        key: const ValueKey('me-header-avatar-image'),
+        imageUrl: normalizedAvatarUrl,
+        fit: BoxFit.cover,
+        placeholder: (context, _) => ColoredBox(
+          color: colorScheme.surfaceContainerHighest,
+          child: Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        ),
+        errorBuilder: (context, _, _) => ColoredBox(
+          color: colorScheme.primaryContainer,
+          child: Icon(
+            Icons.person_rounded,
+            size: 28,
+            color: colorScheme.onPrimaryContainer,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final normalizedSupportingText = supportingText?.trim();
+    final hasSupportingText =
+        normalizedSupportingText != null && normalizedSupportingText.isNotEmpty;
     final indicatorColor = onTap == null
         ? colorScheme.onSurfaceVariant.withValues(alpha: 0.55)
         : colorScheme.onSurfaceVariant;
@@ -236,19 +318,7 @@ class _MeHeaderCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: 28,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
-                ),
+                _buildAvatar(context),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -261,21 +331,24 @@ class _MeHeaderCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        sessionSummary,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        ),
+                      const SizedBox(height: 8),
+                      _HeaderStatusPill(
+                        label: hasActiveSession ? '已登录' : '未登录',
+                        active: hasActiveSession,
+                        compact: true,
                       ),
+                      if (hasSupportingText) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          normalizedSupportingText,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                _HeaderStatusPill(
-                  label: hasActiveSession ? '已登录' : '未登录',
-                  active: hasActiveSession,
                 ),
                 const SizedBox(width: 8),
                 Center(
@@ -307,8 +380,13 @@ class _MeHeaderCard extends StatelessWidget {
 class _HeaderStatusPill extends StatelessWidget {
   final String label;
   final bool active;
+  final bool compact;
 
-  const _HeaderStatusPill({required this.label, required this.active});
+  const _HeaderStatusPill({
+    required this.label,
+    required this.active,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -321,20 +399,69 @@ class _HeaderStatusPill extends StatelessWidget {
         : colorScheme.onSurfaceVariant;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 6 : 8,
+      ),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: foregroundColor,
           fontWeight: FontWeight.w800,
         ),
       ),
     );
   }
+}
+
+String? _resolveCurrentUserPuidFromCookies(String cookies) {
+  final normalizedCookies = cookies.trim();
+  if (normalizedCookies.isEmpty) {
+    return null;
+  }
+
+  const cookieKeyCandidates = <String>['uid', 'puid', 'u', 'g'];
+  for (final key in cookieKeyCandidates) {
+    final parsedPuid = _extractNumericIdentityFromCookie(
+      normalizedCookies,
+      key,
+    );
+    if (parsedPuid != null) {
+      return parsedPuid;
+    }
+  }
+
+  return null;
+}
+
+String? _extractNumericIdentityFromCookie(String cookies, String key) {
+  final match = RegExp(
+    '(?:^|;\\s*)${RegExp.escape(key)}=([^;]+)',
+  ).firstMatch(cookies);
+  if (match == null) {
+    return null;
+  }
+
+  final decodedValue = Uri.decodeComponent(match.group(1)!);
+  final separatorIndex = decodedValue.indexOf('|');
+  final rawId = separatorIndex >= 0
+      ? decodedValue.substring(0, separatorIndex)
+      : decodedValue;
+  final normalizedId = rawId.trim();
+  if (normalizedId.isEmpty) {
+    return null;
+  }
+
+  final isNumeric = RegExp(r'^\d+$').hasMatch(normalizedId);
+  if (!isNumeric) {
+    return null;
+  }
+
+  return normalizedId;
 }
 
 class _NotchedSection extends StatelessWidget {
