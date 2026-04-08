@@ -70,78 +70,94 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
     );
   }
 
-  Widget _buildPrimaryFormattingStrip() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildToggleStyleButton(
-            attribute: quill.Attribute.bold,
-            options: _toolbarButtonOptions.bold,
-          ),
-          const SizedBox(width: _toolbarButtonSpacing),
-          _buildToggleStyleButton(
-            attribute: quill.Attribute.italic,
-            options: _toolbarButtonOptions.italic,
-          ),
-          const SizedBox(width: _toolbarButtonSpacing),
-          _buildToggleStyleButton(
-            attribute: quill.Attribute.underline,
-            options: _toolbarButtonOptions.underLine,
-          ),
-          const SizedBox(width: _toolbarButtonSpacing),
-          _buildToggleStyleButton(
-            attribute: quill.Attribute.strikeThrough,
-            options: _toolbarButtonOptions.strikeThrough,
-          ),
-        ],
+  Widget _buildCustomActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String tooltip,
+  }) {
+    return quill.QuillToolbarCustomButton(
+      controller: widget.controller,
+      options: quill.QuillToolbarCustomButtonOptions(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: Icon(icon, size: 18),
       ),
+      baseOptions: _toolbarButtonOptions.base,
     );
   }
 
-  Widget _buildExpandedFormattingPanel() {
+  Widget _buildPrimaryFormattingStrip() {
     return Wrap(
       spacing: _toolbarButtonSpacing,
       runSpacing: _toolbarButtonSpacing,
       children: [
         _buildToggleStyleButton(
-          attribute: quill.Attribute.inlineCode,
-          options: _toolbarButtonOptions.inlineCode,
+          attribute: quill.Attribute.bold,
+          options: _toolbarButtonOptions.bold,
         ),
-        quill.QuillToolbarClearFormatButton(
+        _buildToggleStyleButton(
+          attribute: quill.Attribute.italic,
+          options: _toolbarButtonOptions.italic,
+        ),
+        quill.QuillToolbarSelectHeaderStyleButtons(
           controller: widget.controller,
-          options: _toolbarButtonOptions.clearFormat,
+          options: const quill.QuillToolbarSelectHeaderStyleButtonsOptions(
+            attributes: [quill.Attribute.h1, quill.Attribute.h2],
+          ),
           baseOptions: _toolbarButtonOptions.base,
+        ),
+        _buildToggleStyleButton(
+          attribute: quill.Attribute.underline,
+          options: _toolbarButtonOptions.underLine,
+        ),
+        _buildToggleStyleButton(
+          attribute: quill.Attribute.strikeThrough,
+          options: _toolbarButtonOptions.strikeThrough,
         ),
         _buildToggleStyleButton(
           attribute: quill.Attribute.ol,
           options: _toolbarButtonOptions.listNumbers,
         ),
         _buildToggleStyleButton(
-          attribute: quill.Attribute.ul,
-          options: _toolbarButtonOptions.listBullets,
+          attribute: quill.Attribute.leftAlignment,
+          options: const quill.QuillToolbarToggleStyleButtonOptions(),
         ),
         _buildToggleStyleButton(
-          attribute: quill.Attribute.blockQuote,
-          options: _toolbarButtonOptions.quote,
+          attribute: quill.Attribute.centerAlignment,
+          options: const quill.QuillToolbarToggleStyleButtonOptions(),
         ),
         _buildToggleStyleButton(
-          attribute: quill.Attribute.codeBlock,
-          options: _toolbarButtonOptions.codeBlock,
+          attribute: quill.Attribute.rightAlignment,
+          options: const quill.QuillToolbarToggleStyleButtonOptions(),
         ),
-        _buildIndentButton(
-          isIncrease: true,
-          options: _toolbarButtonOptions.indentIncrease,
+        quill.QuillToolbarColorButton(
+          controller: widget.controller,
+          isBackground: false,
+          options: _toolbarButtonOptions.color,
+          baseOptions: _toolbarButtonOptions.base,
         ),
-        _buildIndentButton(
-          isIncrease: false,
-          options: _toolbarButtonOptions.indentDecrease,
+        quill.QuillToolbarColorButton(
+          controller: widget.controller,
+          isBackground: true,
+          options: _toolbarButtonOptions.backgroundColor,
+          baseOptions: _toolbarButtonOptions.base,
+        ),
+        _buildCustomActionButton(
+          onPressed: widget.onInsertImagePlaceholder,
+          icon: Icons.image_outlined,
+          tooltip: '图片',
         ),
         quill.QuillToolbarLinkStyleButton(
           controller: widget.controller,
           options: _toolbarButtonOptions.linkStyle,
           baseOptions: _toolbarButtonOptions.base,
         ),
+        if (widget.onInsertVideoPlaceholder != null)
+          _buildCustomActionButton(
+            onPressed: widget.onInsertVideoPlaceholder!,
+            icon: Icons.smart_display_outlined,
+            tooltip: '视频',
+          ),
         _buildHistoryButton(
           isUndo: true,
           options: _toolbarButtonOptions.undoHistory,
@@ -151,6 +167,62 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
           options: _toolbarButtonOptions.redoHistory,
         ),
       ],
+    );
+  }
+
+  Widget _buildExpandedFormattingPanel() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Wrap(
+        spacing: _toolbarButtonSpacing,
+        runSpacing: _toolbarButtonSpacing,
+        children: [
+          _buildToggleStyleButton(
+            attribute: quill.Attribute.inlineCode,
+            options: _toolbarButtonOptions.inlineCode,
+          ),
+          quill.QuillToolbarClearFormatButton(
+            controller: widget.controller,
+            options: _toolbarButtonOptions.clearFormat,
+            baseOptions: _toolbarButtonOptions.base,
+          ),
+          _buildToggleStyleButton(
+            attribute: quill.Attribute.ul,
+            options: _toolbarButtonOptions.listBullets,
+          ),
+          _buildToggleStyleButton(
+            attribute: quill.Attribute.blockQuote,
+            options: _toolbarButtonOptions.quote,
+          ),
+          _buildToggleStyleButton(
+            attribute: quill.Attribute.codeBlock,
+            options: _toolbarButtonOptions.codeBlock,
+          ),
+          _buildIndentButton(
+            isIncrease: true,
+            options: _toolbarButtonOptions.indentIncrease,
+          ),
+          _buildIndentButton(
+            isIncrease: false,
+            options: _toolbarButtonOptions.indentDecrease,
+          ),
+          _buildCustomActionButton(
+            onPressed: widget.onInsertDetails,
+            icon: Icons.unfold_more_rounded,
+            tooltip: '折叠说明',
+          ),
+        ],
+      ),
     );
   }
 
@@ -200,7 +272,7 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
                     return FadeTransition(opacity: animation, child: child);
                   },
                   child: Text(
-                    _isExpanded ? '收起排版' : '更多排版',
+                    _isExpanded ? '收起非兼容格式' : '展开非兼容格式',
                     key: ValueKey<bool>(_isExpanded),
                   ),
                 ),
@@ -214,28 +286,6 @@ class _QuillComposerToolbarState extends State<QuillComposerToolbar> {
           const SizedBox(height: 4),
           _buildPrimaryFormattingStrip(),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.tonalIcon(
-                onPressed: widget.onInsertImagePlaceholder,
-                icon: const Icon(Icons.image_outlined, size: 18),
-                label: const Text('图片'),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: widget.onInsertDetails,
-                icon: const Icon(Icons.unfold_more_rounded, size: 18),
-                label: const Text('折叠说明'),
-              ),
-              if (widget.onInsertVideoPlaceholder != null)
-                FilledButton.tonalIcon(
-                  onPressed: widget.onInsertVideoPlaceholder,
-                  icon: const Icon(Icons.smart_display_outlined, size: 18),
-                  label: const Text('视频'),
-                ),
-            ],
-          ),
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
