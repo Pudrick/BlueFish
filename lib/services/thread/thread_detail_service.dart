@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:bluefish/models/author_identity.dart';
+import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/thread_main.dart';
@@ -166,12 +167,14 @@ class ThreadDetailService {
     }
 
     final repliesInfo = threadInfo['replies'] as Map<String, dynamic>;
+    final int topicId = parseInt(threadInfo['topicId']);
     final int totalRepliesNum = repliesInfo['count'] as int;
     final lightedReplies = _parseReplyList('lights', threadInfo);
     final replies = _parseReplyList('replies', threadInfo);
 
     return ThreadDetail(
       tid: tid,
+      topicId: topicId,
       currentPage: page,
       totalRepliesNum: totalRepliesNum,
       repliesPerPage: 20,
@@ -220,6 +223,7 @@ class ThreadDetailService {
 
     return {
       'thread': thread,
+      'topicId': detailInfo['topicId'],
       'lights': detailInfo['lights'],
       'replies': detailInfo['replies'],
     };

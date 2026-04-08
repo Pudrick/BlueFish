@@ -4,6 +4,7 @@ import 'package:bluefish/models/thread/single_reply_floor.dart';
 /// Data container for thread detail page.
 class ThreadDetail {
   final String tid;
+  final int topicId;
   final int currentPage;
   final int totalRepliesNum;
   final int repliesPerPage;
@@ -13,6 +14,7 @@ class ThreadDetail {
 
   ThreadDetail({
     required this.tid,
+    required this.topicId,
     required this.currentPage,
     required this.totalRepliesNum,
     required this.repliesPerPage,

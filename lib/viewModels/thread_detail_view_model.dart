@@ -1,4 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
+import 'package:bluefish/models/internal_settings.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:flutter/foundation.dart';
@@ -155,6 +156,13 @@ class ThreadDetailViewModel extends ChangeNotifier {
 
     result.when(
       success: (data) {
+        if (data.topicId != mainTopicID) {
+          _data = null;
+          _errorMessage = '仅支持打开崩版';
+          _state = ThreadDetailState.error;
+          return;
+        }
+
         _data = data;
         _currentPage = page;
         _state = ThreadDetailState.loaded;
