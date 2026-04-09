@@ -36,158 +36,159 @@ class MePage extends StatelessWidget {
         };
 
         return Scaffold(
-          appBar: AppBar(title: const Text('我'), centerTitle: true),
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxContentWidth = constraints.maxWidth >= 1024
-                  ? 960.0
-                  : double.infinity;
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxContentWidth = constraints.maxWidth >= 1024
+                    ? 960.0
+                    : double.infinity;
 
-              return Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      _MeHeaderCard(
-                        title: isLoggedIn
-                            ? (profile?.username ?? '个人中心')
-                            : '未登录',
-                        avatarUrl: isLoggedIn ? profile?.avatarUrl : null,
-                        hasActiveSession: isLoggedIn,
-                        supportingText: supportingText,
-                        onTap: onHeaderTap,
-                      ),
-                      const SizedBox(height: 24),
-                      _NotchedSection(
-                        key: const ValueKey('me-section-account'),
-                        title: '账户',
-                        child: _FeatureGrid(
-                          items: [
-                            _MeFeatureItemData(
-                              key: 'profile',
-                              title: '编辑资料',
-                              icon: Icons.account_circle_outlined,
-                              statusLabel: isLoggedIn ? '待接入' : '先登录',
-                              tone: _MeFeatureTone.primary,
-                              onTap: isLoggedIn
-                                  ? null
-                                  : () {
-                                      context.pushLogin();
-                                    },
-                            ),
-                            _MeFeatureItemData(
-                              key: 'settings',
-                              title: '设置',
-                              icon: Icons.settings_outlined,
-                              tone: _MeFeatureTone.secondary,
-                              onTap: () {
-                                context.pushSettings();
-                              },
-                            ),
-                          ],
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxContentWidth),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      children: [
+                        _MeHeaderCard(
+                          title: isLoggedIn
+                              ? (profile?.username ?? '个人中心')
+                              : '未登录',
+                          avatarUrl: isLoggedIn ? profile?.avatarUrl : null,
+                          hasActiveSession: isLoggedIn,
+                          supportingText: supportingText,
+                          onTap: onHeaderTap,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      _NotchedSection(
-                        key: const ValueKey('me-section-activity'),
-                        title: '互动与记录',
-                        child: _FeatureGrid(
-                          items: [
-                            _MeFeatureItemData(
-                              key: 'favorites',
-                              title: '收藏',
-                              icon: Icons.bookmark_border_rounded,
-                              tone: _MeFeatureTone.tertiary,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: '收藏',
-                                  icon: Icons.bookmark_border_rounded,
-                                  statusLabel: '占位入口',
-                                  description: '这里后续会集中展示你收藏过的帖子、回复和相关内容。',
-                                );
-                              },
-                            ),
-                            _MeFeatureItemData(
-                              key: 'lights',
-                              title: '点亮',
-                              icon: Icons.wb_incandescent_outlined,
-                              tone: _MeFeatureTone.warning,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: '点亮',
-                                  icon: Icons.wb_incandescent_outlined,
-                                  statusLabel: '占位入口',
-                                  description: '这里后续会展示你点亮过的内容，方便回看互动痕迹。',
-                                );
-                              },
-                            ),
-                            _MeFeatureItemData(
-                              key: 'history',
-                              title: '历史记录',
-                              icon: Icons.history_rounded,
-                              tone: _MeFeatureTone.neutral,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: '历史记录',
-                                  icon: Icons.history_rounded,
-                                  statusLabel: '占位入口',
-                                  description: '这里后续会整理最近浏览过的帖子与页面，方便继续阅读。',
-                                );
-                              },
-                            ),
-                            _MeFeatureItemData(
-                              key: 'drafts',
-                              title: '草稿箱',
-                              icon: Icons.edit_note_rounded,
-                              tone: _MeFeatureTone.primary,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: '草稿箱',
-                                  icon: Icons.edit_note_rounded,
-                                  statusLabel: '占位入口',
-                                  description: '这里后续会集中管理未发布的帖子和回复草稿，方便继续编辑。',
-                                );
-                              },
-                            ),
-                          ],
+                        const SizedBox(height: 24),
+                        _NotchedSection(
+                          key: const ValueKey('me-section-account'),
+                          title: '账户',
+                          child: _FeatureGrid(
+                            items: [
+                              _MeFeatureItemData(
+                                key: 'profile',
+                                title: '编辑资料',
+                                icon: Icons.account_circle_outlined,
+                                statusLabel: isLoggedIn ? '待接入' : '先登录',
+                                tone: _MeFeatureTone.primary,
+                                onTap: isLoggedIn
+                                    ? null
+                                    : () {
+                                        context.pushLogin();
+                                      },
+                              ),
+                              _MeFeatureItemData(
+                                key: 'settings',
+                                title: '设置',
+                                icon: Icons.settings_outlined,
+                                tone: _MeFeatureTone.secondary,
+                                onTap: () {
+                                  context.pushSettings();
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      _NotchedSection(
-                        key: const ValueKey('me-section-assets'),
-                        title: '资产',
-                        child: _FeatureGrid(
-                          items: [
-                            _MeFeatureItemData(
-                              key: 'hcoin',
-                              title: 'H币',
-                              icon: Icons.monetization_on_outlined,
-                              statusLabel: '即将上线',
-                              tone: _MeFeatureTone.secondary,
-                              onTap: () {
-                                _openPlaceholderPage(
-                                  context,
-                                  title: 'H币',
-                                  icon: Icons.monetization_on_outlined,
-                                  statusLabel: '即将上线',
-                                  description: '这里后续会承载 H 币相关的查看、说明和扩展能力。',
-                                );
-                              },
-                            ),
-                          ],
+                        const SizedBox(height: 20),
+                        _NotchedSection(
+                          key: const ValueKey('me-section-activity'),
+                          title: '互动与记录',
+                          child: _FeatureGrid(
+                            items: [
+                              _MeFeatureItemData(
+                                key: 'favorites',
+                                title: '收藏',
+                                icon: Icons.bookmark_border_rounded,
+                                tone: _MeFeatureTone.tertiary,
+                                onTap: () {
+                                  _openPlaceholderPage(
+                                    context,
+                                    title: '收藏',
+                                    icon: Icons.bookmark_border_rounded,
+                                    statusLabel: '占位入口',
+                                    description: '这里后续会集中展示你收藏过的帖子、回复和相关内容。',
+                                  );
+                                },
+                              ),
+                              _MeFeatureItemData(
+                                key: 'lights',
+                                title: '点亮',
+                                icon: Icons.wb_incandescent_outlined,
+                                tone: _MeFeatureTone.warning,
+                                onTap: () {
+                                  _openPlaceholderPage(
+                                    context,
+                                    title: '点亮',
+                                    icon: Icons.wb_incandescent_outlined,
+                                    statusLabel: '占位入口',
+                                    description: '这里后续会展示你点亮过的内容，方便回看互动痕迹。',
+                                  );
+                                },
+                              ),
+                              _MeFeatureItemData(
+                                key: 'history',
+                                title: '历史记录',
+                                icon: Icons.history_rounded,
+                                tone: _MeFeatureTone.neutral,
+                                onTap: () {
+                                  _openPlaceholderPage(
+                                    context,
+                                    title: '历史记录',
+                                    icon: Icons.history_rounded,
+                                    statusLabel: '占位入口',
+                                    description: '这里后续会整理最近浏览过的帖子与页面，方便继续阅读。',
+                                  );
+                                },
+                              ),
+                              _MeFeatureItemData(
+                                key: 'drafts',
+                                title: '草稿箱',
+                                icon: Icons.edit_note_rounded,
+                                tone: _MeFeatureTone.primary,
+                                onTap: () {
+                                  _openPlaceholderPage(
+                                    context,
+                                    title: '草稿箱',
+                                    icon: Icons.edit_note_rounded,
+                                    statusLabel: '占位入口',
+                                    description: '这里后续会集中管理未发布的帖子和回复草稿，方便继续编辑。',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        _NotchedSection(
+                          key: const ValueKey('me-section-assets'),
+                          title: '资产',
+                          child: _FeatureGrid(
+                            items: [
+                              _MeFeatureItemData(
+                                key: 'hcoin',
+                                title: 'H币',
+                                icon: Icons.monetization_on_outlined,
+                                statusLabel: '即将上线',
+                                tone: _MeFeatureTone.secondary,
+                                onTap: () {
+                                  _openPlaceholderPage(
+                                    context,
+                                    title: 'H币',
+                                    icon: Icons.monetization_on_outlined,
+                                    statusLabel: '即将上线',
+                                    description: '这里后续会承载 H 币相关的查看、说明和扩展能力。',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
