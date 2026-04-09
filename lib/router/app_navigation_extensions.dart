@@ -82,6 +82,7 @@ extension AppNavigationExtensions on BuildContext {
   Future<T?> pushThreadDetail<T>({
     required Object tid,
     int page = 1,
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) async {
@@ -94,6 +95,7 @@ extension AppNavigationExtensions on BuildContext {
       AppRoutes.threadDetailLocation(
         tid: tid.toString(),
         page: page,
+        targetPid: targetPid,
         onlyEuid: onlyEuid,
         onlyPuid: onlyPuid,
       ),
@@ -123,6 +125,7 @@ extension AppNavigationExtensions on BuildContext {
   void replaceThreadDetail({
     required Object tid,
     int page = 1,
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) {
@@ -135,6 +138,7 @@ extension AppNavigationExtensions on BuildContext {
       AppRoutes.threadDetailLocation(
         tid: tid.toString(),
         page: page,
+        targetPid: targetPid,
         onlyEuid: onlyEuid,
         onlyPuid: onlyPuid,
       ),

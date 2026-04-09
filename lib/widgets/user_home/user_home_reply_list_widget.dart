@@ -7,11 +7,13 @@ import 'package:intl/intl.dart';
 class UserHomeReplyWidget extends StatelessWidget {
   final UserHomeReply reply;
   final bool isQuote;
+  final VoidCallback? onTap;
 
   const UserHomeReplyWidget({
     super.key,
     required this.reply,
     required this.isQuote,
+    this.onTap,
   });
 
   @override
@@ -39,7 +41,7 @@ class UserHomeReplyWidget extends StatelessWidget {
       // color: colorScheme.surfaceContainerHigh,
       color: backgroundColor,
       child: InkWell(
-        onTap: () {},
+        onTap: isQuote ? null : onTap,
         child: Container(
           decoration: BoxDecoration(border: innerBorder),
           padding: const EdgeInsets.all(16.0),
@@ -316,12 +318,14 @@ class UserHomeReplyListWidget extends StatelessWidget {
 
   final bool isLoading;
   final bool isLastPage;
+  final ValueChanged<UserHomeReply>? onReplyTap;
 
   const UserHomeReplyListWidget({
     super.key,
     required this.replyList,
     required this.isLoading,
     required this.isLastPage,
+    this.onReplyTap,
   });
 
   Widget _buildFooter(BuildContext context) {
@@ -349,7 +353,11 @@ class UserHomeReplyListWidget extends StatelessWidget {
       delegate: SliverChildBuilderDelegate((BuildContext context, int index) {
         if (index == replyList.length) return _buildFooter(context);
         final item = replyList[index];
-        return UserHomeReplyWidget(reply: item, isQuote: false);
+        return UserHomeReplyWidget(
+          reply: item,
+          isQuote: false,
+          onTap: onReplyTap == null ? null : () => onReplyTap!(item),
+        );
       }, childCount: replyList.length + 1),
     );
   }

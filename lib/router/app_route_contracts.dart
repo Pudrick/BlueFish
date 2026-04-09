@@ -57,6 +57,7 @@ class AppRoutes {
   static const String threadIdParameter = 'tid';
   static const String threadReplyIdParameter = 'pid';
   static const String threadPageQueryParameter = 'page';
+  static const String threadTargetPidQueryParameter = 'targetPid';
   static const String threadOnlyEuidQueryParameter = 'onlyEuid';
   static const String threadOnlyPuidQueryParameter = 'onlyPuid';
   static const String threadDetailPath = '/thread/:$threadIdParameter';
@@ -97,6 +98,14 @@ class AppRoutes {
 
   static String? parseThreadOnlyPuid(String? rawValue) {
     return _normalizeAuthorId(rawValue);
+  }
+
+  static String? parseThreadTargetPid(String? rawValue) {
+    final normalized = rawValue?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 
   static AuthorIdentity? parseThreadAuthorIdentity({
@@ -147,6 +156,7 @@ class AppRoutes {
   static String threadDetailLocation({
     required String tid,
     int page = 1,
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) {
@@ -154,6 +164,7 @@ class AppRoutes {
       path: threadDetailPathForTid(tid),
       queryParameters: _threadQueryParameters(
         page,
+        targetPid: targetPid,
         onlyEuid: onlyEuid,
         onlyPuid: onlyPuid,
       ),
@@ -164,6 +175,7 @@ class AppRoutes {
     required String tid,
     required String pid,
     int page = 1,
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) {
@@ -171,6 +183,7 @@ class AppRoutes {
       path: '${threadDetailPathForTid(tid)}/reply/${pid.trim()}',
       queryParameters: _threadQueryParameters(
         page,
+        targetPid: targetPid,
         onlyEuid: onlyEuid,
         onlyPuid: onlyPuid,
       ),
@@ -250,6 +263,7 @@ class AppRoutes {
 
   static Map<String, String>? _threadQueryParameters(
     int page, {
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) {
@@ -257,6 +271,11 @@ class AppRoutes {
 
     if (page > 1) {
       queryParameters[threadPageQueryParameter] = '$page';
+    }
+
+    final normalizedTargetPid = parseThreadTargetPid(targetPid);
+    if (normalizedTargetPid != null) {
+      queryParameters[threadTargetPidQueryParameter] = normalizedTargetPid;
     }
 
     final normalizedOnlyEuid = parseThreadOnlyEuid(onlyEuid);

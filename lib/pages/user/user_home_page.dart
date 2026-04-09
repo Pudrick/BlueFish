@@ -1,8 +1,13 @@
 import 'package:bluefish/models/author_identity.dart';
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/models/user_home/user_home.dart';
+import 'package:bluefish/models/user_home/user_home_reply.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/reply_page_locator_service.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
 import 'package:bluefish/widgets/user_home/user_home_display_select_widget.dart';
@@ -38,6 +43,8 @@ class _UserHomePageViewState extends State<UserHomePageView> {
   final GlobalKey _infoSectionKey = GlobalKey();
 
   static const double _infoSectionVerticalPadding = 32;
+  int _replyJumpRequestId = 0;
+  bool _replyJumpInProgress = false;
 
   @override
   void initState() {
@@ -99,8 +106,130 @@ class _UserHomePageViewState extends State<UserHomePageView> {
     context.popOrGoThreadList();
   }
 
+  int _resolveReplyLocateBudget() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateTotalProbeBudget ??
+        AppSettings.defaultReplyLocateTotalProbeBudget;
+  }
+
+  int _resolveReplyLocateCacheMaxEntries() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateCacheMaxEntries ??
+        AppSettings.defaultReplyLocateCacheMaxEntries;
+  }
+
+  bool _isReplyJumpCanceled(int requestId) {
+    return !_replyJumpInProgress || _replyJumpRequestId != requestId;
+  }
+
+  void _cancelActiveReplyJump({bool hideSnackBar = true}) {
+    if (_replyJumpInProgress) {
+      _replyJumpInProgress = false;
+      _replyJumpRequestId += 1;
+    }
+    if (hideSnackBar && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+    }
+  }
+
+  void _showReplyJumpSnackBar(int requestId) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) {
+      return;
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('正在跳转...'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(days: 1),
+          action: SnackBarAction(
+            label: '取消',
+            onPressed: () {
+              if (_replyJumpRequestId == requestId) {
+                _cancelActiveReplyJump();
+              }
+            },
+          ),
+        ),
+      );
+  }
+
+  void _showMessage(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+  }
+
+  Future<void> _openThreadByReplyTarget({
+    required int tid,
+    required int pid,
+  }) async {
+    _cancelActiveReplyJump();
+
+    final requestId = _replyJumpRequestId + 1;
+    _replyJumpRequestId = requestId;
+    _replyJumpInProgress = true;
+    _showReplyJumpSnackBar(requestId);
+
+    final locateResult = await context
+        .read<ReplyPageLocatorService>()
+        .locateReplyPage(
+          tid: '$tid',
+          pid: '$pid',
+          probeBudget: _resolveReplyLocateBudget(),
+          cacheMaxEntries: _resolveReplyLocateCacheMaxEntries(),
+          isCanceled: () => _isReplyJumpCanceled(requestId),
+        );
+
+    if (!mounted || _isReplyJumpCanceled(requestId)) {
+      return;
+    }
+
+    _replyJumpInProgress = false;
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+
+    if (!locateResult.shouldNavigate || locateResult.resolvedPage == null) {
+      final message = locateResult.message;
+      if (message != null && message.isNotEmpty) {
+        _showMessage(message);
+      }
+      return;
+    }
+
+    await context.pushThreadDetail(
+      tid: '$tid',
+      page: locateResult.resolvedPage!,
+      targetPid: '$pid',
+    );
+
+    if (!mounted) {
+      return;
+    }
+    final message = locateResult.message;
+    if (message != null && message.isNotEmpty) {
+      _showMessage(message);
+    }
+  }
+
+  Future<void> _handleReplyTap(UserHomeReply reply) {
+    return _openThreadByReplyTarget(tid: reply.tid, pid: reply.pid);
+  }
+
   @override
   void dispose() {
+    _cancelActiveReplyJump(hideSnackBar: false);
     _scrollController.dispose();
     super.dispose();
   }
@@ -161,6 +290,9 @@ class _UserHomePageViewState extends State<UserHomePageView> {
                 replyList: data.replies,
                 isLoading: viewModel.isLoadingReplies,
                 isLastPage: viewModel.isLastReplyPage,
+                onReplyTap: (reply) {
+                  unawaited(_handleReplyTap(reply));
+                },
               ),
               DisplayStatus.recommends => UserHomeThreadListWidget(
                 threadsList: data.recommendThreads,

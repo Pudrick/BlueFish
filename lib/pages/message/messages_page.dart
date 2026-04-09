@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/models/mention/mention_light.dart';
 import 'package:bluefish/models/mention/mention_reply.dart';
 import 'package:bluefish/models/private_message/private_message_list.dart';
 import 'package:bluefish/pages/message/mention_list_page_base.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/reply_page_locator_service.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/mention_light_view_model.dart';
 import 'package:bluefish/viewModels/mention_reply_view_model.dart';
 import 'package:bluefish/viewModels/private_message_list_view_model.dart';
@@ -36,6 +39,8 @@ class _MessagesPageState extends State<MessagesPage>
   bool _didInitLight = false;
   bool _didInitPrivateMessage = false;
   String? _lastSyncedLocation;
+  int _replyJumpRequestId = 0;
+  bool _replyJumpInProgress = false;
 
   int get _replyUnreadCount => _replyViewModel.newList.length;
   int get _lightUnreadCount => _lightViewModel.newList.length;
@@ -74,6 +79,7 @@ class _MessagesPageState extends State<MessagesPage>
 
   @override
   void dispose() {
+    _cancelActiveReplyJump(hideSnackBar: false);
     _tabController.dispose();
     _replyViewModel.dispose();
     _lightViewModel.dispose();
@@ -164,6 +170,131 @@ class _MessagesPageState extends State<MessagesPage>
     );
   }
 
+  int _resolveReplyLocateBudget() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateTotalProbeBudget ??
+        AppSettings.defaultReplyLocateTotalProbeBudget;
+  }
+
+  int _resolveReplyLocateCacheMaxEntries() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateCacheMaxEntries ??
+        AppSettings.defaultReplyLocateCacheMaxEntries;
+  }
+
+  bool _isReplyJumpCanceled(int requestId) {
+    return !_replyJumpInProgress || _replyJumpRequestId != requestId;
+  }
+
+  void _cancelActiveReplyJump({bool hideSnackBar = true}) {
+    if (_replyJumpInProgress) {
+      _replyJumpInProgress = false;
+      _replyJumpRequestId += 1;
+    }
+    if (hideSnackBar && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+    }
+  }
+
+  void _showReplyJumpSnackBar(int requestId) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) {
+      return;
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('正在跳转...'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(days: 1),
+          action: SnackBarAction(
+            label: '取消',
+            onPressed: () {
+              if (_replyJumpRequestId == requestId) {
+                _cancelActiveReplyJump();
+              }
+            },
+          ),
+        ),
+      );
+  }
+
+  void _showMessage(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+  }
+
+  Future<void> _openThreadByReplyTarget({
+    required int tid,
+    required int pid,
+  }) async {
+    _cancelActiveReplyJump();
+
+    final requestId = _replyJumpRequestId + 1;
+    _replyJumpRequestId = requestId;
+    _replyJumpInProgress = true;
+    _showReplyJumpSnackBar(requestId);
+
+    final locateResult = await context
+        .read<ReplyPageLocatorService>()
+        .locateReplyPage(
+          tid: '$tid',
+          pid: '$pid',
+          probeBudget: _resolveReplyLocateBudget(),
+          cacheMaxEntries: _resolveReplyLocateCacheMaxEntries(),
+          isCanceled: () => _isReplyJumpCanceled(requestId),
+        );
+
+    if (!mounted || _isReplyJumpCanceled(requestId)) {
+      return;
+    }
+
+    _replyJumpInProgress = false;
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+
+    if (!locateResult.shouldNavigate || locateResult.resolvedPage == null) {
+      final message = locateResult.message;
+      if (message != null && message.isNotEmpty) {
+        _showMessage(message);
+      }
+      return;
+    }
+
+    await context.pushThreadDetail(
+      tid: '$tid',
+      page: locateResult.resolvedPage!,
+      targetPid: '$pid',
+    );
+
+    if (!mounted) {
+      return;
+    }
+    final message = locateResult.message;
+    if (message != null && message.isNotEmpty) {
+      _showMessage(message);
+    }
+  }
+
+  Future<void> _handleMentionReplyTap(MentionReply reply) {
+    return _openThreadByReplyTarget(tid: reply.tid, pid: reply.pid);
+  }
+
+  Future<void> _handleMentionLightTap(MentionLight light) {
+    return _openThreadByReplyTarget(tid: light.post.tid, pid: light.post.pid);
+  }
+
   @override
   Widget build(BuildContext context) {
     _syncRouteIfNeeded();
@@ -191,8 +322,18 @@ class _MessagesPageState extends State<MessagesPage>
                   child: IndexedStack(
                     index: _currentTab.index,
                     children: [
-                      _ReplyMessagesTab(viewModel: _replyViewModel),
-                      _LightMessagesTab(viewModel: _lightViewModel),
+                      _ReplyMessagesTab(
+                        viewModel: _replyViewModel,
+                        onOpenReply: (reply) {
+                          unawaited(_handleMentionReplyTap(reply));
+                        },
+                      ),
+                      _LightMessagesTab(
+                        viewModel: _lightViewModel,
+                        onOpenLight: (light) {
+                          unawaited(_handleMentionLightTap(light));
+                        },
+                      ),
                       _PrivateMessagesTab(
                         viewModel: _privateMessageViewModel,
                         onOpenConversation: _openConversation,
@@ -401,8 +542,9 @@ class _MessagesTabBadge extends StatelessWidget {
 
 class _ReplyMessagesTab extends StatelessWidget {
   final MentionReplyViewModel viewModel;
+  final ValueChanged<MentionReply> onOpenReply;
 
-  const _ReplyMessagesTab({required this.viewModel});
+  const _ReplyMessagesTab({required this.viewModel, required this.onOpenReply});
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +556,7 @@ class _ReplyMessagesTab extends StatelessWidget {
         oldReplies: viewModel.oldList,
         hasNextPage: viewModel.hasNextPage,
         isLoading: viewModel.isLoading,
+        onReplyTap: onOpenReply,
       ),
     );
   }
@@ -421,8 +564,9 @@ class _ReplyMessagesTab extends StatelessWidget {
 
 class _LightMessagesTab extends StatelessWidget {
   final MentionLightViewModel viewModel;
+  final ValueChanged<MentionLight> onOpenLight;
 
-  const _LightMessagesTab({required this.viewModel});
+  const _LightMessagesTab({required this.viewModel, required this.onOpenLight});
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +578,7 @@ class _LightMessagesTab extends StatelessWidget {
         oldLights: viewModel.oldList,
         hasNextPage: viewModel.hasNextPage,
         isLoading: viewModel.isLoading,
+        onLightTap: onOpenLight,
       ),
     );
   }

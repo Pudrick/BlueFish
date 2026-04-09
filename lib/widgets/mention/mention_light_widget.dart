@@ -16,8 +16,9 @@ import 'package:provider/provider.dart';
 
 class MentionLightCard extends StatefulWidget {
   final MentionLight light;
+  final VoidCallback? onTap;
 
-  const MentionLightCard({super.key, required this.light});
+  const MentionLightCard({super.key, required this.light, this.onTap});
 
   @override
   State<MentionLightCard> createState() => _MentionLightCardState();
@@ -69,9 +70,7 @@ class _MentionLightCardState extends State<MentionLightCard> {
     final textTheme = Theme.of(context).textTheme;
 
     return MentionCardShell(
-      onTap: () {
-        // TODO: jump to thread detail.
-      },
+      onTap: widget.onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,6 +340,7 @@ class MentionLightListWidget extends StatelessWidget {
   final List<MentionLight> oldLights;
   final bool hasNextPage;
   final bool isLoading;
+  final ValueChanged<MentionLight>? onLightTap;
 
   const MentionLightListWidget({
     super.key,
@@ -348,6 +348,7 @@ class MentionLightListWidget extends StatelessWidget {
     required this.oldLights,
     required this.hasNextPage,
     required this.isLoading,
+    this.onLightTap,
   });
 
   @override
@@ -357,7 +358,10 @@ class MentionLightListWidget extends StatelessWidget {
       oldItems: oldLights,
       hasNextPage: hasNextPage,
       isLoading: isLoading,
-      itemBuilder: (context, item) => MentionLightCard(light: item),
+      itemBuilder: (context, item) => MentionLightCard(
+        light: item,
+        onTap: onLightTap == null ? null : () => onLightTap!(item),
+      ),
     );
   }
 }
@@ -447,8 +451,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                         linkColor: linkColor,
                         imageShrinkTriggerMaxEdgeDp:
                             imageShrinkTriggerMaxEdgeDp,
-                        imageShrinkTargetMaxEdgeDp:
-                            imageShrinkTargetMaxEdgeDp,
+                        imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
                       ),
                     ),
                   ),

@@ -20,12 +20,14 @@ import 'package:provider/provider.dart';
 class ThreadPage extends StatelessWidget {
   final String tid;
   final int page;
+  final String? targetPid;
   final AuthorIdentity? authorFilter;
 
   const ThreadPage._({
     super.key,
     required this.tid,
     required this.page,
+    this.targetPid,
     this.authorFilter,
   });
 
@@ -33,6 +35,7 @@ class ThreadPage extends StatelessWidget {
     Key? key,
     required dynamic tid,
     int page = 1,
+    String? targetPid,
     String? onlyEuid,
     String? onlyPuid,
   }) {
@@ -44,11 +47,13 @@ class ThreadPage extends StatelessWidget {
       onlyEuid: onlyEuid,
       onlyPuid: onlyPuid,
     );
+    final resolvedTargetPid = AppRoutes.parseThreadTargetPid(targetPid);
     if (tid is String) {
       return ThreadPage._(
         key: key,
         tid: tid,
         page: page,
+        targetPid: resolvedTargetPid,
         authorFilter: resolvedAuthorFilter,
       );
     } else if (tid is int) {
@@ -56,6 +61,7 @@ class ThreadPage extends StatelessWidget {
         key: key,
         tid: tid.toString(),
         page: page,
+        targetPid: resolvedTargetPid,
         authorFilter: resolvedAuthorFilter,
       );
     } else {
@@ -71,6 +77,7 @@ class ThreadPage extends StatelessWidget {
       create: (_) => ThreadDetailViewModel(
         tid: tid,
         initialPage: page,
+        initialTargetPid: targetPid,
         initialAuthorFilter: authorFilter,
       )..loadInitial(),
       child: const _ThreadPageContent(),
@@ -89,14 +96,19 @@ class _ThreadPageContent extends StatefulWidget {
 class _ThreadPageContentState extends State<_ThreadPageContent> {
   final ScrollController _scrollController = ScrollController();
   String? _lastSyncedLocation;
+  String? _pendingTargetPid;
   bool _showScrollToTop = false;
   bool _showScrollToBottom = false;
   bool _quickActionSyncScheduled = false;
+  bool _targetLocateScheduled = false;
+  int _targetLocateAttempts = 0;
 
   static const Duration _scrollAnimationDuration = Duration(milliseconds: 260);
   static const Duration _quickActionAnimationDuration = Duration(
     milliseconds: 180,
   );
+  static const int _maxTargetLocateAttempts = 5;
+  static const double _targetReplyAlignment = 0.04;
 
   @override
   void initState() {
@@ -110,6 +122,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   }
 
   void _jumpToPage(int page) {
+    _clearPendingTarget();
     final viewModel = context.read<ThreadDetailViewModel>();
     if (page == viewModel.currentPage) {
       return;
@@ -254,6 +267,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   }
 
   Future<void> _applyAuthorFilter(AuthorIdentity identity) async {
+    _clearPendingTarget();
     final viewModel = context.read<ThreadDetailViewModel>();
     if (viewModel.authorFilter == identity &&
         viewModel.currentPage == 1 &&
@@ -266,6 +280,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   }
 
   Future<void> _clearAuthorFilter() async {
+    _clearPendingTarget();
     final viewModel = context.read<ThreadDetailViewModel>();
     if (!viewModel.hasAuthorFilter &&
         viewModel.currentPage == 1 &&
@@ -313,6 +328,155 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         );
       }
     });
+  }
+
+  void _consumePendingTargetIfNeeded(ThreadDetailViewModel viewModel) {
+    if (_pendingTargetPid != null) {
+      return;
+    }
+
+    final targetPid = viewModel.consumeTargetPid();
+    if (targetPid == null || targetPid.isEmpty) {
+      return;
+    }
+
+    _pendingTargetPid = targetPid;
+    _targetLocateAttempts = 0;
+    _scheduleTargetLocate();
+  }
+
+  void _clearPendingTarget() {
+    _pendingTargetPid = null;
+    _targetLocateAttempts = 0;
+  }
+
+  void _scheduleTargetLocate() {
+    if (_targetLocateScheduled) {
+      return;
+    }
+
+    _targetLocateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _targetLocateScheduled = false;
+      _tryLocateTargetReply();
+    });
+  }
+
+  void _tryLocateTargetReply() {
+    if (!mounted) {
+      return;
+    }
+
+    final targetPid = _pendingTargetPid;
+    if (targetPid == null) {
+      return;
+    }
+
+    final viewModel = context.read<ThreadDetailViewModel>();
+    final data = viewModel.data;
+    if (!viewModel.isLoaded || data == null) {
+      _scheduleTargetLocate();
+      return;
+    }
+
+    final targetIndex = data.replies.indexWhere(
+      (reply) => reply.pid == targetPid,
+    );
+    if (targetIndex < 0) {
+      _showTargetReplyNotFoundTip();
+      _clearPendingTarget();
+      return;
+    }
+
+    if (!_scrollController.hasClients) {
+      if (_targetLocateAttempts >= _maxTargetLocateAttempts) {
+        _showTargetReplyNotFoundTip();
+        _clearPendingTarget();
+        return;
+      }
+
+      _targetLocateAttempts += 1;
+      _scheduleTargetLocate();
+      return;
+    }
+
+    final targetContext = _findReplyCardContext(targetPid);
+    if (targetContext != null) {
+      Scrollable.ensureVisible(
+        targetContext,
+        alignment: _targetReplyAlignment,
+        duration: Duration.zero,
+      );
+      _clearPendingTarget();
+      return;
+    }
+
+    if (_targetLocateAttempts >= _maxTargetLocateAttempts) {
+      _showTargetReplyNotFoundTip();
+      _clearPendingTarget();
+      return;
+    }
+
+    _targetLocateAttempts += 1;
+    _jumpNearReplyIndex(
+      targetIndex: targetIndex,
+      totalReplies: data.replies.length,
+    );
+    _scheduleTargetLocate();
+  }
+
+  BuildContext? _findReplyCardContext(String pid) {
+    final targetKey = ValueKey<String>('reply-floor-card-$pid');
+    BuildContext? result;
+
+    void visit(Element element) {
+      if (result != null) {
+        return;
+      }
+
+      if (element.widget.key == targetKey) {
+        result = element;
+        return;
+      }
+
+      element.visitChildElements(visit);
+    }
+
+    (context as Element).visitChildElements(visit);
+    return result;
+  }
+
+  void _jumpNearReplyIndex({
+    required int targetIndex,
+    required int totalReplies,
+  }) {
+    if (!_scrollController.hasClients || totalReplies <= 0) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0) {
+      return;
+    }
+
+    final ratio = ((targetIndex + 0.2) / totalReplies).clamp(0.0, 1.0);
+    final roughOffset = (position.maxScrollExtent * ratio).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    _scrollController.jumpTo(roughOffset.toDouble());
+  }
+
+  void _showTargetReplyNotFoundTip() {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('未找到目标回复，已停留在当前页。'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override
@@ -376,6 +540,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         }
 
         _syncRouteIfNeeded(viewModel);
+        _consumePendingTargetIfNeeded(viewModel);
         _scheduleQuickActionSync();
 
         // Loading state

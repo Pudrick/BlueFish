@@ -18,15 +18,18 @@ class ThreadDetailViewModel extends ChangeNotifier {
   ThreadDetail? _data;
   String? _errorMessage;
   String? _pendingInterceptMessage;
+  String? _pendingTargetPid;
   int _currentPage;
   AuthorIdentity? _authorFilter;
 
   ThreadDetailViewModel({
     required this.tid,
     int initialPage = 1,
+    String? initialTargetPid,
     AuthorIdentity? initialAuthorFilter,
     ThreadDetailService? service,
   }) : _currentPage = initialPage,
+       _pendingTargetPid = _normalizeTargetPid(initialTargetPid),
        _authorFilter = initialAuthorFilter,
        _service = service ?? ThreadDetailService();
 
@@ -70,6 +73,12 @@ class ThreadDetailViewModel extends ChangeNotifier {
     final message = _pendingInterceptMessage;
     _pendingInterceptMessage = null;
     return message;
+  }
+
+  String? consumeTargetPid() {
+    final targetPid = _pendingTargetPid;
+    _pendingTargetPid = null;
+    return targetPid;
   }
 
   /// Reply list for current page (empty if not loaded).
@@ -183,5 +192,13 @@ class ThreadDetailViewModel extends ChangeNotifier {
     );
 
     notifyListeners();
+  }
+
+  static String? _normalizeTargetPid(String? rawValue) {
+    final normalized = rawValue?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 }

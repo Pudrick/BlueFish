@@ -9,8 +9,9 @@ import 'package:intl/intl.dart';
 
 class MentionReplyCard extends StatefulWidget {
   final MentionReply reply;
+  final VoidCallback? onTap;
 
-  const MentionReplyCard({super.key, required this.reply});
+  const MentionReplyCard({super.key, required this.reply, this.onTap});
 
   @override
   State<MentionReplyCard> createState() => _MentionReplyCardState();
@@ -38,9 +39,7 @@ class _MentionReplyCardState extends State<MentionReplyCard> {
     final textTheme = Theme.of(context).textTheme;
 
     return MentionCardShell(
-      onTap: () {
-        // TODO: jump to thread detail.
-      },
+      onTap: widget.onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -377,6 +376,7 @@ class MentionReplyListWidget extends StatelessWidget {
   final List<MentionReply> oldReplies;
   final bool hasNextPage;
   final bool isLoading;
+  final ValueChanged<MentionReply>? onReplyTap;
 
   const MentionReplyListWidget({
     super.key,
@@ -384,6 +384,7 @@ class MentionReplyListWidget extends StatelessWidget {
     required this.oldReplies,
     required this.hasNextPage,
     required this.isLoading,
+    this.onReplyTap,
   });
 
   @override
@@ -393,7 +394,10 @@ class MentionReplyListWidget extends StatelessWidget {
       oldItems: oldReplies,
       hasNextPage: hasNextPage,
       isLoading: isLoading,
-      itemBuilder: (context, item) => MentionReplyCard(reply: item),
+      itemBuilder: (context, item) => MentionReplyCard(
+        reply: item,
+        onTap: onReplyTap == null ? null : () => onReplyTap!(item),
+      ),
     );
   }
 }
