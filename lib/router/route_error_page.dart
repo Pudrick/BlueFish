@@ -1,4 +1,4 @@
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_navigation_extensions.dart';
 import 'package:flutter/material.dart';
 
 class RouteErrorPage extends StatelessWidget {

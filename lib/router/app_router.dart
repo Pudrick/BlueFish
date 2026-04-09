@@ -4,7 +4,7 @@ import 'package:bluefish/pages/message/messages_page.dart';
 import 'package:bluefish/pages/composer/create_thread_page.dart';
 import 'package:bluefish/pages/settings/settings_page.dart';
 import 'package:bluefish/pages/thread/thread_list_page.dart';
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_route_contracts.dart';
 import 'package:bluefish/router/route_error_page.dart';
 import 'package:bluefish/router/routes/media_routes.dart';
 import 'package:bluefish/router/routes/mention_routes.dart';

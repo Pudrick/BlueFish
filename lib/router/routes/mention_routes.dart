@@ -1,4 +1,4 @@
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_route_contracts.dart';
 import 'package:go_router/go_router.dart';
 
 final mentionRoutes = <RouteBase>[

@@ -1,5 +1,5 @@
 import 'package:bluefish/pages/message/private_message_detail_page.dart';
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_route_contracts.dart';
 import 'package:bluefish/router/route_error_page.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';

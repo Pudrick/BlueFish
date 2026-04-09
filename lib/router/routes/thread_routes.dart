@@ -2,7 +2,8 @@ import 'package:bluefish/models/composer/reply_draft.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:bluefish/pages/thread/thread_page.dart';
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_route_contracts.dart';
+import 'package:bluefish/router/models/thread_reply_composer_route_data.dart';
 import 'package:bluefish/router/route_error_page.dart';
 import 'package:go_router/go_router.dart';
 

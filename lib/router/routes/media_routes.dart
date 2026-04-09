@@ -1,5 +1,7 @@
 import 'package:bluefish/pages/media/photo_gallery_page.dart';
-import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/app_navigation_extensions.dart';
+import 'package:bluefish/router/app_route_contracts.dart';
+import 'package:bluefish/router/models/photo_gallery_route_data.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

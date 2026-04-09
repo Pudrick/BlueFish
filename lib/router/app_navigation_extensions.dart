@@ -5,7 +5,7 @@ import 'package:bluefish/router/models/thread_reply_composer_route_data.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'app_routes.dart' show AppRoutes, MentionTab;
+import 'app_route_contracts.dart' show AppRoutes, MentionTab;
 
 @immutable
 class ThreadDetailBlockedNavigationResult {
