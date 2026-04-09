@@ -42,6 +42,12 @@ class AppSettings {
   static const double minImageShrinkTargetMaxEdgeDp = 240;
   static const double maxImageShrinkTargetMaxEdgeDp = 640;
   static const double defaultImageShrinkTargetMaxEdgeDp = 360;
+  static const int minReplyLocateTotalProbeBudget = 3;
+  static const int maxReplyLocateTotalProbeBudget = 40;
+  static const int defaultReplyLocateTotalProbeBudget = 15;
+  static const int minReplyLocateCacheMaxEntries = 64;
+  static const int maxReplyLocateCacheMaxEntries = 4096;
+  static const int defaultReplyLocateCacheMaxEntries = 1024;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
   static const double _imageEdgeStepDp = 10;
   static const Object _unset = Object();
@@ -53,6 +59,8 @@ class AppSettings {
     metaFontScale: 1,
     imageShrinkTriggerMaxEdgeDp: defaultImageShrinkTriggerMaxEdgeDp,
     imageShrinkTargetMaxEdgeDp: defaultImageShrinkTargetMaxEdgeDp,
+    replyLocateTotalProbeBudget: defaultReplyLocateTotalProbeBudget,
+    replyLocateCacheMaxEntries: defaultReplyLocateCacheMaxEntries,
     apiVersionOverride: null,
   );
 
@@ -63,6 +71,8 @@ class AppSettings {
   final double metaFontScale;
   final double imageShrinkTriggerMaxEdgeDp;
   final double imageShrinkTargetMaxEdgeDp;
+  final int replyLocateTotalProbeBudget;
+  final int replyLocateCacheMaxEntries;
   final String? apiVersionOverride;
 
   const AppSettings._({
@@ -73,6 +83,8 @@ class AppSettings {
     required this.metaFontScale,
     required this.imageShrinkTriggerMaxEdgeDp,
     required this.imageShrinkTargetMaxEdgeDp,
+    required this.replyLocateTotalProbeBudget,
+    required this.replyLocateCacheMaxEntries,
     required this.apiVersionOverride,
   });
 
@@ -84,6 +96,8 @@ class AppSettings {
     required double metaFontScale,
     required double imageShrinkTriggerMaxEdgeDp,
     required double imageShrinkTargetMaxEdgeDp,
+    required int replyLocateTotalProbeBudget,
+    required int replyLocateCacheMaxEntries,
     String? apiVersionOverride,
   }) {
     final normalizedTrigger = _normalizeImageEdgeDp(
@@ -107,6 +121,12 @@ class AppSettings {
       imageShrinkTargetMaxEdgeDp: normalizedTarget > normalizedTrigger
           ? normalizedTrigger
           : normalizedTarget,
+      replyLocateTotalProbeBudget: _normalizeReplyLocateTotalProbeBudget(
+        replyLocateTotalProbeBudget,
+      ),
+      replyLocateCacheMaxEntries: _normalizeReplyLocateCacheMaxEntries(
+        replyLocateCacheMaxEntries,
+      ),
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
     );
   }
@@ -123,6 +143,8 @@ class AppSettings {
     double? metaFontScale,
     double? imageShrinkTriggerMaxEdgeDp,
     double? imageShrinkTargetMaxEdgeDp,
+    int? replyLocateTotalProbeBudget,
+    int? replyLocateCacheMaxEntries,
     Object? apiVersionOverride = _unset,
   }) {
     return AppSettings(
@@ -135,6 +157,10 @@ class AppSettings {
           imageShrinkTriggerMaxEdgeDp ?? this.imageShrinkTriggerMaxEdgeDp,
       imageShrinkTargetMaxEdgeDp:
           imageShrinkTargetMaxEdgeDp ?? this.imageShrinkTargetMaxEdgeDp,
+      replyLocateTotalProbeBudget:
+          replyLocateTotalProbeBudget ?? this.replyLocateTotalProbeBudget,
+      replyLocateCacheMaxEntries:
+          replyLocateCacheMaxEntries ?? this.replyLocateCacheMaxEntries,
       apiVersionOverride: identical(apiVersionOverride, _unset)
           ? this.apiVersionOverride
           : apiVersionOverride as String?,
@@ -148,6 +174,18 @@ class AppSettings {
 
   static int _normalizeSeedColorValue(int value) {
     return value | 0xFF000000;
+  }
+
+  static int _normalizeReplyLocateTotalProbeBudget(int value) {
+    return value
+        .clamp(minReplyLocateTotalProbeBudget, maxReplyLocateTotalProbeBudget)
+        .toInt();
+  }
+
+  static int _normalizeReplyLocateCacheMaxEntries(int value) {
+    return value
+        .clamp(minReplyLocateCacheMaxEntries, maxReplyLocateCacheMaxEntries)
+        .toInt();
   }
 
   static double _normalizeImageEdgeDp({
@@ -182,6 +220,8 @@ class AppSettings {
         other.metaFontScale == metaFontScale &&
         other.imageShrinkTriggerMaxEdgeDp == imageShrinkTriggerMaxEdgeDp &&
         other.imageShrinkTargetMaxEdgeDp == imageShrinkTargetMaxEdgeDp &&
+        other.replyLocateTotalProbeBudget == replyLocateTotalProbeBudget &&
+        other.replyLocateCacheMaxEntries == replyLocateCacheMaxEntries &&
         other.apiVersionOverride == apiVersionOverride;
   }
 
@@ -194,6 +234,8 @@ class AppSettings {
     metaFontScale,
     imageShrinkTriggerMaxEdgeDp,
     imageShrinkTargetMaxEdgeDp,
+    replyLocateTotalProbeBudget,
+    replyLocateCacheMaxEntries,
     apiVersionOverride,
   );
 }

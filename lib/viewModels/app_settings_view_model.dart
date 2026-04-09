@@ -1,27 +1,43 @@
+import 'dart:async';
+
 import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/network/api_config.dart';
+import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/userdata/app_settings_store.dart';
 import 'package:flutter/foundation.dart';
 
 class AppSettingsViewModel extends ChangeNotifier {
   final AppSettingsStore _store;
+  final ReplyPageLocatorCacheService _replyPageLocatorCacheService;
 
   AppSettings _settings;
   Future<void>? _initialization;
   bool _isInitialized = false;
 
-  AppSettingsViewModel({AppSettingsStore? store, AppSettings? initialSettings})
-    : _store = store ?? AppSettingsStore(),
-      _settings = initialSettings ?? AppSettings.defaults {
+  AppSettingsViewModel({
+    AppSettingsStore? store,
+    AppSettings? initialSettings,
+    ReplyPageLocatorCacheService? replyPageLocatorCacheService,
+  }) : _store = store ?? AppSettingsStore(),
+       _replyPageLocatorCacheService =
+           replyPageLocatorCacheService ?? ReplyPageLocatorCacheService(),
+       _settings = initialSettings ?? AppSettings.defaults {
+    unawaited(
+      _replyPageLocatorCacheService.configureMaxEntries(
+        _settings.replyLocateCacheMaxEntries,
+      ),
+    );
     ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
   }
 
-  AppSettings get settings => _settings;
-
-  bool get isInitialized => _isInitialized;
-
-  static Future<AppSettingsViewModel> create({AppSettingsStore? store}) async {
-    final viewModel = AppSettingsViewModel(store: store);
+  static Future<AppSettingsViewModel> create({
+    AppSettingsStore? store,
+    ReplyPageLocatorCacheService? replyPageLocatorCacheService,
+  }) async {
+    final viewModel = AppSettingsViewModel(
+      store: store,
+      replyPageLocatorCacheService: replyPageLocatorCacheService,
+    );
     await viewModel.initialize();
     return viewModel;
   }
@@ -32,6 +48,9 @@ class AppSettingsViewModel extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     _settings = await _store.load();
+    await _replyPageLocatorCacheService.configureMaxEntries(
+      _settings.replyLocateCacheMaxEntries,
+    );
     ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     _isInitialized = true;
     notifyListeners();
@@ -81,14 +100,45 @@ class AppSettingsViewModel extends ChangeNotifier {
     );
   }
 
+  Future<void> updateReplyLocateTotalProbeBudget(
+    int replyLocateTotalProbeBudget,
+  ) {
+    return _applyAndPersist(
+      _settings.copyWith(
+        replyLocateTotalProbeBudget: replyLocateTotalProbeBudget,
+      ),
+    );
+  }
+
+  Future<void> updateReplyLocateCacheMaxEntries(
+    int replyLocateCacheMaxEntries,
+  ) {
+    return _applyAndPersist(
+      _settings.copyWith(
+        replyLocateCacheMaxEntries: replyLocateCacheMaxEntries,
+      ),
+    );
+  }
+
   Future<void> updateApiVersionOverride(String? apiVersionOverride) {
     return _applyAndPersist(
       _settings.copyWith(apiVersionOverride: apiVersionOverride),
     );
   }
 
+  Future<int> clearReplyLocateCacheBefore(DateTime cutoff) {
+    return _replyPageLocatorCacheService.clearBefore(cutoff);
+  }
+
+  Future<void> clearAllReplyLocateCache() {
+    return _replyPageLocatorCacheService.clearAll();
+  }
+
   Future<void> reset() async {
     _settings = AppSettings.defaults;
+    await _replyPageLocatorCacheService.configureMaxEntries(
+      _settings.replyLocateCacheMaxEntries,
+    );
     ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     notifyListeners();
     await _store.reset();
@@ -100,8 +150,15 @@ class AppSettingsViewModel extends ChangeNotifier {
     }
 
     _settings = nextSettings;
+    await _replyPageLocatorCacheService.configureMaxEntries(
+      _settings.replyLocateCacheMaxEntries,
+    );
     ApiConfig.setApiVersionOverride(_settings.apiVersionOverride);
     notifyListeners();
     await _store.save(_settings);
   }
+
+  AppSettings get settings => _settings;
+
+  bool get isInitialized => _isInitialized;
 }

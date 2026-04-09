@@ -1,10 +1,104 @@
 import 'package:bluefish/network/api_config.dart';
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class AdvancedSettingsPage extends StatelessWidget {
   const AdvancedSettingsPage({super.key});
+
+  Future<void> _clearReplyLocateCacheBeforeDate(
+    BuildContext context,
+    AppSettingsViewModel settingsViewModel,
+  ) async {
+    final now = DateTime.now();
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      helpText: '选择清理截止日期',
+    );
+
+    if (selectedDate == null || !context.mounted) {
+      return;
+    }
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('清除指定日期前缓存'),
+          content: Text(
+            '将清除 ${selectedDate.toLocal().toString().split(' ').first} 之前的回复定位缓存。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('清除'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldClear != true || !context.mounted) {
+      return;
+    }
+
+    final removedCount = await settingsViewModel.clearReplyLocateCacheBefore(
+      DateTime(selectedDate.year, selectedDate.month, selectedDate.day),
+    );
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('已清理 $removedCount 条回复定位缓存。')));
+  }
+
+  Future<void> _clearAllReplyLocateCache(
+    BuildContext context,
+    AppSettingsViewModel settingsViewModel,
+  ) async {
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('清除所有回复定位缓存'),
+          content: const Text('该操作会删除所有已保存的回复定位缓存。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('清除全部'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldClear != true || !context.mounted) {
+      return;
+    }
+
+    await settingsViewModel.clearAllReplyLocateCache();
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('已清除所有回复定位缓存。')));
+  }
 
   Future<void> _openApiVersionOverrideDialog(
     BuildContext context,
@@ -82,6 +176,149 @@ class AdvancedSettingsPage extends StatelessWidget {
                   onTap: () {
                     _openApiVersionOverrideDialog(context, settingsViewModel);
                   },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.tune_rounded),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '回复定位总探测预算',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Text(
+                            '${settings.replyLocateTotalProbeBudget}',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '控制单次跳转前最多探测的帖子页数。',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Slider(
+                        value: settings.replyLocateTotalProbeBudget.toDouble(),
+                        min: AppSettings.minReplyLocateTotalProbeBudget
+                            .toDouble(),
+                        max: AppSettings.maxReplyLocateTotalProbeBudget
+                            .toDouble(),
+                        divisions:
+                            AppSettings.maxReplyLocateTotalProbeBudget -
+                            AppSettings.minReplyLocateTotalProbeBudget,
+                        onChanged: (value) {
+                          settingsViewModel.updateReplyLocateTotalProbeBudget(
+                            value.round(),
+                          );
+                        },
+                      ),
+                      Text(
+                        '默认值：${AppSettings.defaultReplyLocateTotalProbeBudget}。',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.storage_rounded),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '回复定位缓存上限',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Text(
+                            '${settings.replyLocateCacheMaxEntries}',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '控制最多保留多少条回复定位缓存记录。',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Slider(
+                        value: settings.replyLocateCacheMaxEntries.toDouble(),
+                        min: AppSettings.minReplyLocateCacheMaxEntries
+                            .toDouble(),
+                        max: AppSettings.maxReplyLocateCacheMaxEntries
+                            .toDouble(),
+                        divisions:
+                            ((AppSettings.maxReplyLocateCacheMaxEntries -
+                                        AppSettings
+                                            .minReplyLocateCacheMaxEntries) /
+                                    64)
+                                .round(),
+                        onChanged: (value) {
+                          final rounded = ((value / 64).round() * 64)
+                              .clamp(
+                                AppSettings.minReplyLocateCacheMaxEntries,
+                                AppSettings.maxReplyLocateCacheMaxEntries,
+                              )
+                              .toInt();
+                          settingsViewModel.updateReplyLocateCacheMaxEntries(
+                            rounded,
+                          );
+                        },
+                      ),
+                      Text(
+                        '默认值：${AppSettings.defaultReplyLocateCacheMaxEntries}。',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.cleaning_services_rounded),
+                      title: const Text('清除指定日期前的回复定位缓存'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () {
+                        _clearReplyLocateCacheBeforeDate(
+                          context,
+                          settingsViewModel,
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_sweep_rounded),
+                      title: const Text('清除所有回复定位缓存'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () {
+                        _clearAllReplyLocateCache(context, settingsViewModel);
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],

@@ -11,6 +11,10 @@ class AppSettingsStore {
       'settings.image_shrink_trigger_max_edge_dp';
   static const String _imageShrinkTargetMaxEdgeDpKey =
       'settings.image_shrink_target_max_edge_dp';
+  static const String _replyLocateTotalProbeBudgetKey =
+      'settings.reply_locate_total_probe_budget';
+  static const String _replyLocateCacheMaxEntriesKey =
+      'settings.reply_locate_cache_max_entries';
   static const String _apiVersionOverrideKey = 'settings.api_version_override';
 
   SharedPreferences? _prefs;
@@ -44,6 +48,12 @@ class AppSettingsStore {
       imageShrinkTargetMaxEdgeDp:
           prefs.getDouble(_imageShrinkTargetMaxEdgeDpKey) ??
           AppSettings.defaults.imageShrinkTargetMaxEdgeDp,
+      replyLocateTotalProbeBudget:
+          prefs.getInt(_replyLocateTotalProbeBudgetKey) ??
+          AppSettings.defaults.replyLocateTotalProbeBudget,
+      replyLocateCacheMaxEntries:
+          prefs.getInt(_replyLocateCacheMaxEntriesKey) ??
+          AppSettings.defaults.replyLocateCacheMaxEntries,
       apiVersionOverride: prefs.getString(_apiVersionOverrideKey),
     );
   }
@@ -67,6 +77,14 @@ class AppSettingsStore {
       _imageShrinkTargetMaxEdgeDpKey,
       settings.imageShrinkTargetMaxEdgeDp,
     );
+    await prefs.setInt(
+      _replyLocateTotalProbeBudgetKey,
+      settings.replyLocateTotalProbeBudget,
+    );
+    await prefs.setInt(
+      _replyLocateCacheMaxEntriesKey,
+      settings.replyLocateCacheMaxEntries,
+    );
     if (settings.apiVersionOverride == null) {
       await prefs.remove(_apiVersionOverrideKey);
     } else {
@@ -87,6 +105,8 @@ class AppSettingsStore {
     await prefs.remove(_metaFontScaleKey);
     await prefs.remove(_imageShrinkTriggerMaxEdgeDpKey);
     await prefs.remove(_imageShrinkTargetMaxEdgeDpKey);
+    await prefs.remove(_replyLocateTotalProbeBudgetKey);
+    await prefs.remove(_replyLocateCacheMaxEntriesKey);
     await prefs.remove(_apiVersionOverrideKey);
   }
 }
