@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/thread_list_service.dart';
 import 'package:bluefish/viewModels/thread_list_view_model.dart';
 
 import 'package:bluefish/widgets/thread/thread_list_body.dart';
@@ -42,7 +43,9 @@ class ThreadListPage extends StatelessWidget {
     }
 
     return ChangeNotifierProvider<ThreadListViewModel>(
-      create: (context) => ThreadListViewModel.defaultList(),
+      create: (context) => ThreadListViewModel.defaultList(
+        service: context.read<ThreadListService>(),
+      ),
       child: child,
     );
   }

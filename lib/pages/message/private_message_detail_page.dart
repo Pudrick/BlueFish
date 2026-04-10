@@ -1,3 +1,4 @@
+import 'package:bluefish/services/private_message/private_message_detail_service.dart';
 import 'package:bluefish/viewModels/private_message_detail_view_model.dart';
 import 'package:bluefish/widgets/private_message/private_message_detail_widget.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,10 @@ class PrivateMessageDetailPage extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: ChangeNotifierProvider(
-          create: (_) => PrivateMessageDetailViewModel(puid: puid)..init(),
+          create: (context) => PrivateMessageDetailViewModel(
+            puid: puid,
+            service: context.read<PrivateMessageDetailService>(),
+          )..init(),
           child: PrivateMessageDetailWidget(
             initialTitle: initialTitle,
             initialAvatarUrl: initialAvatarUrl,

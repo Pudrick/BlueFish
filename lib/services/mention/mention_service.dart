@@ -1,18 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bluefish/network/http_client.dart';
+import 'package:http/http.dart' as http;
 
 class MentionService<T> {
   final String apiPath;
   final T Function(Map<String, dynamic>) fromJson;
   final Map<String, String> defaultQueryParameters;
+  final http.Client _client;
 
   MentionService({
     required this.apiPath,
     required this.fromJson,
+    required http.Client client,
     this.defaultQueryParameters = const {},
-  });
+  }) : _client = client;
 
   String get _baseUrl => "https://bbs.hupu.com/pcmapi/pc/space/v1/$apiPath";
 
@@ -25,7 +27,7 @@ class MentionService<T> {
         if (currentPageStr != null) 'pageStr': currentPageStr,
       },
     );
-    var response = await httpClient.get(url);
+    final response = await _client.get(url);
     if (response.statusCode != 200) {
       throw const HttpException("Failed to get http response.");
     }

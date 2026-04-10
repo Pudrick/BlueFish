@@ -7,10 +7,10 @@ import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/thread_main.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/utils/result.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
+import 'package:http/http.dart' as http;
 
 /// Service for fetching thread detail data with LRU caching.
 class ThreadDetailService {
@@ -24,7 +24,9 @@ class ThreadDetailService {
   /// Cached main floor per thread (doesn't change between pages).
   final Map<String, ThreadMain> _mainFloorCache = {};
 
-  ThreadDetailService();
+  final http.Client _client;
+
+  ThreadDetailService({required http.Client client}) : _client = client;
 
   static Uri buildThreadUri({
     required String tid,
@@ -194,7 +196,7 @@ class ThreadDetailService {
       page: page,
       authorIdentity: authorIdentity,
     );
-    final response = await httpClient.get(threadUrl);
+    final response = await _client.get(threadUrl);
 
     if (response.statusCode != 200) {
       throw TimeoutException('Failed to get http response.');

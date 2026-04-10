@@ -29,11 +29,11 @@ class CurrentUserProfileViewModel extends ChangeNotifier {
 
   CurrentUserProfileViewModel({
     required AuthSessionManager authSessionManager,
-    CurrentUserProfileService? service,
+    required CurrentUserProfileService service,
     CurrentUserProfileStore? store,
     Duration refreshDebounceWindow = defaultRefreshDebounceWindow,
   }) : _authSessionManager = authSessionManager,
-       _service = service ?? CurrentUserProfileHttpService(),
+       _service = service,
        _store = store ?? CurrentUserProfileStore(),
        _refreshDebounceWindow = refreshDebounceWindow,
        _lastLoggedInState = authSessionManager.isLoggedIn {

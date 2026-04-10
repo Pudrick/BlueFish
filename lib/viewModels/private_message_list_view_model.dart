@@ -11,10 +11,10 @@ class PrivateMessageListViewModel extends ChangeNotifier {
   bool _unreadOnly;
 
   PrivateMessageListViewModel({
-    PrivateMessageListService? service,
+    required PrivateMessageListService service,
     this.pageSize = defaultPageSize,
     bool unreadOnly = false,
-  }) : _service = service ?? PrivateMessageListService(),
+  }) : _service = service,
        _unreadOnly = unreadOnly;
 
   PrivateMessageList? _data;

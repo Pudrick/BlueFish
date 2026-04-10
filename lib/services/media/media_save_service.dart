@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bluefish/network/http_client.dart';
 import 'package:http/http.dart' as http;
 
 enum SavedMediaType { image, video }
@@ -29,7 +28,7 @@ class MediaSaveException implements Exception {
 class MediaSaveService {
   final http.Client _client;
 
-  MediaSaveService({http.Client? client}) : _client = client ?? httpClient;
+  MediaSaveService({required http.Client client}) : _client = client;
 
   Future<SavedMediaFile> saveImage({
     required String url,

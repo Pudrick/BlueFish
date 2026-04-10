@@ -12,10 +12,10 @@ class PrivateMessageDetailViewModel extends ChangeNotifier {
 
   PrivateMessageDetailViewModel({
     required this.puid,
-    PrivateMessageDetailService? service,
+    required PrivateMessageDetailService service,
     this.pageSize = defaultPageSize,
     this.prependHistoryOnLoadMore = true,
-  }) : _service = service ?? PrivateMessageDetailService();
+  }) : _service = service;
 
   PrivateMessageDetail? _data;
   PrivateMessageDetail? get data => _data;

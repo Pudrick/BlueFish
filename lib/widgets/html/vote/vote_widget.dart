@@ -4,6 +4,7 @@ import 'package:bluefish/widgets/html/vote/dual_image_vote_widget.dart';
 import 'package:bluefish/widgets/html/vote/no_image_vote_widget.dart';
 import 'package:bluefish/widgets/html/vote/vote_card_shell.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class VoteWidget extends StatefulWidget {
   final int voteId;
@@ -18,7 +19,8 @@ class VoteWidget extends StatefulWidget {
 class _VoteWidgetState extends State<VoteWidget> {
   late Future<Vote> _voteFuture;
 
-  VoteService get _voteService => widget.voteService ?? VoteService();
+  VoteService get _voteService =>
+      widget.voteService ?? context.read<VoteService>();
 
   @override
   void initState() {

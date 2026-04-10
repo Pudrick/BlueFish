@@ -1,5 +1,5 @@
 import 'package:bluefish/models/author_identity.dart';
-import 'package:bluefish/network/http_client.dart';
+import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/pages/user/user_home_page.dart';
 import 'package:bluefish/router/app_navigation_extensions.dart';
 import 'package:bluefish/router/app_route_contracts.dart';
@@ -7,6 +7,7 @@ import 'package:bluefish/router/auth_guard.dart';
 import 'package:bluefish/router/route_error_page.dart';
 import 'package:bluefish/widgets/common/auth_required_gate_page.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 final userRoutes = <RouteBase>[
   GoRoute(
@@ -21,10 +22,13 @@ final userRoutes = <RouteBase>[
         return const RouteErrorPage(message: '用户参数无效，无法打开主页。');
       }
 
-      if (!authSessionManager.isLoggedIn) {
+      final isLoggedIn = context.select<AuthSessionManager, bool>(
+        (sessionManager) => sessionManager.isLoggedIn,
+      );
+      if (!isLoggedIn) {
         return AuthRequiredGatePage(
           policy: AuthGuardPolicies.userHome,
-          isLoggedIn: authSessionManager.isLoggedIn,
+          isLoggedIn: isLoggedIn,
           onBackPressed: () => context.popOrGoThreadList(),
           onGoToLogin: (context) async {
             await context.pushLogin<void>();

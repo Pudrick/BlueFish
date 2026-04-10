@@ -1,4 +1,3 @@
-import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/private_message/private_message_list.dart';
 import 'package:bluefish/services/private_message/private_message_service_helper.dart';
 import 'package:http/http.dart' as http;
@@ -10,8 +9,7 @@ class PrivateMessageListService {
 
   final http.Client _client;
 
-  PrivateMessageListService({http.Client? client})
-    : _client = client ?? httpClient;
+  PrivateMessageListService({required http.Client client}) : _client = client;
 
   Future<PrivateMessageList> getList({
     bool unreadOnly = false,

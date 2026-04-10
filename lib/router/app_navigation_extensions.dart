@@ -1,9 +1,10 @@
-import 'package:bluefish/network/http_client.dart';
+import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/router/auth_guard.dart';
 import 'package:bluefish/router/models/photo_gallery_route_data.dart';
 import 'package:bluefish/router/models/thread_reply_composer_route_data.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'app_route_contracts.dart' show AppRoutes, MentionTab;
 
@@ -183,6 +184,7 @@ extension AppNavigationExtensions on BuildContext {
     if (router == null) {
       return Future<T?>.value(null);
     }
+    final authSessionManager = read<AuthSessionManager>();
 
     final guardDecision = await AuthNavigationGuard.checkAccess(
       context: this,

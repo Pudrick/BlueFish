@@ -24,8 +24,8 @@ class PhotoGalleryPage extends StatefulWidget {
 }
 
 class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
-  late final MediaSaveService _mediaSaveService =
-      widget.mediaSaveService ?? MediaSaveService();
+  MediaSaveService get _mediaSaveService =>
+      widget.mediaSaveService ?? context.read<MediaSaveService>();
   late PageController _pageController;
   late int _currentIndex;
   bool _isSaving = false;

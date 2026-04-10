@@ -121,8 +121,8 @@ class ThreadListViewModel extends ChangeNotifier {
     }
   }
 
-  ThreadListViewModel.defaultList({ThreadListService? service})
-    : _service = service ?? ThreadListService(),
+  ThreadListViewModel.defaultList({required ThreadListService service})
+    : _service = service,
       topicID = mainTopicID,
       fid = 4875,
       page = 1 {
@@ -134,10 +134,10 @@ class ThreadListViewModel extends ChangeNotifier {
     int initialZoneID,
     this.page,
     SortType initialSortType, {
-    ThreadListService? service,
+    required ThreadListService service,
     this.fid = 4875,
   }) : assert(initialSortType.index != 0),
-       _service = service ?? ThreadListService() {
+       _service = service {
     _currentBoard = initialZoneID == theaterZoneID
         ? ThreadListBoard.theater
         : ThreadListBoard.main;

@@ -1,4 +1,4 @@
-import 'package:bluefish/auth/auth_session_manager.dart';
+import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -10,17 +10,16 @@ class MePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AuthSessionManager, CurrentUserProfileViewModel>(
-      builder: (context, authSessionManager, currentUserProfileViewModel, _) {
-        final isLoggedIn = authSessionManager.isLoggedIn;
+    return Consumer2<
+      CurrentUserIdentityController,
+      CurrentUserProfileViewModel
+    >(
+      builder: (context, currentUserIdentity, currentUserProfileViewModel, _) {
+        final isLoggedIn = currentUserIdentity.isLoggedIn;
         final profile = isLoggedIn ? currentUserProfileViewModel.profile : null;
         final supportingText = isLoggedIn ? null : '当前未检测到登录会话，点击后前往登录页';
-        final currentUserEuid = profile?.euid;
-        final currentUserPuid = currentUserEuid == null
-            ? _resolveCurrentUserPuidFromCookies(
-                authSessionManager.getCookiesSync(),
-              )
-            : null;
+        final currentUserEuid = currentUserIdentity.currentUserEuid;
+        final currentUserPuid = currentUserIdentity.currentUserPuid;
 
         final VoidCallback? onHeaderTap = switch (isLoggedIn) {
           false => () => context.pushLogin(),
@@ -417,52 +416,6 @@ class _HeaderStatusPill extends StatelessWidget {
       ),
     );
   }
-}
-
-String? _resolveCurrentUserPuidFromCookies(String cookies) {
-  final normalizedCookies = cookies.trim();
-  if (normalizedCookies.isEmpty) {
-    return null;
-  }
-
-  const cookieKeyCandidates = <String>['uid', 'puid', 'u', 'g'];
-  for (final key in cookieKeyCandidates) {
-    final parsedPuid = _extractNumericIdentityFromCookie(
-      normalizedCookies,
-      key,
-    );
-    if (parsedPuid != null) {
-      return parsedPuid;
-    }
-  }
-
-  return null;
-}
-
-String? _extractNumericIdentityFromCookie(String cookies, String key) {
-  final match = RegExp(
-    '(?:^|;\\s*)${RegExp.escape(key)}=([^;]+)',
-  ).firstMatch(cookies);
-  if (match == null) {
-    return null;
-  }
-
-  final decodedValue = Uri.decodeComponent(match.group(1)!);
-  final separatorIndex = decodedValue.indexOf('|');
-  final rawId = separatorIndex >= 0
-      ? decodedValue.substring(0, separatorIndex)
-      : decodedValue;
-  final normalizedId = rawId.trim();
-  if (normalizedId.isEmpty) {
-    return null;
-  }
-
-  final isNumeric = RegExp(r'^\d+$').hasMatch(normalizedId);
-  if (!isNumeric) {
-    return null;
-  }
-
-  return normalizedId;
 }
 
 class _NotchedSection extends StatelessWidget {

@@ -6,6 +6,7 @@ import 'package:bluefish/models/user_home/user_home.dart';
 import 'package:bluefish/models/user_home/user_home_reply.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/reply_jump_controller.dart';
+import 'package:bluefish/services/user_home/user_home_service.dart';
 import 'package:bluefish/viewModels/user_home_view_model.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
 import 'package:bluefish/widgets/user_home/user_home_display_select_widget.dart';
@@ -23,7 +24,10 @@ class UserHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<UserHomeViewModel>(
-      create: (_) => UserHomeViewModel(userIdentity: userIdentity)..init(),
+      create: (context) => UserHomeViewModel(
+        userIdentity: userIdentity,
+        service: context.read<UserHomeService>(),
+      )..init(),
       child: const UserHomePageView(),
     );
   }

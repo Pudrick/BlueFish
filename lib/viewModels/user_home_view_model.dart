@@ -7,10 +7,13 @@ enum DisplayStatus { threads, replies, recommends }
 
 class UserHomeViewModel extends ChangeNotifier {
   UserHome? _data;
-  final UserHomeService _service = UserHomeService();
+  final UserHomeService _service;
   final AuthorIdentity userIdentity;
 
-  UserHomeViewModel({required this.userIdentity});
+  UserHomeViewModel({
+    required this.userIdentity,
+    required UserHomeService service,
+  }) : _service = service;
 
   DisplayStatus _displayStatus = DisplayStatus.threads;
   DisplayStatus get displayStatus => _displayStatus;

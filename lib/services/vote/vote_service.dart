@@ -3,13 +3,12 @@ import 'dart:convert';
 import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/vote.dart';
 import 'package:bluefish/network/api_config.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:http/http.dart' as http;
 
 class VoteService {
   final http.Client _client;
 
-  VoteService({http.Client? client}) : _client = client ?? httpClient;
+  VoteService({required http.Client client}) : _client = client;
 
   // Request example:
   // https://bbs.mobileapi.hupu.com/3/8.0.80/bbsintapi/vote/v1/getVoteInfo?voteId=11124697

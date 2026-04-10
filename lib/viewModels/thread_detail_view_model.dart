@@ -27,11 +27,11 @@ class ThreadDetailViewModel extends ChangeNotifier {
     int initialPage = 1,
     String? initialTargetPid,
     AuthorIdentity? initialAuthorFilter,
-    ThreadDetailService? service,
+    required ThreadDetailService service,
   }) : _currentPage = initialPage,
        _pendingTargetPid = _normalizeTargetPid(initialTargetPid),
        _authorFilter = initialAuthorFilter,
-       _service = service ?? ThreadDetailService();
+       _service = service;
 
   // ===== Getters =====
 

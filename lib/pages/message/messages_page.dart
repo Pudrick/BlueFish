@@ -6,6 +6,9 @@ import 'package:bluefish/models/private_message/private_message_list.dart';
 import 'package:bluefish/pages/message/mention_list_page_base.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/router/reply_jump_controller.dart';
+import 'package:bluefish/services/mention/mention_light_service.dart';
+import 'package:bluefish/services/mention/mention_reply_service.dart';
+import 'package:bluefish/services/private_message/private_message_list_service.dart';
 import 'package:bluefish/viewModels/mention_light_view_model.dart';
 import 'package:bluefish/viewModels/mention_reply_view_model.dart';
 import 'package:bluefish/viewModels/private_message_list_view_model.dart';
@@ -48,9 +51,15 @@ class _MessagesPageState extends State<MessagesPage>
   @override
   void initState() {
     super.initState();
-    _replyViewModel = MentionReplyViewModel();
-    _lightViewModel = MentionLightViewModel();
-    _privateMessageViewModel = PrivateMessageListViewModel();
+    _replyViewModel = MentionReplyViewModel(
+      context.read<MentionReplyService>(),
+    );
+    _lightViewModel = MentionLightViewModel(
+      context.read<MentionLightService>(),
+    );
+    _privateMessageViewModel = PrivateMessageListViewModel(
+      service: context.read<PrivateMessageListService>(),
+    );
     _currentTab = widget.initialTab;
     _tabController = TabController(
       length: MentionTab.values.length,

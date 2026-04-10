@@ -1,4 +1,3 @@
-import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/thread/floor_meta.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
@@ -18,6 +17,7 @@ class ReplyFloor extends StatelessWidget {
   final VoidCallback? onOnlySeeAuthorTap;
   final bool showActionRow;
   final bool showOverflowAction;
+  final String? viewerPuid;
 
   const ReplyFloor({
     super.key,
@@ -31,12 +31,11 @@ class ReplyFloor extends StatelessWidget {
     this.onOnlySeeAuthorTap,
     this.showActionRow = true,
     this.showOverflowAction = true,
+    this.viewerPuid,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currentUserPuid = _resolveCurrentUserPuid();
-
     return _ReplyFloorContent(
       content: replyFloor,
       isQuote: isQuote,
@@ -51,9 +50,7 @@ class ReplyFloor extends StatelessWidget {
       onOnlySeeAuthorTap: onOnlySeeAuthorTap,
       showActionRow: showActionRow,
       showOverflowAction: showOverflowAction,
-      isMine:
-          currentUserPuid != null &&
-          currentUserPuid == replyFloor.meta.author.puid,
+      isMine: viewerPuid != null && viewerPuid == replyFloor.meta.author.puid,
     );
   }
 }
@@ -1022,31 +1019,4 @@ String _formatCompactCount(int count) {
     return '99+';
   }
   return '$count';
-}
-
-String? _resolveCurrentUserPuid() {
-  final cookies = authSessionManager.getCookiesSync();
-  if (cookies.trim().isEmpty) {
-    return null;
-  }
-
-  return _extractPuidFromCookie(cookies, 'u') ??
-      _extractPuidFromCookie(cookies, 'g');
-}
-
-String? _extractPuidFromCookie(String cookies, String key) {
-  final match = RegExp(
-    '(?:^|;\\s*)${RegExp.escape(key)}=([^;]+)',
-  ).firstMatch(cookies);
-  if (match == null) {
-    return null;
-  }
-
-  final decodedValue = Uri.decodeComponent(match.group(1)!);
-  final separatorIndex = decodedValue.indexOf('|');
-  final puid = separatorIndex >= 0
-      ? decodedValue.substring(0, separatorIndex)
-      : decodedValue;
-  final normalizedPuid = puid.trim();
-  return normalizedPuid.isEmpty ? null : normalizedPuid;
 }

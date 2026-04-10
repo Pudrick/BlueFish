@@ -1,6 +1,8 @@
+import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
@@ -74,11 +76,12 @@ class ThreadPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ThreadDetailViewModel(
+      create: (context) => ThreadDetailViewModel(
         tid: tid,
         initialPage: page,
         initialTargetPid: targetPid,
         initialAuthorFilter: authorFilter,
+        service: context.read<ThreadDetailService>(),
       )..loadInitial(),
       child: const _ThreadPageContent(),
     );
@@ -509,6 +512,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final currentUserPuid = context
+        .select<CurrentUserIdentityController, String?>(
+          (identity) => identity.currentUserPuid,
+        );
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
@@ -720,6 +727,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                       child: ReplyFloor(
                                         replyFloor: reply,
                                         isQuote: false,
+                                        viewerPuid: currentUserPuid,
                                         floorNumber: displayFloorNumber,
                                         contentMaxWidth: contentBodyMaxWidth,
                                         onOnlySeeAuthorTap:

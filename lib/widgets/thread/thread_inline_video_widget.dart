@@ -29,8 +29,8 @@ class ThreadInlineVideoWidget extends StatefulWidget {
 }
 
 class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
-  late final MediaSaveService _mediaSaveService =
-      widget.mediaSaveService ?? MediaSaveService();
+  MediaSaveService get _mediaSaveService =>
+      widget.mediaSaveService ?? context.read<MediaSaveService>();
 
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;

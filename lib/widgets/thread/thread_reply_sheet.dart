@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:provider/provider.dart';
 
 Future<void> showThreadReplySheet({
   required BuildContext context,
@@ -82,7 +84,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   @override
   void initState() {
     super.initState();
-    _service = widget.service ?? ThreadReplyService();
+    _service = widget.service ?? context.read<ThreadReplyService>();
     _contentScrollController = ScrollController();
     final rootNode = _ReplyChainNodeState(
       reply: widget.rootReply,
@@ -368,6 +370,10 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     final textTheme = theme.textTheme;
     final currentNode = _currentNode;
     final canGoBack = _navigationStack.length > 1;
+    final currentUserPuid = context
+        .select<CurrentUserIdentityController, String?>(
+          (identity) => identity.currentUserPuid,
+        );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -486,7 +492,10 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                             duration: const Duration(milliseconds: 180),
                             switchInCurve: Curves.easeOutCubic,
                             switchOutCurve: Curves.easeInCubic,
-                            child: _buildSheetBody(currentNode),
+                            child: _buildSheetBody(
+                              currentNode,
+                              viewerPuid: currentUserPuid,
+                            ),
                           ),
                         ),
                       ],
@@ -501,7 +510,10 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     );
   }
 
-  Widget _buildSheetBody(_ReplyChainNodeState node) {
+  Widget _buildSheetBody(
+    _ReplyChainNodeState node, {
+    required String? viewerPuid,
+  }) {
     return NotificationListener<ScrollNotification>(
       key: ValueKey('list-${node.reply.pid}'),
       onNotification: (notification) {
@@ -535,6 +547,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                 key: ValueKey('source-${node.reply.pid}'),
                 reply: node.reply,
                 floorNumber: node.floorNumber,
+                viewerPuid: viewerPuid,
               ),
             ),
           ),
@@ -547,7 +560,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          ..._buildReplyListSlivers(node),
+          ..._buildReplyListSlivers(node, viewerPuid: viewerPuid),
         ],
       ),
     );
@@ -563,7 +576,10 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     return '$floorLabel${node.reply.meta.author.name} · $replyCountLabel';
   }
 
-  List<Widget> _buildReplyListSlivers(_ReplyChainNodeState node) {
+  List<Widget> _buildReplyListSlivers(
+    _ReplyChainNodeState node, {
+    required String? viewerPuid,
+  }) {
     if (node.isLoadingInitial && node.replies.isEmpty) {
       return const <Widget>[
         SliverFillRemaining(
@@ -632,6 +648,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
               child: ReplyFloor(
                 replyFloor: reply,
                 isQuote: false,
+                viewerPuid: viewerPuid,
                 floorNumber: reply.serverFloorNumber,
                 imageHeroScope:
                     'thread-reply-sheet:${node.reply.pid}:reply:${reply.pid}',
@@ -668,11 +685,13 @@ class _ReplyChainNodeState {
 class _SourceReplySection extends StatelessWidget {
   final SingleReplyFloor reply;
   final int? floorNumber;
+  final String? viewerPuid;
 
   const _SourceReplySection({
     super.key,
     required this.reply,
     required this.floorNumber,
+    required this.viewerPuid,
   });
 
   @override
@@ -695,6 +714,7 @@ class _SourceReplySection extends StatelessWidget {
             reply: reply,
             floorNumber: floorNumber,
             imageHeroScope: 'thread-reply-sheet:${reply.pid}:source',
+            viewerPuid: viewerPuid,
           ),
         ),
       ),
@@ -708,11 +728,13 @@ class _CollapsibleReplyCard extends StatefulWidget {
   final SingleReplyFloor reply;
   final int? floorNumber;
   final String imageHeroScope;
+  final String? viewerPuid;
 
   const _CollapsibleReplyCard({
     required this.reply,
     required this.floorNumber,
     required this.imageHeroScope,
+    required this.viewerPuid,
   });
 
   @override
@@ -853,6 +875,7 @@ class _CollapsibleReplyCardState extends State<_CollapsibleReplyCard> {
       child: ReplyFloor(
         replyFloor: widget.reply,
         isQuote: false,
+        viewerPuid: widget.viewerPuid,
         floorNumber: widget.floorNumber,
         imageHeroScope: widget.imageHeroScope,
         showActionRow: false,

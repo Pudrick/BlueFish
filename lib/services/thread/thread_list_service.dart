@@ -2,14 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bluefish/network/api_config.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/thread/single_thread_title.dart';
 import 'package:http/http.dart' as http;
 
 class ThreadListService {
   final http.Client _client;
 
-  ThreadListService({http.Client? client}) : _client = client ?? httpClient;
+  ThreadListService({required http.Client client}) : _client = client;
 
   Uri topicThreadsBaseUrl() {
     return Uri.parse(ApiConfig.apiPath('topics/getTopicThreads'));

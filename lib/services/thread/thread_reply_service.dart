@@ -3,13 +3,12 @@ import 'dart:io';
 
 import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/thread/thread_reply_page.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:http/http.dart' as http;
 
 class ThreadReplyService {
   final http.Client _client;
 
-  ThreadReplyService({http.Client? client}) : _client = client ?? httpClient;
+  ThreadReplyService({required http.Client client}) : _client = client;
 
   Future<ThreadReplyPage> getReplyPage({
     required String tid,

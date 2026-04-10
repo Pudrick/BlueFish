@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/internal_settings.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/user_home/user_home.dart';
 import 'package:bluefish/models/user_home/user_home_reply.dart';
 import 'package:bluefish/models/user_home/user_home_thread_title.dart';
@@ -14,7 +13,7 @@ import 'package:http/http.dart' as http;
 class UserHomeService {
   final http.Client _client;
 
-  UserHomeService({http.Client? client}) : _client = client ?? httpClient;
+  UserHomeService({required http.Client client}) : _client = client;
 
   String getAuthorDataFromScripts(List<Element> scripts) {
     for (final script in scripts) {

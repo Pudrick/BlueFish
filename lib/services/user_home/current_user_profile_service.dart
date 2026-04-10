@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bluefish/models/current_user_profile.dart';
-import 'package:bluefish/network/http_client.dart';
 import 'package:http/http.dart' as http;
 
 abstract class CurrentUserProfileService {
@@ -16,8 +15,8 @@ class CurrentUserProfileHttpService implements CurrentUserProfileService {
 
   final http.Client _client;
 
-  CurrentUserProfileHttpService({http.Client? client})
-    : _client = client ?? httpClient;
+  CurrentUserProfileHttpService({required http.Client client})
+    : _client = client;
 
   @override
   Future<CurrentUserProfile> fetchCurrentUserProfile() async {
