@@ -1,17 +1,13 @@
-import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 
-import '../../models/composer/composer_attachment.dart';
 import '../../models/composer/quill_embed_models.dart';
-import '../../models/composer/quill_draft_utils.dart';
 import '../../models/composer/reply_draft.dart';
 import '../../services/composer/composer_image_picker_service.dart';
-import '../../services/composer/html_export_service.dart';
 import 'package:bluefish/services/composer/thread_publish_service.dart';
 import 'package:bluefish/services/composer/thread_video_upload_service.dart';
+import '../../viewModels/rich_text_composer_controller.dart';
 import 'composer_accessory_panel.dart';
 import 'quill_composer_editor.dart';
 import 'quill_composer_toolbar.dart';
@@ -142,33 +138,28 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
   static const double _dismissDragVelocity = 1100;
   static const double _maxDismissDragOffset = 260;
 
-  late ReplyDraft _draft;
+  late final RichTextComposerController _composer;
   bool _isSubmitting = false;
-  String? _statusMessage;
-  bool _isApplyingProgrammaticRichTextUpdate = false;
-  bool _isNormalizingCollapsedSelection = false;
   late final ThreadPublishService _publishService;
-  late final ThreadVideoUploadService _videoUploadService;
-  late final ComposerImagePickerService _imagePickerService;
-  final HtmlExportService _htmlExportService = const HtmlExportService();
-
-  late final quill.QuillController _controller;
   late final AnimationController _fullscreenController;
   late final AnimationController _dismissOffsetController;
+
+  ReplyDraft get _draft => ReplyDraft.fromComposerContent(_composer.content);
 
   @override
   void initState() {
     super.initState();
-    _draft = widget.initialDraft;
     _publishService = widget.publishService ?? const StubThreadPublishService();
-    _videoUploadService =
-        widget.videoUploadService ?? const StubThreadVideoUploadService();
-    _imagePickerService =
-        widget.imagePickerService ?? DeviceComposerImagePickerService();
-    _controller = quill.QuillController(
-      document: _documentFromDeltaJson(_draft.deltaJson),
-      selection: const TextSelection.collapsed(offset: 0),
-    )..addListener(_handleRichTextChanged);
+    _composer = RichTextComposerController(
+      initialContent: widget.initialDraft.composerContent,
+      videoUploadService: widget.videoUploadService,
+      imagePickerService: widget.imagePickerService,
+      imageAttachmentLabelPrefix: '回复图片',
+      videoAttachmentLabel: '回复视频草稿',
+      videoUploadStartedMessage: '正在模拟为回复附件上传视频。',
+      videoUploadReadyMessage: '回复视频草稿已就绪，后续接线时可直接沿用。',
+      videoUploadFailedMessage: '回复视频草稿上传失败。',
+    )..addListener(_handleComposerChanged);
     _fullscreenController = AnimationController(
       vsync: this,
       duration: _sheetSnapDuration,
@@ -186,204 +177,66 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
     setState(() {});
   }
 
+  void _handleComposerChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
   void _insertDetailsEmbed() {
-    _insertBlockEmbedWithLineBreaks(
-      BluefishDetailsEmbed(BluefishDetailsEmbedData.initial()),
-    );
+    _composer.insertDetailsEmbed();
   }
 
-  Future<void> _pickAndInsertImage() async {
-    try {
-      final pickedImage = await _imagePickerService.pickImage();
-      if (pickedImage == null) {
-        setState(() {
-          _statusMessage = '已取消选择图片。';
-        });
-        return;
-      }
-
-      _insertPickedImage(pickedImage);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _statusMessage = '选择图片失败，请稍后再试。';
-      });
-    }
+  Future<void> _pickAndInsertImage() {
+    return _composer.pickAndInsertImage();
   }
 
-  void _insertPickedImage(PickedComposerImage pickedImage) {
-    final attachmentId = _createComposerId('reply-image-attachment');
-    final label = pickedImage.name.trim().isEmpty
-        ? '回复图片 ${_draft.attachments.length + 1}'
-        : pickedImage.name.trim();
-    final attachment = ComposerAttachment(
-      id: attachmentId,
-      type: ComposerAttachmentType.image,
-      uploadState: ComposerUploadState.pending,
-      label: label,
-      localPath: pickedImage.path,
-      thumbnailUrl: pickedImage.path,
-      bytes: pickedImage.bytes,
-    );
-
-    setState(() {
-      _draft = _draft.copyWith(
-        attachments: <ComposerAttachment>[..._draft.attachments, attachment],
-        clearBodyHtml: true,
-      );
-      _statusMessage = '已添加图片：$label';
-    });
-
-    _insertBlockEmbedWithLineBreaks(
-      BluefishImagePlaceholderEmbed(
-        BluefishImagePlaceholderEmbedData(
-          attachmentId: attachmentId,
-          label: label,
-          sourceUrl: pickedImage.path,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _addVideoPlaceholder() async {
-    final pendingVideo = ComposerAttachment(
-      id: _createComposerId('reply-video-attachment'),
-      type: ComposerAttachmentType.video,
-      uploadState: ComposerUploadState.uploading,
-      label: '回复视频草稿',
-      duration: const Duration(seconds: 42),
-      progress: 0.18,
-    );
-
-    setState(() {
-      _draft = _draft.copyWith(
-        attachments: <ComposerAttachment>[..._draft.attachments, pendingVideo],
-        clearBodyHtml: true,
-      );
-      _statusMessage = '正在模拟为回复附件上传视频。';
-    });
-
-    try {
-      final uploaded = await _videoUploadService.uploadVideo(pendingVideo);
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _draft = _draft.copyWith(
-          attachments: _draft.attachments
-              .map(
-                (attachment) =>
-                    attachment.id == pendingVideo.id ? uploaded : attachment,
-              )
-              .toList(growable: false),
-          clearBodyHtml: true,
-        );
-        _statusMessage = '回复视频草稿已就绪，后续接线时可直接沿用。';
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _draft = _draft.copyWith(
-          attachments: _draft.attachments
-              .map((attachment) {
-                if (attachment.id != pendingVideo.id) {
-                  return attachment;
-                }
-                return attachment.copyWith(
-                  uploadState: ComposerUploadState.failed,
-                  progress: 0,
-                  errorMessage: 'stub 上传失败',
-                );
-              })
-              .toList(growable: false),
-          clearBodyHtml: true,
-        );
-        _statusMessage = '回复视频草稿上传失败。';
-      });
-    }
+  Future<void> _addVideoPlaceholder() {
+    return _composer.addVideoAttachment();
   }
 
   void _updateDetailsEmbed(int offset, BluefishDetailsEmbedData data) {
-    _replaceEmbed(offset, BluefishDetailsEmbed(data));
+    _composer.updateDetailsEmbed(offset, data);
   }
 
   void _updateImagePlaceholderEmbed(
     int offset,
     BluefishImagePlaceholderEmbedData data,
   ) {
-    _replaceEmbed(offset, BluefishImagePlaceholderEmbed(data));
+    _composer.updateImagePlaceholderEmbed(offset, data);
   }
 
   void _removeEmbed(int offset) {
-    _controller.replaceText(
-      offset,
-      1,
-      '',
-      TextSelection.collapsed(offset: offset),
-    );
+    _composer.removeEmbed(offset);
   }
 
   void _removeAttachment(String attachmentId) {
-    final nextAttachments = _draft.attachments
-        .where((attachment) => attachment.id != attachmentId)
-        .toList(growable: false);
-
-    if (nextAttachments.length == _draft.attachments.length) {
-      return;
-    }
-
-    setState(() {
-      _draft = _draft.copyWith(
-        attachments: nextAttachments,
-        clearBodyHtml: true,
-      );
-    });
-
-    final offset = _findImagePlaceholderOffsetByAttachmentId(
-      _serializeControllerDelta(),
-      attachmentId,
-    );
-    if (offset != null) {
-      _controller.replaceText(
-        offset,
-        1,
-        '',
-        TextSelection.collapsed(offset: offset),
-      );
-    }
+    _composer.removeAttachment(attachmentId);
   }
 
   Future<void> _submit() async {
-    if (_isSubmitting || !_draft.hasPublishableContent) {
-      setState(() {
-        _statusMessage = '回复草稿还没有可发送内容。';
-      });
+    if (_isSubmitting || !_composer.hasPublishableContent) {
+      _composer.setStatusMessage('回复草稿还没有可发送内容。');
       return;
     }
 
     setState(() {
       _isSubmitting = true;
-      _statusMessage = null;
     });
+    _composer.clearStatusMessage();
 
-    final draftForSubmit = _draft.copyWith(
-      bodyHtml: _htmlExportService.exportRichText(_draft.deltaJson),
-      clearBodyHtml: false,
+    final draftForSubmit = ReplyDraft.fromComposerContent(
+      _composer.buildExportedContent(),
     );
 
     try {
+      String? successMessage;
       if (widget.onSubmit != null) {
         await widget.onSubmit!(draftForSubmit);
       } else {
         final receipt = await _publishService.publishReply(draftForSubmit);
-        _statusMessage = receipt.summary;
+        successMessage = receipt.summary;
       }
 
       if (!mounted) {
@@ -392,18 +245,17 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
       if (widget.closeOnSubmit) {
         Navigator.of(context).pop(draftForSubmit);
       } else {
-        setState(() {
-          _draft = draftForSubmit;
-          _statusMessage ??= '回复草稿已保存。';
-        });
+        _composer.replaceContent(
+          draftForSubmit.composerContent,
+          reloadDocument: false,
+        );
+        _composer.setStatusMessage(successMessage ?? '回复草稿已保存。');
       }
     } catch (_) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _statusMessage = '回复草稿发送失败。';
-      });
+      _composer.setStatusMessage('回复草稿发送失败。');
     } finally {
       if (mounted) {
         setState(() {
@@ -411,252 +263,6 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
         });
       }
     }
-  }
-
-  void _insertBlockEmbedWithLineBreaks(quill.Embeddable embed) {
-    final selection = _normalizedSelection();
-    final plainText = _controller.document.toPlainText();
-    final replaceLength = selection.end - selection.start;
-    final hasLeadingNewline =
-        selection.start == 0 || plainText[selection.start - 1] == '\n';
-    final hasTrailingNewline =
-        selection.end >= plainText.length || plainText[selection.end] == '\n';
-    _isApplyingProgrammaticRichTextUpdate = true;
-    try {
-      _controller.replaceText(
-        selection.start,
-        replaceLength,
-        '',
-        TextSelection.collapsed(offset: selection.start),
-      );
-
-      var insertOffset = selection.start;
-      if (!hasLeadingNewline) {
-        _controller.replaceText(
-          insertOffset,
-          0,
-          '\n',
-          TextSelection.collapsed(offset: insertOffset + 1),
-        );
-        insertOffset += 1;
-      }
-
-      _controller.replaceText(
-        insertOffset,
-        0,
-        embed,
-        TextSelection.collapsed(offset: insertOffset + 1),
-      );
-      insertOffset += 1;
-
-      if (!hasTrailingNewline) {
-        _controller.replaceText(
-          insertOffset,
-          0,
-          '\n',
-          TextSelection.collapsed(offset: insertOffset + 1),
-        );
-        insertOffset += 1;
-      }
-
-      _controller.updateSelection(
-        TextSelection.collapsed(offset: insertOffset),
-        quill.ChangeSource.local,
-      );
-    } finally {
-      _isApplyingProgrammaticRichTextUpdate = false;
-    }
-
-    _handleRichTextChanged();
-  }
-
-  void _replaceEmbed(int offset, quill.Embeddable embed) {
-    _isApplyingProgrammaticRichTextUpdate = true;
-    try {
-      _controller.replaceText(
-        offset,
-        1,
-        embed,
-        TextSelection.collapsed(offset: offset + 1),
-      );
-    } finally {
-      _isApplyingProgrammaticRichTextUpdate = false;
-    }
-
-    _handleRichTextChanged();
-  }
-
-  TextSelection _normalizedSelection() {
-    final selection = _controller.selection;
-    if (selection.isValid) {
-      return selection;
-    }
-
-    final fallbackOffset = (_controller.document.length - 1).clamp(
-      0,
-      _controller.document.length,
-    );
-    return TextSelection.collapsed(offset: fallbackOffset);
-  }
-
-  void _handleRichTextChanged() {
-    if (_isApplyingProgrammaticRichTextUpdate) {
-      return;
-    }
-
-    if (_normalizeCollapsedSelectionAroundBlockEmbeds()) {
-      return;
-    }
-
-    final nextDeltaJson = _serializeControllerDelta();
-    final nextAttachments = _synchronizeImageAttachments(nextDeltaJson);
-    final deltaChanged =
-        jsonEncode(nextDeltaJson) != jsonEncode(_draft.deltaJson);
-    final attachmentsChanged =
-        jsonEncode(_attachmentSignature(nextAttachments)) !=
-        jsonEncode(_attachmentSignature(_draft.attachments));
-
-    if (!deltaChanged && !attachmentsChanged) {
-      return;
-    }
-
-    setState(() {
-      _draft = _draft.copyWith(
-        deltaJson: nextDeltaJson,
-        attachments: nextAttachments,
-        clearBodyHtml: true,
-      );
-    });
-  }
-
-  bool _normalizeCollapsedSelectionAroundBlockEmbeds() {
-    if (_isNormalizingCollapsedSelection) {
-      return false;
-    }
-
-    final selection = _controller.selection;
-    if (!selection.isValid || !selection.isCollapsed) {
-      return false;
-    }
-
-    final deltaJson = _serializeControllerDelta();
-    final normalizedSelection = normalizedCollapsedSelectionForBlockEmbeds(
-      deltaJson: deltaJson,
-      plainText: _controller.document.toPlainText(),
-      selection: selection,
-    );
-    if (normalizedSelection == null || normalizedSelection == selection) {
-      return false;
-    }
-
-    _isNormalizingCollapsedSelection = true;
-    try {
-      _controller.updateSelection(
-        normalizedSelection,
-        quill.ChangeSource.local,
-      );
-    } finally {
-      _isNormalizingCollapsedSelection = false;
-    }
-    return true;
-  }
-
-  List<ComposerAttachment> _synchronizeImageAttachments(
-    List<Map<String, dynamic>> deltaJson,
-  ) {
-    final referencedEmbeds = <String, BluefishImagePlaceholderEmbedData>{};
-    for (final operation in deltaJson) {
-      final insert = operation['insert'];
-      if (insert is! Map ||
-          !insert.containsKey(bluefishImagePlaceholderEmbedType)) {
-        continue;
-      }
-
-      final embedData = BluefishImagePlaceholderEmbedData.fromJsonString(
-        insert[bluefishImagePlaceholderEmbedType].toString(),
-      );
-      referencedEmbeds[embedData.attachmentId] = embedData;
-    }
-
-    return _draft.attachments
-        .where(
-          (attachment) =>
-              attachment.type == ComposerAttachmentType.video ||
-              referencedEmbeds.containsKey(attachment.id),
-        )
-        .map((attachment) {
-          final embed = referencedEmbeds[attachment.id];
-          if (embed == null) {
-            return attachment;
-          }
-          return attachment.copyWith(label: embed.label);
-        })
-        .toList(growable: false);
-  }
-
-  int? _findImagePlaceholderOffsetByAttachmentId(
-    List<Map<String, dynamic>> deltaJson,
-    String attachmentId,
-  ) {
-    var offset = 0;
-    for (final operation in deltaJson) {
-      final insert = operation['insert'];
-      if (insert is String) {
-        offset += insert.length;
-        continue;
-      }
-
-      if (insert is Map &&
-          insert.containsKey(bluefishImagePlaceholderEmbedType)) {
-        final embedData = BluefishImagePlaceholderEmbedData.fromJsonString(
-          insert[bluefishImagePlaceholderEmbedType].toString(),
-        );
-        if (embedData.attachmentId == attachmentId) {
-          return offset;
-        }
-      }
-
-      offset += 1;
-    }
-    return null;
-  }
-
-  List<Map<String, Object?>> _attachmentSignature(
-    List<ComposerAttachment> attachments,
-  ) {
-    return attachments
-        .map(
-          (attachment) => <String, Object?>{
-            'id': attachment.id,
-            'type': attachment.type.name,
-            'state': attachment.uploadState.name,
-            'label': attachment.label,
-            'localPath': attachment.localPath,
-            'bytes': attachment.bytes,
-            'progress': attachment.progress,
-          },
-        )
-        .toList(growable: false);
-  }
-
-  quill.Document _documentFromDeltaJson(List<Map<String, dynamic>> deltaJson) {
-    try {
-      return quill.Document.fromJson(deltaJson);
-    } catch (_) {
-      return quill.Document();
-    }
-  }
-
-  List<Map<String, dynamic>> _serializeControllerDelta() {
-    final rawJson = _controller.document.toDelta().toJson();
-    return (jsonDecode(jsonEncode(rawJson)) as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList(growable: false);
-  }
-
-  String _createComposerId(String prefix) {
-    _replyComposerIdCounter += 1;
-    return '$prefix-${DateTime.now().microsecondsSinceEpoch}-$_replyComposerIdCounter';
   }
 
   void _handleSheetResizeDragStart(DragStartDetails details) {
@@ -729,14 +335,16 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
     _dismissOffsetController
       ..removeListener(_handleAnimationProgressChanged)
       ..dispose();
-    _controller
-      ..removeListener(_handleRichTextChanged)
+    _composer
+      ..removeListener(_handleComposerChanged)
       ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final draft = _draft;
+    final statusMessage = _composer.statusMessage;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
@@ -866,7 +474,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                               ),
                             if (hasContext) const SizedBox(height: 12),
                             QuillComposerToolbar(
-                              controller: _controller,
+                              controller: _composer.controller,
                               onInsertDetails: _insertDetailsEmbed,
                               onInsertImagePlaceholder: _pickAndInsertImage,
                               onInsertVideoPlaceholder:
@@ -876,7 +484,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                             ),
                             const SizedBox(height: 12),
                             QuillComposerEditor(
-                              controller: _controller,
+                              controller: _composer.controller,
                               placeholder: widget.placeholder,
                               onDetailsEmbedChanged: _updateDetailsEmbed,
                               onImagePlaceholderChanged:
@@ -887,13 +495,13 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                             ComposerAccessoryPanel(
                               title: '附件与状态',
                               description: '已选择的图片和视频附件会显示在这里，后续可以直接接入真实上传链路。',
-                              attachments: _draft.attachments,
+                              attachments: draft.attachments,
                               onRemoveAttachment: _removeAttachment,
                             ),
-                            if (_statusMessage != null) ...[
+                            if (statusMessage != null) ...[
                               const SizedBox(height: 12),
                               Text(
-                                _statusMessage!,
+                                statusMessage,
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
@@ -908,7 +516,7 @@ class _ReplyComposerSheetState extends State<ReplyComposerSheet>
                           children: [
                             Expanded(
                               child: Text(
-                                _draft.hasPublishableContent
+                                _composer.hasPublishableContent
                                     ? '草稿可发送'
                                     : '请先输入正文、插入折叠说明/图片，或在开启视频扩展后添加视频',
                                 style: textTheme.bodySmall?.copyWith(
@@ -1195,5 +803,3 @@ class _ComposerContextPreviewBody extends StatelessWidget {
     );
   }
 }
-
-int _replyComposerIdCounter = 0;

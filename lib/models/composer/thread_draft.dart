@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'composer_attachment.dart';
-import 'quill_draft_utils.dart';
+import 'rich_text_composer_content.dart';
 
 enum ThreadComposeMode { richText, videoOnly }
 
@@ -26,10 +26,33 @@ class RichTextThreadDraft extends ThreadDraft {
   });
 
   factory RichTextThreadDraft.empty() =>
-      RichTextThreadDraft(title: '', deltaJson: emptyQuillDeltaJson());
+      RichTextThreadDraft.fromComposerContent(
+        title: '',
+        content: RichTextComposerContent.empty(),
+      );
+
+  factory RichTextThreadDraft.fromComposerContent({
+    required String title,
+    required RichTextComposerContent content,
+  }) {
+    return RichTextThreadDraft(
+      title: title,
+      deltaJson: content.deltaJson,
+      attachments: content.attachments,
+      bodyHtml: content.bodyHtml,
+    );
+  }
+
+  RichTextComposerContent get composerContent {
+    return RichTextComposerContent(
+      deltaJson: deltaJson,
+      attachments: attachments,
+      bodyHtml: bodyHtml,
+    );
+  }
 
   bool get hasPublishableContent {
-    return !isQuillDeltaMeaningfullyEmpty(deltaJson) || attachments.isNotEmpty;
+    return composerContent.hasPublishableContent;
   }
 
   RichTextThreadDraft copyWith({
@@ -39,19 +62,21 @@ class RichTextThreadDraft extends ThreadDraft {
     String? bodyHtml,
     bool clearBodyHtml = false,
   }) {
-    return RichTextThreadDraft(
+    return RichTextThreadDraft.fromComposerContent(
       title: title ?? this.title,
-      deltaJson: deltaJson ?? this.deltaJson,
-      attachments: attachments ?? this.attachments,
-      bodyHtml: clearBodyHtml ? null : bodyHtml ?? this.bodyHtml,
+      content: composerContent.copyWith(
+        deltaJson: deltaJson,
+        attachments: attachments,
+        bodyHtml: bodyHtml,
+        clearBodyHtml: clearBodyHtml,
+      ),
     );
   }
 
   RichTextThreadDraft clearedBodyPreservingTitle() {
-    return RichTextThreadDraft(
+    return RichTextThreadDraft.fromComposerContent(
       title: title,
-      deltaJson: emptyQuillDeltaJson(),
-      attachments: const <ComposerAttachment>[],
+      content: composerContent.clearedBody(),
     );
   }
 }

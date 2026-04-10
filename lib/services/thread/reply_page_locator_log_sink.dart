@@ -12,9 +12,14 @@ class ReplyPageLocatorLogSink implements ReplyPageLocatorLogWriter {
   static const int defaultMaxRecords = 300;
   static const String defaultRelativeDirectory = 'playground/logs';
   static const String defaultFileName = 'reply_page_locator.jsonl';
-  static const String _recordMarker = '--- 回复定位记录 ---';
-
-  static const JsonEncoder _prettyJsonEncoder = JsonEncoder.withIndent('  ');
+  static const Map<String, String> _stringSanitizationOverrides =
+      <String, String>{
+        '目标楼层无法显示': 'target_reply_not_visible',
+        '目标回复早于当前帖子第一页可见范围，无法跳转。': 'target_reply_before_first_visible_page',
+      };
+  static final RegExp _localizedCharacterPattern = RegExp(
+    r'[\u3000-\u303F\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]',
+  );
 
   final int _maxRecords;
   final String _relativeDirectory;
@@ -91,33 +96,19 @@ class ReplyPageLocatorLogSink implements ReplyPageLocatorLogWriter {
       nextRecords.removeRange(0, removeCount);
     }
 
-    final payload = _buildReadablePayload(nextRecords);
+    final payload = _buildJsonLinesPayload(nextRecords);
 
     await file.writeAsString(payload, flush: true);
   }
 
-  String _buildReadablePayload(List<ReplyPageLocatorLogRecord> records) {
-    final payload = StringBuffer();
-    payload.writeln('# BlueFish 回复跳转定位日志（可读版）');
-    payload.writeln('#');
-    payload.writeln('# 字段说明：');
-    payload.writeln('# - tid / pid: 目标帖子 ID 与目标回复 ID');
-    payload.writeln('# - probeBudget: 本次允许探测的最大页数预算');
-    payload.writeln('# - startedAtEpochMs / finishedAtEpochMs: 毫秒时间戳');
-    payload.writeln('# - outcome: 本次定位结论（exact、bracket、tailLastPage 等）');
-    payload.writeln('# - resolvedPage: 最终定位到的页码（若无则为 null）');
-    payload.writeln('# - shouldNavigate: 是否应继续跳转到 thread_detail');
-    payload.writeln('# - probesUsed: 实际探测页数');
-    payload.writeln('# - steps: 详细计算与比对过程（name、atEpochMs、details）');
-    payload.writeln('#');
-    payload.writeln('# 格式说明：每条记录由标记行开始，后接一段格式化 JSON。');
-
-    for (final item in records) {
-      payload.writeln(_recordMarker);
-      payload.writeln(_prettyJsonEncoder.convert(item.toJson()));
+  String _buildJsonLinesPayload(List<ReplyPageLocatorLogRecord> records) {
+    if (records.isEmpty) {
+      return '';
     }
 
-    return payload.toString();
+    return records
+        .map((record) => jsonEncode(_sanitizeRecord(record).toJson()))
+        .join('\n');
   }
 
   List<ReplyPageLocatorLogRecord> _decodeFileContent(String content) {
@@ -126,38 +117,10 @@ class ReplyPageLocatorLogSink implements ReplyPageLocatorLogWriter {
       return const <ReplyPageLocatorLogRecord>[];
     }
 
-    if (normalized.contains(_recordMarker)) {
-      return _decodeReadableContent(content);
-    }
-
-    return _decodeLines(content.split(RegExp(r'\r?\n')));
+    return _decodeJsonLines(content.split(RegExp(r'\r?\n')));
   }
 
-  List<ReplyPageLocatorLogRecord> _decodeReadableContent(String content) {
-    final records = <ReplyPageLocatorLogRecord>[];
-    final sections = content.split(_recordMarker);
-
-    for (final rawSection in sections) {
-      final section = rawSection.trim();
-      if (section.isEmpty || section.startsWith('#')) {
-        continue;
-      }
-
-      try {
-        final decoded = jsonDecode(section);
-        final record = ReplyPageLocatorLogRecord.fromJson(decoded);
-        if (record != null) {
-          records.add(record);
-        }
-      } catch (_) {
-        // Skip malformed blocks to keep historical files readable.
-      }
-    }
-
-    return records;
-  }
-
-  List<ReplyPageLocatorLogRecord> _decodeLines(List<String> lines) {
+  List<ReplyPageLocatorLogRecord> _decodeJsonLines(List<String> lines) {
     final records = <ReplyPageLocatorLogRecord>[];
     for (final rawLine in lines) {
       final line = rawLine.trim();
@@ -176,6 +139,95 @@ class ReplyPageLocatorLogSink implements ReplyPageLocatorLogWriter {
       }
     }
     return records;
+  }
+
+  ReplyPageLocatorLogRecord _sanitizeRecord(ReplyPageLocatorLogRecord record) {
+    return ReplyPageLocatorLogRecord(
+      tid: _sanitizeString(record.tid),
+      pid: _sanitizeString(record.pid),
+      probeBudget: record.probeBudget,
+      startedAtEpochMs: record.startedAtEpochMs,
+      finishedAtEpochMs: record.finishedAtEpochMs,
+      outcome: _sanitizeString(record.outcome),
+      resolvedPage: record.resolvedPage,
+      shouldNavigate: record.shouldNavigate,
+      probesUsed: record.probesUsed,
+      resultMessage: _sanitizeNullableString(record.resultMessage),
+      exceptionMessage: _sanitizeNullableString(record.exceptionMessage),
+      steps: record.steps.map(_sanitizeStep).toList(growable: false),
+    );
+  }
+
+  ReplyPageLocatorLogStep _sanitizeStep(ReplyPageLocatorLogStep step) {
+    return ReplyPageLocatorLogStep(
+      name: _sanitizeString(step.name),
+      atEpochMs: step.atEpochMs,
+      details: _sanitizeMap(step.details),
+    );
+  }
+
+  Map<String, Object?> _sanitizeMap(Map<dynamic, dynamic> rawMap) {
+    final sanitized = <String, Object?>{};
+    for (final entry in rawMap.entries) {
+      final key = _sanitizeString(entry.key.toString());
+      if (key.isEmpty) {
+        continue;
+      }
+      sanitized[key] = _sanitizeValue(entry.value);
+    }
+    return sanitized;
+  }
+
+  List<Object?> _sanitizeList(List<dynamic> rawList) {
+    return rawList
+        .map<Object?>((entry) => _sanitizeValue(entry))
+        .toList(growable: false);
+  }
+
+  Object? _sanitizeValue(Object? value) {
+    if (value == null || value is num || value is bool) {
+      return value;
+    }
+    if (value is String) {
+      return _sanitizeNullableString(value);
+    }
+    if (value is List) {
+      return _sanitizeList(value);
+    }
+    if (value is Map) {
+      return _sanitizeMap(value);
+    }
+
+    return _sanitizeNullableString(value.toString());
+  }
+
+  String? _sanitizeNullableString(String? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final sanitized = _sanitizeString(value);
+    if (sanitized.isEmpty) {
+      return null;
+    }
+    return sanitized;
+  }
+
+  String _sanitizeString(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+
+    final overridden = _stringSanitizationOverrides[trimmed];
+    if (overridden != null) {
+      return overridden;
+    }
+
+    return trimmed
+        .replaceAll(_localizedCharacterPattern, ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   Future<File> _resolveLogFile({required bool createDirectory}) async {

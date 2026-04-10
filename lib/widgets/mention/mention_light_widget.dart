@@ -398,6 +398,7 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
       widget.html,
       textStyle: widget.textStyle,
       factoryBuilder: () => BluefishHtmlWidgetFactory(
+        enableImageShrink: false,
         imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
         imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
       ),
@@ -492,21 +493,37 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_shouldCollapse)
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 240),
-                reverseDuration: const Duration(milliseconds: 200),
-                firstCurve: Curves.easeOutCubic,
-                secondCurve: Curves.easeOutCubic,
-                sizeCurve: Curves.easeInOutCubic,
+              Align(
                 alignment: Alignment.topLeft,
-                crossFadeState: _expanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                firstChild: collapsedHtml,
-                secondChild: _buildHtmlWidget(
-                  linkColor: linkColor,
-                  imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
-                  imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  reverseDuration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeOutCubic,
+                  layoutBuilder: (currentChild, previousChildren) {
+                    return Stack(
+                      alignment: Alignment.topLeft,
+                      children: <Widget>[
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
+                    );
+                  },
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey<bool>(_expanded),
+                    child: _expanded
+                        ? _buildHtmlWidget(
+                            linkColor: linkColor,
+                            imageShrinkTriggerMaxEdgeDp:
+                                imageShrinkTriggerMaxEdgeDp,
+                            imageShrinkTargetMaxEdgeDp:
+                                imageShrinkTargetMaxEdgeDp,
+                          )
+                        : collapsedHtml,
+                  ),
                 ),
               )
             else

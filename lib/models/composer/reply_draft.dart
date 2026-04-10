@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'composer_attachment.dart';
-import 'quill_draft_utils.dart';
+import 'rich_text_composer_content.dart';
 
 @immutable
 class ReplyDraft {
@@ -15,10 +15,27 @@ class ReplyDraft {
     this.bodyHtml,
   });
 
-  factory ReplyDraft.empty() => ReplyDraft(deltaJson: emptyQuillDeltaJson());
+  factory ReplyDraft.empty() =>
+      ReplyDraft.fromComposerContent(RichTextComposerContent.empty());
+
+  factory ReplyDraft.fromComposerContent(RichTextComposerContent content) {
+    return ReplyDraft(
+      deltaJson: content.deltaJson,
+      attachments: content.attachments,
+      bodyHtml: content.bodyHtml,
+    );
+  }
+
+  RichTextComposerContent get composerContent {
+    return RichTextComposerContent(
+      deltaJson: deltaJson,
+      attachments: attachments,
+      bodyHtml: bodyHtml,
+    );
+  }
 
   bool get hasPublishableContent {
-    return !isQuillDeltaMeaningfullyEmpty(deltaJson) || attachments.isNotEmpty;
+    return composerContent.hasPublishableContent;
   }
 
   ReplyDraft copyWith({
@@ -27,10 +44,13 @@ class ReplyDraft {
     String? bodyHtml,
     bool clearBodyHtml = false,
   }) {
-    return ReplyDraft(
-      deltaJson: deltaJson ?? this.deltaJson,
-      attachments: attachments ?? this.attachments,
-      bodyHtml: clearBodyHtml ? null : bodyHtml ?? this.bodyHtml,
+    return ReplyDraft.fromComposerContent(
+      composerContent.copyWith(
+        deltaJson: deltaJson,
+        attachments: attachments,
+        bodyHtml: bodyHtml,
+        clearBodyHtml: clearBodyHtml,
+      ),
     );
   }
 }

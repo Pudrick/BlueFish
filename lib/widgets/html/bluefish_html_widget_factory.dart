@@ -14,14 +14,17 @@ typedef BluefishHtmlImageTapCallback =
 class BluefishHtmlWidgetFactory extends fwfh.WidgetFactory {
   fwfh.BuildOp? _detailsBuildOp;
   final BluefishHtmlImageTapCallback? _onTapImageAtIndex;
+  final bool _enableImageShrink;
   final double _imageShrinkTriggerMaxEdgeDp;
   final double _imageShrinkTargetMaxEdgeDp;
 
   BluefishHtmlWidgetFactory({
     BluefishHtmlImageTapCallback? onTapImageAtIndex,
+    bool enableImageShrink = true,
     double? imageShrinkTriggerMaxEdgeDp,
     double? imageShrinkTargetMaxEdgeDp,
   }) : _onTapImageAtIndex = onTapImageAtIndex,
+       _enableImageShrink = enableImageShrink,
        _imageShrinkTriggerMaxEdgeDp = _resolveImageShrinkTriggerMaxEdgeDp(
          imageShrinkTriggerMaxEdgeDp,
        ),
@@ -128,7 +131,7 @@ class BluefishHtmlWidgetFactory extends fwfh.WidgetFactory {
       tree.element.attributes[bluefishGalleryIndexAttribute] ?? '',
     );
     final onTapImageAtIndex = _onTapImageAtIndex;
-    if (!hasIntrinsicSize) {
+    if (!hasIntrinsicSize || !_enableImageShrink) {
       return _wrapWithImageTap(
         child: built,
         galleryIndex: galleryIndex,

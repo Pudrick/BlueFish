@@ -1962,18 +1962,27 @@ class ReplyPageLocatorService {
     final normalizedStride = coarseProbeStride < 1
         ? AppSettings.defaultReplyLocateCoarseProbeStride
         : coarseProbeStride;
-
-    final pages = <int>[1];
-    for (
-      var page = 1 + normalizedStride;
-      page <= totalPages;
-      page += normalizedStride
-    ) {
-      pages.add(page);
+    if (totalPages <= normalizedStride) {
+      return const <int>[];
     }
 
-    if (pages.last != totalPages) {
-      pages.add(totalPages);
+    final pages = <int>[];
+    final seenPages = <int>{};
+
+    void addPage(int page) {
+      if (page < 1 || page > totalPages) {
+        return;
+      }
+      if (seenPages.add(page)) {
+        pages.add(page);
+      }
+    }
+
+    addPage(totalPages);
+
+    final alignedTailPage = totalPages - (totalPages % normalizedStride);
+    for (var page = alignedTailPage; page >= 1; page -= normalizedStride) {
+      addPage(page);
     }
 
     return pages;
@@ -1987,23 +1996,28 @@ class ReplyPageLocatorService {
     _LocateTrace? trace,
     String? stage,
   }) async {
-    if (targetPidNumber == null || totalPages <= 1) {
+    final normalizedStride = coarseProbeStride < 1
+        ? AppSettings.defaultReplyLocateCoarseProbeStride
+        : coarseProbeStride;
+
+    if (targetPidNumber == null || totalPages <= normalizedStride) {
       trace?.addStep('coarse_probe_skipped', <String, Object?>{
         'stage': stage,
         'reason': targetPidNumber == null
             ? 'target_pid_not_numeric'
-            : 'single_page_thread',
+            : 'total_pages_within_stride',
         'totalPages': totalPages,
+        'coarseProbeStride': normalizedStride,
       });
       return const _CoarseIntervalOutcome();
     }
 
-    final coarsePages = _buildCoarseProbePages(totalPages, coarseProbeStride);
+    final coarsePages = _buildCoarseProbePages(totalPages, normalizedStride);
     trace?.addStep('coarse_probe_start', <String, Object?>{
       'stage': stage,
       'targetPidNumber': targetPidNumber,
       'totalPages': totalPages,
-      'coarseProbeStride': coarseProbeStride,
+      'coarseProbeStride': normalizedStride,
       'pages': coarsePages,
     });
 
@@ -2053,7 +2067,7 @@ class ReplyPageLocatorService {
       final previous = anchors[anchors.length - 2];
       final current = anchors[anchors.length - 1];
 
-      if (current.firstPidNumber <= previous.firstPidNumber) {
+      if (current.firstPidNumber == previous.firstPidNumber) {
         continue;
       }
 
@@ -2070,17 +2084,21 @@ class ReplyPageLocatorService {
         break;
       }
 
-      if (previous.firstPidNumber < targetPidNumber &&
-          targetPidNumber < current.firstPidNumber) {
-        lowerAnchor = previous;
-        upperAnchor = current;
+      final pair = _matchCoarseProbePair(
+        left: previous,
+        right: current,
+        targetPidNumber: targetPidNumber,
+      );
+      if (pair != null) {
+        lowerAnchor = pair.lowerAnchor;
+        upperAnchor = pair.upperAnchor;
         trace?.addStep('coarse_probe_early_exit_interval', <String, Object?>{
           'stage': stage,
           'targetPidNumber': targetPidNumber,
-          'lowerPage': previous.page,
-          'upperPage': current.page,
-          'lowerFirstPid': previous.firstPidNumber,
-          'upperFirstPid': current.firstPidNumber,
+          'lowerPage': pair.lowerAnchor.page,
+          'upperPage': pair.upperAnchor.page,
+          'lowerFirstPid': pair.lowerAnchor.firstPidNumber,
+          'upperFirstPid': pair.upperAnchor.firstPidNumber,
           'anchorsProbed': anchors.length,
         });
         break;
@@ -2096,14 +2114,23 @@ class ReplyPageLocatorService {
       return const _CoarseIntervalOutcome();
     }
 
+    final orderedAnchors = anchors.toList()
+      ..sort((left, right) {
+        final pidCompare = left.firstPidNumber.compareTo(right.firstPidNumber);
+        if (pidCompare != 0) {
+          return pidCompare;
+        }
+        return left.page.compareTo(right.page);
+      });
+
     if (lowerAnchor == null || upperAnchor == null) {
-      if (targetPidNumber <= anchors.first.firstPidNumber) {
-        lowerAnchor = anchors.first;
-        upperAnchor = anchors[1];
+      if (targetPidNumber <= orderedAnchors.first.firstPidNumber) {
+        lowerAnchor = orderedAnchors.first;
+        upperAnchor = orderedAnchors[1];
       } else {
-        for (var index = 1; index < anchors.length; index += 1) {
-          final previous = anchors[index - 1];
-          final current = anchors[index];
+        for (var index = 1; index < orderedAnchors.length; index += 1) {
+          final previous = orderedAnchors[index - 1];
+          final current = orderedAnchors[index];
 
           if (current.firstPidNumber <= previous.firstPidNumber) {
             trace?.addStep('coarse_probe_non_monotonic_pair', <String, Object?>{
@@ -2122,10 +2149,14 @@ class ReplyPageLocatorService {
             break;
           }
 
-          if (previous.firstPidNumber < targetPidNumber &&
-              targetPidNumber < current.firstPidNumber) {
-            lowerAnchor = previous;
-            upperAnchor = current;
+          final pair = _matchCoarseProbePair(
+            left: previous,
+            right: current,
+            targetPidNumber: targetPidNumber,
+          );
+          if (pair != null) {
+            lowerAnchor = pair.lowerAnchor;
+            upperAnchor = pair.upperAnchor;
             break;
           }
         }
@@ -2133,9 +2164,9 @@ class ReplyPageLocatorService {
     }
 
     if (lowerAnchor == null || upperAnchor == null) {
-      if (targetPidNumber > anchors.last.firstPidNumber) {
-        lowerAnchor = anchors[anchors.length - 2];
-        upperAnchor = anchors.last;
+      if (targetPidNumber > orderedAnchors.last.firstPidNumber) {
+        lowerAnchor = orderedAnchors[orderedAnchors.length - 2];
+        upperAnchor = orderedAnchors.last;
       } else {
         trace?.addStep('coarse_probe_interval_unavailable', <String, Object?>{
           'stage': stage,
@@ -2160,6 +2191,30 @@ class ReplyPageLocatorService {
       'upperFirstPid': upperAnchor.firstPidNumber,
     });
     return _CoarseIntervalOutcome(interval: interval);
+  }
+
+  _CoarseProbePair? _matchCoarseProbePair({
+    required _CoarseProbeAnchor left,
+    required _CoarseProbeAnchor right,
+    required int targetPidNumber,
+  }) {
+    if (left.firstPidNumber == right.firstPidNumber) {
+      return null;
+    }
+
+    final lowerAnchor = left.firstPidNumber < right.firstPidNumber
+        ? left
+        : right;
+    final upperAnchor = identical(lowerAnchor, left) ? right : left;
+    if (lowerAnchor.firstPidNumber < targetPidNumber &&
+        targetPidNumber < upperAnchor.firstPidNumber) {
+      return _CoarseProbePair(
+        lowerAnchor: lowerAnchor,
+        upperAnchor: upperAnchor,
+      );
+    }
+
+    return null;
   }
 
   Future<int?> _fetchOfficialHintPage({
@@ -2392,6 +2447,16 @@ class _CoarseProbeAnchor {
     required this.page,
     required this.firstPidNumber,
     required this.detail,
+  });
+}
+
+class _CoarseProbePair {
+  final _CoarseProbeAnchor lowerAnchor;
+  final _CoarseProbeAnchor upperAnchor;
+
+  const _CoarseProbePair({
+    required this.lowerAnchor,
+    required this.upperAnchor,
   });
 }
 
