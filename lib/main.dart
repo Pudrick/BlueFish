@@ -25,6 +25,7 @@ Future<void> launchApp() async {
   );
   final replyPageLocatorService = ReplyPageLocatorService(
     cacheService: replyPageLocatorCacheService,
+    shouldWriteJumpLogs: () => settingsViewModel.settings.generateJumpLogs,
   );
 
   // Initialize the auth-aware HTTP client before the widget tree mounts.

@@ -15,6 +15,9 @@ class AppSettingsStore {
       'settings.reply_locate_total_probe_budget';
   static const String _replyLocateCacheMaxEntriesKey =
       'settings.reply_locate_cache_max_entries';
+  static const String _replyLocateCoarseProbeStrideKey =
+      'settings.reply_locate_coarse_probe_stride';
+  static const String _generateJumpLogsKey = 'settings.generate_jump_logs';
   static const String _imageSaveDirectoryPathKey =
       'settings.image_save_directory_path';
   static const String _videoSaveDirectoryPathKey =
@@ -58,6 +61,12 @@ class AppSettingsStore {
       replyLocateCacheMaxEntries:
           prefs.getInt(_replyLocateCacheMaxEntriesKey) ??
           AppSettings.defaults.replyLocateCacheMaxEntries,
+      replyLocateCoarseProbeStride:
+          prefs.getInt(_replyLocateCoarseProbeStrideKey) ??
+          AppSettings.defaults.replyLocateCoarseProbeStride,
+      generateJumpLogs:
+          prefs.getBool(_generateJumpLogsKey) ??
+          AppSettings.defaults.generateJumpLogs,
       imageSaveDirectoryPath: prefs.getString(_imageSaveDirectoryPathKey),
       videoSaveDirectoryPath: prefs.getString(_videoSaveDirectoryPathKey),
       apiVersionOverride: prefs.getString(_apiVersionOverrideKey),
@@ -91,6 +100,11 @@ class AppSettingsStore {
       _replyLocateCacheMaxEntriesKey,
       settings.replyLocateCacheMaxEntries,
     );
+    await prefs.setInt(
+      _replyLocateCoarseProbeStrideKey,
+      settings.replyLocateCoarseProbeStride,
+    );
+    await prefs.setBool(_generateJumpLogsKey, settings.generateJumpLogs);
     if (settings.imageSaveDirectoryPath == null) {
       await prefs.remove(_imageSaveDirectoryPathKey);
     } else {
@@ -129,6 +143,8 @@ class AppSettingsStore {
     await prefs.remove(_imageShrinkTargetMaxEdgeDpKey);
     await prefs.remove(_replyLocateTotalProbeBudgetKey);
     await prefs.remove(_replyLocateCacheMaxEntriesKey);
+    await prefs.remove(_replyLocateCoarseProbeStrideKey);
+    await prefs.remove(_generateJumpLogsKey);
     await prefs.remove(_imageSaveDirectoryPathKey);
     await prefs.remove(_videoSaveDirectoryPathKey);
     await prefs.remove(_apiVersionOverrideKey);

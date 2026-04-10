@@ -188,6 +188,15 @@ class _MessagesPageState extends State<MessagesPage>
         AppSettings.defaultReplyLocateCacheMaxEntries;
   }
 
+  int _resolveReplyLocateCoarseProbeStride() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateCoarseProbeStride ??
+        AppSettings.defaultReplyLocateCoarseProbeStride;
+  }
+
   bool _isReplyJumpCanceled(int requestId) {
     return !_replyJumpInProgress || _replyJumpRequestId != requestId;
   }
@@ -254,6 +263,7 @@ class _MessagesPageState extends State<MessagesPage>
           pid: '$pid',
           probeBudget: _resolveReplyLocateBudget(),
           cacheMaxEntries: _resolveReplyLocateCacheMaxEntries(),
+          coarseProbeStride: _resolveReplyLocateCoarseProbeStride(),
           isCanceled: () => _isReplyJumpCanceled(requestId),
         );
 

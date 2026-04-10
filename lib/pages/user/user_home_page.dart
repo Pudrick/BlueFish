@@ -124,6 +124,15 @@ class _UserHomePageViewState extends State<UserHomePageView> {
         AppSettings.defaultReplyLocateCacheMaxEntries;
   }
 
+  int _resolveReplyLocateCoarseProbeStride() {
+    final settings = Provider.of<AppSettingsViewModel?>(
+      context,
+      listen: false,
+    )?.settings;
+    return settings?.replyLocateCoarseProbeStride ??
+        AppSettings.defaultReplyLocateCoarseProbeStride;
+  }
+
   bool _isReplyJumpCanceled(int requestId) {
     return !_replyJumpInProgress || _replyJumpRequestId != requestId;
   }
@@ -190,6 +199,7 @@ class _UserHomePageViewState extends State<UserHomePageView> {
           pid: '$pid',
           probeBudget: _resolveReplyLocateBudget(),
           cacheMaxEntries: _resolveReplyLocateCacheMaxEntries(),
+          coarseProbeStride: _resolveReplyLocateCoarseProbeStride(),
           isCanceled: () => _isReplyJumpCanceled(requestId),
         );
 

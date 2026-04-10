@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/models/model_parsing.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
+import 'package:bluefish/services/thread/reply_page_locator_log_models.dart';
+import 'package:bluefish/services/thread/reply_page_locator_log_sink.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/userdata/reply_page_locator_cache_store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 enum ReplyPageResolutionType {
@@ -177,14 +181,20 @@ class ReplyPageLocatorService {
   final http.Client _client;
   final ThreadDetailService _threadDetailService;
   final ReplyPageLocatorCacheService _cacheService;
+  final ReplyPageLocatorLogWriter _logWriter;
+  final bool Function() _shouldWriteJumpLogs;
 
   ReplyPageLocatorService({
     http.Client? client,
     ThreadDetailService? threadDetailService,
     ReplyPageLocatorCacheService? cacheService,
+    ReplyPageLocatorLogWriter? logWriter,
+    bool Function()? shouldWriteJumpLogs,
   }) : _client = client ?? httpClient,
        _threadDetailService = threadDetailService ?? ThreadDetailService(),
-       _cacheService = cacheService ?? ReplyPageLocatorCacheService();
+       _cacheService = cacheService ?? ReplyPageLocatorCacheService(),
+       _logWriter = logWriter ?? ReplyPageLocatorLogSink(),
+       _shouldWriteJumpLogs = shouldWriteJumpLogs ?? (() => true);
 
   static ReplyPageLocatorTelemetry telemetrySnapshot() {
     return ReplyPageLocatorTelemetry(
@@ -215,6 +225,7 @@ class ReplyPageLocatorService {
     required String pid,
     required int probeBudget,
     int cacheMaxEntries = ReplyPageLocatorCacheService.defaultMaxEntries,
+    int coarseProbeStride = AppSettings.defaultReplyLocateCoarseProbeStride,
     bool useCache = true,
     bool Function()? isCanceled,
   }) async {
@@ -226,39 +237,214 @@ class ReplyPageLocatorService {
     final normalizedCacheMaxEntries = cacheMaxEntries < 1
         ? ReplyPageLocatorCacheService.defaultMaxEntries
         : cacheMaxEntries;
+    final normalizedCoarseProbeStride = _normalizeCoarseProbeStride(
+      coarseProbeStride,
+    );
 
-    if (_isCanceled(isCanceled)) {
-      _canceled += 1;
-      return ReplyPageLocateResult.canceled(
-        probesUsed: 0,
-        probeBudget: normalizedBudget,
-      );
-    }
-
-    if (useCache) {
-      await _cacheService.ensureInitialized();
-      await _cacheService.configureMaxEntries(normalizedCacheMaxEntries);
-      final cached = await _cacheService.findExact(
-        tid: normalizedTid,
-        targetPid: normalizedPid,
-      );
-      if (cached != null) {
-        return _resultFromCacheEntry(cached, normalizedBudget);
-      }
-    }
-
-    final targetPidNumber = _parsePidNumber(normalizedPid);
-    final officialHintRaw = await _fetchOfficialHintPage(
+    final trace = _LocateTrace(
       tid: normalizedTid,
       pid: normalizedPid,
+      probeBudget: normalizedBudget,
     );
+    trace.addStep('normalize_input', <String, Object?>{
+      'tid': normalizedTid,
+      'pid': normalizedPid,
+      'probeBudget': probeBudget,
+      'normalizedProbeBudget': normalizedBudget,
+      'useCache': useCache,
+      'cacheMaxEntries': cacheMaxEntries,
+      'normalizedCacheMaxEntries': normalizedCacheMaxEntries,
+      'coarseProbeStride': coarseProbeStride,
+      'normalizedCoarseProbeStride': normalizedCoarseProbeStride,
+    });
+
+    ReplyPageLocateResult? completedResult;
+    Object? thrownError;
+
+    try {
+      if (_isCanceled(isCanceled)) {
+        _canceled += 1;
+        trace.addStep('canceled_before_locate');
+        completedResult = ReplyPageLocateResult.canceled(
+          probesUsed: 0,
+          probeBudget: normalizedBudget,
+        );
+        return completedResult;
+      }
+
+      if (useCache) {
+        await _cacheService.ensureInitialized();
+        await _cacheService.configureMaxEntries(normalizedCacheMaxEntries);
+        final cached = await _cacheService.findExact(
+          tid: normalizedTid,
+          targetPid: normalizedPid,
+        );
+        if (cached != null) {
+          trace.addStep('cache_exact_hit', <String, Object?>{
+            'resolvedPage': cached.resolvedPage,
+            'resolutionType': cached.resolutionType,
+            'message': cached.message,
+          });
+          completedResult = _resultFromCacheEntry(cached, normalizedBudget);
+          return completedResult;
+        }
+        trace.addStep('cache_exact_miss');
+      } else {
+        trace.addStep('cache_disabled');
+      }
+
+      final targetPidNumber = _parsePidNumber(normalizedPid);
+      trace.addStep('parse_target_pid', <String, Object?>{
+        'rawPid': normalizedPid,
+        'targetPidNumber': targetPidNumber,
+      });
+      final officialHintRaw = await _fetchOfficialHintPage(
+        tid: normalizedTid,
+        pid: normalizedPid,
+      );
+      trace.addStep('official_hint_result', <String, Object?>{
+        'officialHintRaw': officialHintRaw,
+      });
+
+      final hintDrivenResult = await _locateReplyPageByHintRange(
+        normalizedTid: normalizedTid,
+        normalizedPid: normalizedPid,
+        targetPidNumber: targetPidNumber,
+        normalizedBudget: normalizedBudget,
+        coarseProbeStride: normalizedCoarseProbeStride,
+        useCache: useCache,
+        officialHintRaw: officialHintRaw,
+        isCanceled: isCanceled,
+        trace: trace,
+      );
+
+      if (hintDrivenResult != null) {
+        trace.addStep('hint_range_terminal', <String, Object?>{
+          'resolutionType': hintDrivenResult.resolutionType.name,
+          'resolvedPage': hintDrivenResult.resolvedPage,
+          'probesUsed': hintDrivenResult.probesUsed,
+          'shouldNavigate': hintDrivenResult.shouldNavigate,
+        });
+        completedResult = _finalize(
+          tid: normalizedTid,
+          pid: normalizedPid,
+          result: hintDrivenResult,
+          useCache: useCache,
+        );
+        return completedResult;
+      }
+
+      trace.addStep('hint_range_fallback_to_legacy');
+      final legacyResult = await _locateReplyPageLegacy(
+        normalizedTid: normalizedTid,
+        normalizedPid: normalizedPid,
+        targetPidNumber: targetPidNumber,
+        normalizedBudget: normalizedBudget,
+        coarseProbeStride: normalizedCoarseProbeStride,
+        useCache: useCache,
+        officialHintRaw: officialHintRaw,
+        isCanceled: isCanceled,
+        trace: trace,
+      );
+      trace.addStep('legacy_terminal', <String, Object?>{
+        'resolutionType': legacyResult.resolutionType.name,
+        'resolvedPage': legacyResult.resolvedPage,
+        'probesUsed': legacyResult.probesUsed,
+        'shouldNavigate': legacyResult.shouldNavigate,
+      });
+      completedResult = _finalize(
+        tid: normalizedTid,
+        pid: normalizedPid,
+        result: legacyResult,
+        useCache: useCache,
+      );
+      return completedResult;
+    } catch (error, stackTrace) {
+      thrownError = error;
+      trace.addStep('exception_thrown', <String, Object?>{
+        'error': error.toString(),
+      });
+      debugPrint(
+        'ReplyPageLocatorService failed for tid=$normalizedTid pid=$normalizedPid: $error',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+      rethrow;
+    } finally {
+      if (completedResult != null) {
+        await _persistTraceRecord(trace.completeWithResult(completedResult));
+      } else if (thrownError != null) {
+        await _persistTraceRecord(
+          trace.completeWithException(thrownError.toString()),
+        );
+      }
+    }
+  }
+
+  Future<ReplyPageLocateResult?> _locateReplyPageByHintRange({
+    required String normalizedTid,
+    required String normalizedPid,
+    required int? targetPidNumber,
+    required int normalizedBudget,
+    required int coarseProbeStride,
+    required bool useCache,
+    required int? officialHintRaw,
+    bool Function()? isCanceled,
+    required _LocateTrace trace,
+  }) async {
+    trace.addStep('hint_range_start', <String, Object?>{
+      'targetPidNumber': targetPidNumber,
+      'officialHintRaw': officialHintRaw,
+      'normalizedBudget': normalizedBudget,
+      'coarseProbeStride': coarseProbeStride,
+      'useCache': useCache,
+    });
+    if (targetPidNumber == null ||
+        officialHintRaw == null ||
+        officialHintRaw < 1) {
+      trace.addStep('hint_range_skipped', <String, Object?>{
+        'reason': 'missing_target_or_invalid_hint',
+      });
+      return null;
+    }
 
     final Map<int, ThreadDetail> visitedPages = <int, ThreadDetail>{};
     int probesUsed = 0;
     bool budgetExhausted = false;
+    bool budgetTelemetryRecorded = false;
 
-    Future<_ProbeOutcome> probePage(int page, {bool evaluate = true}) async {
+    void recordBudgetExhausted() {
+      if (!budgetTelemetryRecorded && budgetExhausted) {
+        _budgetExhausted += 1;
+        budgetTelemetryRecorded = true;
+        trace.addStep('hint_budget_exhausted_counter_incremented');
+      }
+    }
+
+    ReplyPageLocateResult fallbackPage1() {
+      trace.addStep('hint_fallback_page1', <String, Object?>{
+        'probesUsed': probesUsed,
+        'probeBudget': normalizedBudget,
+      });
+      recordBudgetExhausted();
+      return ReplyPageLocateResult.fallbackPage1(
+        probesUsed: probesUsed,
+        probeBudget: normalizedBudget,
+      );
+    }
+
+    Future<_ProbeOutcome> probePage(
+      int page, {
+      bool countAgainstBudget = true,
+    }) async {
+      trace.addStep('hint_probe_begin', <String, Object?>{
+        'page': page,
+        'countAgainstBudget': countAgainstBudget,
+        'probesUsed': probesUsed,
+        'probeBudget': normalizedBudget,
+        'alreadyVisited': visitedPages.containsKey(page),
+      });
       if (_isCanceled(isCanceled)) {
+        trace.addStep('hint_probe_canceled', <String, Object?>{'page': page});
         return _ProbeOutcome(
           terminal: ReplyPageLocateResult.canceled(
             probesUsed: probesUsed,
@@ -269,21 +455,36 @@ class ReplyPageLocatorService {
 
       final existing = visitedPages[page];
       if (existing != null) {
+        trace.addStep('hint_probe_reuse_cached_page', <String, Object?>{
+          'page': page,
+          ..._detailSummary(existing),
+        });
         return _ProbeOutcome(detail: existing);
       }
 
-      if (probesUsed >= normalizedBudget) {
+      if (countAgainstBudget && probesUsed >= normalizedBudget) {
         budgetExhausted = true;
+        trace.addStep('hint_probe_budget_reached', <String, Object?>{
+          'page': page,
+          'probesUsed': probesUsed,
+          'probeBudget': normalizedBudget,
+        });
         return const _ProbeOutcome();
       }
 
-      probesUsed += 1;
+      if (countAgainstBudget) {
+        probesUsed += 1;
+      }
       final detailResult = await _threadDetailService.getThreadDetail(
         normalizedTid,
         page,
       );
 
       if (_isCanceled(isCanceled)) {
+        trace.addStep('hint_probe_canceled_after_fetch', <String, Object?>{
+          'page': page,
+          'probesUsed': probesUsed,
+        });
         return _ProbeOutcome(
           terminal: ReplyPageLocateResult.canceled(
             probesUsed: probesUsed,
@@ -300,10 +501,455 @@ class ReplyPageLocatorService {
         failure: (_, __) {},
       );
       if (detail == null) {
+        trace.addStep('hint_probe_detail_missing', <String, Object?>{
+          'page': page,
+        });
         return const _ProbeOutcome();
       }
 
       visitedPages[page] = detail!;
+      trace.addStep('hint_probe_success', <String, Object?>{
+        'page': page,
+        ..._detailSummary(detail!),
+      });
+      return _ProbeOutcome(detail: detail);
+    }
+
+    final officialOutcome = await probePage(officialHintRaw);
+    if (officialOutcome.terminal != null) {
+      _traceResult(
+        trace,
+        'hint_official_probe_terminal',
+        officialOutcome.terminal!,
+      );
+      return officialOutcome.terminal;
+    }
+
+    final officialHintDetail = officialOutcome.detail;
+    if (officialHintDetail == null) {
+      trace.addStep('hint_official_probe_no_detail');
+      return null;
+    }
+
+    final totalPages = officialHintDetail.totalPagesNum;
+    final officialHint = _normalizeOfficialHint(
+      officialHintRaw: officialHintRaw,
+      totalPages: totalPages,
+    );
+    if (officialHint == null) {
+      trace.addStep('hint_official_invalid_for_total_pages', <String, Object?>{
+        'officialHintRaw': officialHintRaw,
+        'totalPages': totalPages,
+      });
+      return null;
+    }
+
+    final officialHintResult = _resolveCandidatePageResult(
+      detail: officialHintDetail,
+      targetPid: normalizedPid,
+      targetPidNumber: targetPidNumber,
+      probesUsed: probesUsed,
+      probeBudget: normalizedBudget,
+      trace: trace,
+      stage: 'hint_official',
+    );
+    if (officialHintResult != null) {
+      if (officialHintResult.resolutionType == ReplyPageResolutionType.exact) {
+        _officialHintHits += 1;
+      }
+      _traceResult(
+        trace,
+        'hint_official_candidate_terminal',
+        officialHintResult,
+      );
+      return officialHintResult;
+    }
+
+    final firstPageOutcome = await probePage(1);
+    if (firstPageOutcome.terminal != null) {
+      _traceResult(
+        trace,
+        'hint_first_page_terminal',
+        firstPageOutcome.terminal!,
+      );
+      return firstPageOutcome.terminal;
+    }
+
+    final firstPageDetail = firstPageOutcome.detail;
+    if (firstPageDetail == null) {
+      trace.addStep('hint_first_page_missing');
+      return fallbackPage1();
+    }
+
+    final lowBoundResult = _resolveLowBoundResult(
+      detail: firstPageDetail,
+      targetPidNumber: targetPidNumber,
+      probesUsed: probesUsed,
+      probeBudget: normalizedBudget,
+      trace: trace,
+      stage: 'hint_low_bound',
+    );
+    if (lowBoundResult != null) {
+      _traceResult(trace, 'hint_low_bound_terminal', lowBoundResult);
+      return lowBoundResult;
+    }
+
+    ThreadDetail? lastPageDetail;
+    if (totalPages > 1) {
+      final lastPageOutcome = await probePage(totalPages);
+      if (lastPageOutcome.terminal != null) {
+        _traceResult(
+          trace,
+          'hint_last_page_terminal',
+          lastPageOutcome.terminal!,
+        );
+        return lastPageOutcome.terminal;
+      }
+
+      lastPageDetail = lastPageOutcome.detail;
+      if (lastPageDetail != null) {
+        final lastPageCandidateResult = _resolveCandidatePageResult(
+          detail: lastPageDetail,
+          targetPid: normalizedPid,
+          targetPidNumber: targetPidNumber,
+          probesUsed: probesUsed,
+          probeBudget: normalizedBudget,
+          trace: trace,
+          stage: 'hint_last_page',
+        );
+        if (lastPageCandidateResult != null) {
+          _traceResult(
+            trace,
+            'hint_last_page_candidate_terminal',
+            lastPageCandidateResult,
+          );
+          return lastPageCandidateResult;
+        }
+
+        final tailPageResult = _resolveTailLastPageResult(
+          detail: lastPageDetail,
+          targetPidNumber: targetPidNumber,
+          probesUsed: probesUsed,
+          probeBudget: normalizedBudget,
+          trace: trace,
+          stage: 'hint_tail_compare',
+        );
+        if (tailPageResult != null) {
+          _traceResult(trace, 'hint_tail_terminal', tailPageResult);
+          return tailPageResult;
+        }
+      }
+    } else {
+      lastPageDetail = firstPageDetail;
+    }
+
+    ThreadDetail currentHintDetail = officialHintDetail;
+    final officialRelation = _classifyPageRange(
+      officialHintDetail,
+      targetPidNumber,
+    );
+    trace.addStep('hint_official_range_relation', <String, Object?>{
+      'relation': officialRelation.name,
+      ..._detailSummary(officialHintDetail),
+      'targetPidNumber': targetPidNumber,
+    });
+    if (officialRelation != _PageTargetRelation.within) {
+      final coarseIntervalOutcome = await _resolveCoarseInterpolationInterval(
+        totalPages: totalPages,
+        targetPidNumber: targetPidNumber,
+        coarseProbeStride: coarseProbeStride,
+        probePage: (int page) => probePage(page, countAgainstBudget: false),
+        trace: trace,
+        stage: 'hint_coarse',
+      );
+      if (coarseIntervalOutcome.terminal != null) {
+        _traceResult(
+          trace,
+          'hint_coarse_terminal',
+          coarseIntervalOutcome.terminal!,
+        );
+        return coarseIntervalOutcome.terminal;
+      }
+
+      var interpolationLowerBound = firstPageDetail;
+      var interpolationUpperBound = lastPageDetail ?? firstPageDetail;
+      final coarseInterval = coarseIntervalOutcome.interval;
+      if (coarseInterval != null) {
+        interpolationLowerBound = coarseInterval.lowerBoundDetail;
+        interpolationUpperBound = coarseInterval.upperBoundDetail;
+        trace.addStep('hint_coarse_interval_applied', <String, Object?>{
+          'lowerPage': interpolationLowerBound.currentPage,
+          'upperPage': interpolationUpperBound.currentPage,
+          'lowerFirstPid': _firstReplyPid(interpolationLowerBound),
+          'upperFirstPid': _firstReplyPid(interpolationUpperBound),
+        });
+      } else {
+        trace.addStep('hint_coarse_interval_unavailable_fallback_global');
+      }
+
+      final interpolatedPage = _computeInterpolatedPage(
+        totalPages: totalPages,
+        targetPidNumber: targetPidNumber,
+        lowerBoundDetail: interpolationLowerBound,
+        upperBoundDetail: interpolationUpperBound,
+        trace: trace,
+        stage: 'hint_interpolation',
+      );
+      trace.addStep('hint_interpolation_page', <String, Object?>{
+        'interpolatedPage': interpolatedPage,
+        'officialCurrentPage': currentHintDetail.currentPage,
+      });
+
+      if (interpolatedPage != null &&
+          interpolatedPage != currentHintDetail.currentPage) {
+        final interpolationOutcome = await probePage(interpolatedPage);
+        if (interpolationOutcome.terminal != null) {
+          _traceResult(
+            trace,
+            'hint_interpolation_probe_terminal',
+            interpolationOutcome.terminal!,
+          );
+          return interpolationOutcome.terminal;
+        }
+
+        final interpolationDetail = interpolationOutcome.detail;
+        if (interpolationDetail != null) {
+          currentHintDetail = interpolationDetail;
+          final interpolationResult = _resolveCandidatePageResult(
+            detail: interpolationDetail,
+            targetPid: normalizedPid,
+            targetPidNumber: targetPidNumber,
+            probesUsed: probesUsed,
+            probeBudget: normalizedBudget,
+            trace: trace,
+            stage: 'hint_interpolation_candidate',
+          );
+          if (interpolationResult != null) {
+            if (interpolationResult.resolutionType ==
+                ReplyPageResolutionType.exact) {
+              _interpolationHits += 1;
+            }
+            _traceResult(
+              trace,
+              'hint_interpolation_candidate_terminal',
+              interpolationResult,
+            );
+            return interpolationResult;
+          }
+        }
+      }
+    }
+
+    int seedPage = currentHintDetail.currentPage;
+    final currentHintFirstPid = _parsePidNumber(
+      _firstReplyPid(currentHintDetail),
+    );
+    trace.addStep('hint_seed_base', <String, Object?>{
+      'seedPage': seedPage,
+      'currentHintFirstPid': currentHintFirstPid,
+      'targetPidNumber': targetPidNumber,
+    });
+
+    if (useCache) {
+      final nearestCacheEntry = await _cacheService.findNearestInThread(
+        tid: normalizedTid,
+        targetPid: normalizedPid,
+      );
+      final cachePid = nearestCacheEntry == null
+          ? null
+          : _parsePidNumber(nearestCacheEntry.targetPid);
+      trace.addStep('hint_cache_nearest_result', <String, Object?>{
+        'hasNearest': nearestCacheEntry != null,
+        'nearestResolvedPage': nearestCacheEntry?.resolvedPage,
+        'nearestTargetPid': nearestCacheEntry?.targetPid,
+        'nearestPidNumber': cachePid,
+      });
+
+      if (currentHintFirstPid != null &&
+          currentHintFirstPid == targetPidNumber) {
+        final result = ReplyPageLocateResult.exact(
+          page: currentHintDetail.currentPage,
+          probesUsed: probesUsed,
+          probeBudget: normalizedBudget,
+        );
+        _traceResult(trace, 'hint_seed_exact_from_first_pid', result);
+        return result;
+      }
+
+      if (nearestCacheEntry != null &&
+          cachePid != null &&
+          cachePid == targetPidNumber) {
+        final result = _resultFromCacheEntry(
+          nearestCacheEntry,
+          normalizedBudget,
+        );
+        _traceResult(trace, 'hint_seed_exact_from_cache_pid', result);
+        return result;
+      }
+
+      if (nearestCacheEntry != null && cachePid != null) {
+        if (currentHintFirstPid == null) {
+          seedPage = nearestCacheEntry.resolvedPage;
+        } else {
+          final hintPage = currentHintDetail.currentPage;
+          final cachePage = nearestCacheEntry.resolvedPage;
+
+          if (cachePid > targetPidNumber &&
+              currentHintFirstPid > targetPidNumber) {
+            seedPage = cachePage < hintPage ? cachePage : hintPage;
+          } else if (cachePid < targetPidNumber &&
+              currentHintFirstPid < targetPidNumber) {
+            seedPage = cachePage > hintPage ? cachePage : hintPage;
+          } else if ((cachePid < targetPidNumber &&
+                  targetPidNumber < currentHintFirstPid) ||
+              (currentHintFirstPid < targetPidNumber &&
+                  targetPidNumber < cachePid)) {
+            final cacheDistance = (cachePid - targetPidNumber).abs();
+            final hintDistance = (currentHintFirstPid - targetPidNumber).abs();
+            seedPage = cacheDistance <= hintDistance ? cachePage : hintPage;
+          }
+        }
+      }
+    }
+
+    seedPage = seedPage.clamp(1, totalPages).toInt();
+    trace.addStep('hint_seed_page_final', <String, Object?>{
+      'seedPage': seedPage,
+      'totalPages': totalPages,
+    });
+
+    final directionalResult = await _scanDirectionalByPageRange(
+      seedPage: seedPage,
+      targetPid: normalizedPid,
+      targetPidNumber: targetPidNumber,
+      totalPages: totalPages,
+      probeBudget: normalizedBudget,
+      currentProbesUsed: () => probesUsed,
+      probePage: probePage,
+      trace: trace,
+    );
+    if (directionalResult != null) {
+      _traceResult(trace, 'hint_directional_terminal', directionalResult);
+      return directionalResult;
+    }
+
+    return fallbackPage1();
+  }
+
+  Future<ReplyPageLocateResult> _locateReplyPageLegacy({
+    required String normalizedTid,
+    required String normalizedPid,
+    required int? targetPidNumber,
+    required int normalizedBudget,
+    required int coarseProbeStride,
+    required bool useCache,
+    required int? officialHintRaw,
+    bool Function()? isCanceled,
+    required _LocateTrace trace,
+  }) async {
+    trace.addStep('legacy_start', <String, Object?>{
+      'targetPidNumber': targetPidNumber,
+      'officialHintRaw': officialHintRaw,
+      'normalizedBudget': normalizedBudget,
+      'coarseProbeStride': coarseProbeStride,
+      'useCache': useCache,
+    });
+    final Map<int, ThreadDetail> visitedPages = <int, ThreadDetail>{};
+    int probesUsed = 0;
+    bool budgetExhausted = false;
+
+    Future<_ProbeOutcome> probePage(
+      int page, {
+      bool evaluate = true,
+      bool countAgainstBudget = true,
+    }) async {
+      trace.addStep('legacy_probe_begin', <String, Object?>{
+        'page': page,
+        'evaluate': evaluate,
+        'countAgainstBudget': countAgainstBudget,
+        'probesUsed': probesUsed,
+        'probeBudget': normalizedBudget,
+        'alreadyVisited': visitedPages.containsKey(page),
+      });
+      if (_isCanceled(isCanceled)) {
+        trace.addStep('legacy_probe_canceled', <String, Object?>{'page': page});
+        return _ProbeOutcome(
+          terminal: ReplyPageLocateResult.canceled(
+            probesUsed: probesUsed,
+            probeBudget: normalizedBudget,
+          ),
+        );
+      }
+
+      final existing = visitedPages[page];
+      if (existing != null) {
+        final terminal = evaluate
+            ? _evaluatePage(
+                detail: existing,
+                targetPid: normalizedPid,
+                targetPidNumber: targetPidNumber,
+                probesUsed: probesUsed,
+                probeBudget: normalizedBudget,
+                trace: trace,
+                stage: 'legacy_probe_reuse',
+              )
+            : null;
+        if (terminal != null) {
+          _traceResult(trace, 'legacy_probe_reuse_terminal', terminal);
+        }
+        return _ProbeOutcome(detail: existing, terminal: terminal);
+      }
+
+      if (countAgainstBudget && probesUsed >= normalizedBudget) {
+        budgetExhausted = true;
+        trace.addStep('legacy_probe_budget_reached', <String, Object?>{
+          'page': page,
+          'probesUsed': probesUsed,
+          'probeBudget': normalizedBudget,
+        });
+        return const _ProbeOutcome();
+      }
+
+      if (countAgainstBudget) {
+        probesUsed += 1;
+      }
+      final detailResult = await _threadDetailService.getThreadDetail(
+        normalizedTid,
+        page,
+      );
+
+      if (_isCanceled(isCanceled)) {
+        trace.addStep('legacy_probe_canceled_after_fetch', <String, Object?>{
+          'page': page,
+          'probesUsed': probesUsed,
+        });
+        return _ProbeOutcome(
+          terminal: ReplyPageLocateResult.canceled(
+            probesUsed: probesUsed,
+            probeBudget: normalizedBudget,
+          ),
+        );
+      }
+
+      ThreadDetail? detail;
+      detailResult.when(
+        success: (data) {
+          detail = data;
+        },
+        failure: (_, __) {},
+      );
+      if (detail == null) {
+        trace.addStep('legacy_probe_detail_missing', <String, Object?>{
+          'page': page,
+        });
+        return const _ProbeOutcome();
+      }
+
+      visitedPages[page] = detail!;
+      trace.addStep('legacy_probe_success', <String, Object?>{
+        'page': page,
+        ..._detailSummary(detail!),
+      });
       final terminal = evaluate
           ? _evaluatePage(
               detail: detail!,
@@ -311,8 +957,14 @@ class ReplyPageLocatorService {
               targetPidNumber: targetPidNumber,
               probesUsed: probesUsed,
               probeBudget: normalizedBudget,
+              trace: trace,
+              stage: 'legacy_probe_evaluate',
             )
           : null;
+
+      if (terminal != null) {
+        _traceResult(trace, 'legacy_probe_terminal', terminal);
+      }
 
       return _ProbeOutcome(detail: detail, terminal: terminal);
     }
@@ -320,12 +972,8 @@ class ReplyPageLocatorService {
     final firstPageOutcome = await probePage(1);
     final firstPageTerminal = firstPageOutcome.terminal;
     if (firstPageTerminal != null) {
-      return _finalize(
-        tid: normalizedTid,
-        pid: normalizedPid,
-        result: firstPageTerminal,
-        useCache: useCache,
-      );
+      _traceResult(trace, 'legacy_first_page_terminal', firstPageTerminal);
+      return firstPageTerminal;
     }
 
     final firstPageDetail = firstPageOutcome.detail;
@@ -333,6 +981,10 @@ class ReplyPageLocatorService {
       if (budgetExhausted) {
         _budgetExhausted += 1;
       }
+      trace.addStep('legacy_first_page_missing_fallback', <String, Object?>{
+        'budgetExhausted': budgetExhausted,
+        'probesUsed': probesUsed,
+      });
       return ReplyPageLocateResult.fallbackPage1(
         probesUsed: probesUsed,
         probeBudget: normalizedBudget,
@@ -340,11 +992,15 @@ class ReplyPageLocatorService {
     }
 
     final totalPages = firstPageDetail.totalPagesNum;
-
     final officialHint = _normalizeOfficialHint(
       officialHintRaw: officialHintRaw,
       totalPages: totalPages,
     );
+    trace.addStep('legacy_official_hint_normalized', <String, Object?>{
+      'officialHintRaw': officialHintRaw,
+      'officialHint': officialHint,
+      'totalPages': totalPages,
+    });
 
     ThreadDetail? officialHintDetail;
     if (officialHint != null) {
@@ -354,12 +1010,8 @@ class ReplyPageLocatorService {
         if (officialTerminal.resolutionType == ReplyPageResolutionType.exact) {
           _officialHintHits += 1;
         }
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: officialTerminal,
-          useCache: useCache,
-        );
+        _traceResult(trace, 'legacy_official_terminal', officialTerminal);
+        return officialTerminal;
       }
       officialHintDetail = officialOutcome.detail;
     }
@@ -369,23 +1021,58 @@ class ReplyPageLocatorService {
       final lastPageOutcome = await probePage(totalPages);
       final lastPageTerminal = lastPageOutcome.terminal;
       if (lastPageTerminal != null) {
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: lastPageTerminal,
-          useCache: useCache,
-        );
+        _traceResult(trace, 'legacy_last_page_terminal', lastPageTerminal);
+        return lastPageTerminal;
       }
       lastPageDetail = lastPageOutcome.detail;
+    }
+
+    final coarseIntervalOutcome = await _resolveCoarseInterpolationInterval(
+      totalPages: totalPages,
+      targetPidNumber: targetPidNumber,
+      coarseProbeStride: coarseProbeStride,
+      probePage: (int page) =>
+          probePage(page, evaluate: false, countAgainstBudget: false),
+      trace: trace,
+      stage: 'legacy_coarse',
+    );
+    if (coarseIntervalOutcome.terminal != null) {
+      _traceResult(
+        trace,
+        'legacy_coarse_terminal',
+        coarseIntervalOutcome.terminal!,
+      );
+      return coarseIntervalOutcome.terminal!;
+    }
+
+    var interpolationLowerBound = firstPageDetail;
+    var interpolationUpperBound = lastPageDetail ?? firstPageDetail;
+    final coarseInterval = coarseIntervalOutcome.interval;
+    if (coarseInterval != null) {
+      interpolationLowerBound = coarseInterval.lowerBoundDetail;
+      interpolationUpperBound = coarseInterval.upperBoundDetail;
+      trace.addStep('legacy_coarse_interval_applied', <String, Object?>{
+        'lowerPage': interpolationLowerBound.currentPage,
+        'upperPage': interpolationUpperBound.currentPage,
+        'lowerFirstPid': _firstReplyPid(interpolationLowerBound),
+        'upperFirstPid': _firstReplyPid(interpolationUpperBound),
+      });
+    } else {
+      trace.addStep('legacy_coarse_interval_unavailable_fallback_global');
     }
 
     ThreadDetail? interpolationDetail;
     final interpolationPage = _computeInterpolatedPage(
       totalPages: totalPages,
       targetPidNumber: targetPidNumber,
-      firstPageDetail: firstPageDetail,
-      lastPageDetail: lastPageDetail,
+      lowerBoundDetail: interpolationLowerBound,
+      upperBoundDetail: interpolationUpperBound,
+      trace: trace,
+      stage: 'legacy_interpolation',
     );
+    trace.addStep('legacy_interpolation_page', <String, Object?>{
+      'interpolationPage': interpolationPage,
+    });
 
     if (interpolationPage != null) {
       final interpolationOutcome = await probePage(interpolationPage);
@@ -395,12 +1082,12 @@ class ReplyPageLocatorService {
             ReplyPageResolutionType.exact) {
           _interpolationHits += 1;
         }
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: interpolationTerminal,
-          useCache: useCache,
+        _traceResult(
+          trace,
+          'legacy_interpolation_terminal',
+          interpolationTerminal,
         );
+        return interpolationTerminal;
       }
       interpolationDetail = interpolationOutcome.detail;
     }
@@ -423,24 +1110,33 @@ class ReplyPageLocatorService {
       final cachePid = nearestCacheEntry == null
           ? null
           : _parsePidNumber(nearestCacheEntry.targetPid);
+      trace.addStep('legacy_cache_nearest_result', <String, Object?>{
+        'hasNearest': nearestCacheEntry != null,
+        'nearestResolvedPage': nearestCacheEntry?.resolvedPage,
+        'nearestTargetPid': nearestCacheEntry?.targetPid,
+        'hintFirstPid': hintFirstPid,
+        'cachePid': cachePid,
+      });
 
       if (hintFirstPid != null && hintFirstPid == targetPidNumber) {
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: ReplyPageLocateResult.exact(
-            page: officialHintDetail.currentPage,
-            probesUsed: probesUsed,
-            probeBudget: normalizedBudget,
-          ),
-          useCache: useCache,
+        final result = ReplyPageLocateResult.exact(
+          page: officialHintDetail.currentPage,
+          probesUsed: probesUsed,
+          probeBudget: normalizedBudget,
         );
+        _traceResult(trace, 'legacy_seed_exact_from_hint_first_pid', result);
+        return result;
       }
 
       if (nearestCacheEntry != null &&
           cachePid != null &&
           cachePid == targetPidNumber) {
-        return _resultFromCacheEntry(nearestCacheEntry, normalizedBudget);
+        final result = _resultFromCacheEntry(
+          nearestCacheEntry,
+          normalizedBudget,
+        );
+        _traceResult(trace, 'legacy_seed_exact_from_cache_pid', result);
+        return result;
       }
 
       if (nearestCacheEntry != null &&
@@ -470,6 +1166,12 @@ class ReplyPageLocatorService {
       }
     }
 
+    trace.addStep('legacy_seed_final', <String, Object?>{
+      'seedPage': seedPage,
+      'seedFirstPid': seedFirstPid,
+      'totalPages': totalPages,
+    });
+
     final firstPidDirectionalTerminal = await _scanDirectionalByFirstPid(
       seedPage: seedPage,
       seedFirstPid: seedFirstPid,
@@ -480,15 +1182,16 @@ class ReplyPageLocatorService {
       currentProbesUsed: () => probesUsed,
       visitedPages: visitedPages,
       probePage: probePage,
+      trace: trace,
     );
 
     if (firstPidDirectionalTerminal != null) {
-      return _finalize(
-        tid: normalizedTid,
-        pid: normalizedPid,
-        result: firstPidDirectionalTerminal,
-        useCache: useCache,
+      _traceResult(
+        trace,
+        'legacy_first_pid_directional_terminal',
+        firstPidDirectionalTerminal,
       );
+      return firstPidDirectionalTerminal;
     }
 
     final directionalCandidates = _buildDirectionalCandidates(
@@ -500,44 +1203,44 @@ class ReplyPageLocatorService {
     );
 
     for (final page in directionalCandidates) {
+      trace.addStep('legacy_directional_candidate_probe', <String, Object?>{
+        'page': page,
+      });
       final outcome = await probePage(page);
       final terminal = outcome.terminal;
       if (terminal != null) {
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: terminal,
-          useCache: useCache,
-        );
+        _traceResult(trace, 'legacy_directional_candidate_terminal', terminal);
+        return terminal;
       }
       if (_isCanceled(isCanceled)) {
-        return _finalize(
-          tid: normalizedTid,
-          pid: normalizedPid,
-          result: ReplyPageLocateResult.canceled(
-            probesUsed: probesUsed,
-            probeBudget: normalizedBudget,
-          ),
-          useCache: useCache,
+        final canceledResult = ReplyPageLocateResult.canceled(
+          probesUsed: probesUsed,
+          probeBudget: normalizedBudget,
         );
+        _traceResult(trace, 'legacy_directional_canceled', canceledResult);
+        return canceledResult;
       }
       if (probesUsed >= normalizedBudget) {
         budgetExhausted = true;
+        trace.addStep('legacy_directional_budget_reached', <String, Object?>{
+          'probesUsed': probesUsed,
+          'probeBudget': normalizedBudget,
+        });
         break;
       }
     }
 
     if (budgetExhausted) {
       _budgetExhausted += 1;
+      trace.addStep('legacy_budget_exhausted_counter_incremented');
     }
-    return _finalize(
-      tid: normalizedTid,
-      pid: normalizedPid,
-      result: ReplyPageLocateResult.fallbackPage1(
-        probesUsed: probesUsed,
-        probeBudget: normalizedBudget,
-      ),
-      useCache: useCache,
+    trace.addStep('legacy_fallback_page1', <String, Object?>{
+      'probesUsed': probesUsed,
+      'probeBudget': normalizedBudget,
+    });
+    return ReplyPageLocateResult.fallbackPage1(
+      probesUsed: probesUsed,
+      probeBudget: normalizedBudget,
     );
   }
 
@@ -610,10 +1313,105 @@ class ReplyPageLocatorService {
     };
   }
 
-  ReplyPageLocateResult? _evaluatePage({
+  ReplyPageLocateResult? _resolveCandidatePageResult({
     required ThreadDetail detail,
     required String targetPid,
-    required int? targetPidNumber,
+    required int targetPidNumber,
+    required int probesUsed,
+    required int probeBudget,
+    _LocateTrace? trace,
+    String? stage,
+  }) {
+    final relation = _classifyPageRange(detail, targetPidNumber);
+    trace?.addStep('compare_page_range', <String, Object?>{
+      'stage': stage,
+      'targetPidNumber': targetPidNumber,
+      'relation': relation.name,
+      ..._detailSummary(detail),
+    });
+    if (relation != _PageTargetRelation.within) {
+      return null;
+    }
+
+    final evaluatedResult = _evaluateCandidatePage(
+      detail: detail,
+      targetPid: targetPid,
+      targetPidNumber: targetPidNumber,
+      probesUsed: probesUsed,
+      probeBudget: probeBudget,
+    );
+    trace?.addStep('compare_candidate_page', <String, Object?>{
+      'stage': stage,
+      'resultResolutionType': evaluatedResult?.resolutionType.name,
+      'resolvedPage': evaluatedResult?.resolvedPage,
+      'probesUsed': probesUsed,
+    });
+
+    return evaluatedResult ??
+        ReplyPageLocateResult.fallbackPage1(
+          probesUsed: probesUsed,
+          probeBudget: probeBudget,
+        );
+  }
+
+  ReplyPageLocateResult? _resolveLowBoundResult({
+    required ThreadDetail detail,
+    required int targetPidNumber,
+    required int probesUsed,
+    required int probeBudget,
+    _LocateTrace? trace,
+    String? stage,
+  }) {
+    final firstReplyPidNumber = _parsePidNumber(_firstReplyPid(detail));
+    trace?.addStep('compare_low_bound', <String, Object?>{
+      'stage': stage,
+      'currentPage': detail.currentPage,
+      'targetPidNumber': targetPidNumber,
+      'firstReplyPidNumber': firstReplyPidNumber,
+    });
+    if (detail.currentPage <= 1 &&
+        firstReplyPidNumber != null &&
+        targetPidNumber < firstReplyPidNumber) {
+      return ReplyPageLocateResult.errorOutOfLowBound(
+        probesUsed: probesUsed,
+        probeBudget: probeBudget,
+      );
+    }
+    return null;
+  }
+
+  ReplyPageLocateResult? _resolveTailLastPageResult({
+    required ThreadDetail detail,
+    required int targetPidNumber,
+    required int probesUsed,
+    required int probeBudget,
+    _LocateTrace? trace,
+    String? stage,
+  }) {
+    final lastReplyPidNumber = _parsePidNumber(_lastReplyPid(detail));
+    trace?.addStep('compare_tail_last_page', <String, Object?>{
+      'stage': stage,
+      'currentPage': detail.currentPage,
+      'totalPages': detail.totalPagesNum,
+      'targetPidNumber': targetPidNumber,
+      'lastReplyPidNumber': lastReplyPidNumber,
+    });
+    if (detail.currentPage >= detail.totalPagesNum &&
+        lastReplyPidNumber != null &&
+        targetPidNumber > lastReplyPidNumber) {
+      return ReplyPageLocateResult.tailLastPage(
+        page: detail.currentPage,
+        probesUsed: probesUsed,
+        probeBudget: probeBudget,
+      );
+    }
+    return null;
+  }
+
+  ReplyPageLocateResult? _evaluateCandidatePage({
+    required ThreadDetail detail,
+    required String targetPid,
+    required int targetPidNumber,
     required int probesUsed,
     required int probeBudget,
   }) {
@@ -625,8 +1423,7 @@ class ReplyPageLocatorService {
       );
     }
 
-    if (targetPidNumber != null &&
-        _containsBracket(detail.replies, targetPidNumber)) {
+    if (_containsBracket(detail.replies, targetPidNumber)) {
       return ReplyPageLocateResult.bracket(
         page: detail.currentPage,
         probesUsed: probesUsed,
@@ -634,7 +1431,59 @@ class ReplyPageLocatorService {
       );
     }
 
+    return null;
+  }
+
+  ReplyPageLocateResult? _evaluatePage({
+    required ThreadDetail detail,
+    required String targetPid,
+    required int? targetPidNumber,
+    required int probesUsed,
+    required int probeBudget,
+    _LocateTrace? trace,
+    String? stage,
+  }) {
+    if (targetPidNumber != null) {
+      final candidateResult = _evaluateCandidatePage(
+        detail: detail,
+        targetPid: targetPid,
+        targetPidNumber: targetPidNumber,
+        probesUsed: probesUsed,
+        probeBudget: probeBudget,
+      );
+      trace?.addStep('evaluate_page_candidate', <String, Object?>{
+        'stage': stage,
+        'targetPidNumber': targetPidNumber,
+        'resultResolutionType': candidateResult?.resolutionType.name,
+        ..._detailSummary(detail),
+      });
+      if (candidateResult != null) {
+        return candidateResult;
+      }
+    } else if (_containsExactPid(detail, targetPid)) {
+      trace?.addStep(
+        'evaluate_page_exact_without_numeric_pid',
+        <String, Object?>{
+          'stage': stage,
+          'targetPid': targetPid,
+          ..._detailSummary(detail),
+        },
+      );
+      return ReplyPageLocateResult.exact(
+        page: detail.currentPage,
+        probesUsed: probesUsed,
+        probeBudget: probeBudget,
+      );
+    }
+
     final firstReplyPidNumber = _parsePidNumber(_firstReplyPid(detail));
+    trace?.addStep('evaluate_page_boundary_compare', <String, Object?>{
+      'stage': stage,
+      'targetPidNumber': targetPidNumber,
+      'firstReplyPidNumber': firstReplyPidNumber,
+      'currentPage': detail.currentPage,
+      'totalPages': detail.totalPagesNum,
+    });
     if (targetPidNumber != null && firstReplyPidNumber != null) {
       if (detail.currentPage <= 1 && targetPidNumber < firstReplyPidNumber) {
         return ReplyPageLocateResult.errorOutOfLowBound(
@@ -657,11 +1506,6 @@ class ReplyPageLocatorService {
 
   bool _containsExactPid(ThreadDetail detail, String targetPid) {
     for (final reply in detail.replies) {
-      if (reply.pid == targetPid) {
-        return true;
-      }
-    }
-    for (final reply in detail.lightedReplies) {
       if (reply.pid == targetPid) {
         return true;
       }
@@ -691,34 +1535,211 @@ class ReplyPageLocatorService {
   int? _computeInterpolatedPage({
     required int totalPages,
     required int? targetPidNumber,
-    required ThreadDetail firstPageDetail,
-    ThreadDetail? lastPageDetail,
+    required ThreadDetail lowerBoundDetail,
+    required ThreadDetail upperBoundDetail,
+    _LocateTrace? trace,
+    String? stage,
   }) {
     if (targetPidNumber == null || totalPages <= 1) {
+      trace?.addStep('interpolation_skipped', <String, Object?>{
+        'stage': stage,
+        'targetPidNumber': targetPidNumber,
+        'totalPages': totalPages,
+      });
       return null;
     }
 
-    final firstPidNumber = _parsePidNumber(_firstReplyPid(firstPageDetail));
-    final lastPidNumber = _parsePidNumber(
-      _firstReplyPid(lastPageDetail ?? firstPageDetail),
-    );
+    var lowerDetail = lowerBoundDetail;
+    var upperDetail = upperBoundDetail;
 
-    if (firstPidNumber == null || lastPidNumber == null) {
+    var lowerPage = lowerDetail.currentPage.clamp(1, totalPages).toInt();
+    var upperPage = upperDetail.currentPage.clamp(1, totalPages).toInt();
+    if (lowerPage > upperPage) {
+      final swapDetail = lowerDetail;
+      lowerDetail = upperDetail;
+      upperDetail = swapDetail;
+
+      final swapPage = lowerPage;
+      lowerPage = upperPage;
+      upperPage = swapPage;
+    }
+
+    if (lowerPage == upperPage) {
+      trace?.addStep('interpolation_single_page_bounds', <String, Object?>{
+        'stage': stage,
+        'targetPidNumber': targetPidNumber,
+        'page': lowerPage,
+      });
+      return lowerPage;
+    }
+
+    final lowerFirstPidNumber = _parsePidNumber(_firstReplyPid(lowerDetail));
+    final upperFirstPidNumber = _parsePidNumber(_firstReplyPid(upperDetail));
+
+    if (lowerFirstPidNumber == null || upperFirstPidNumber == null) {
+      trace?.addStep('interpolation_missing_boundary_pid', <String, Object?>{
+        'stage': stage,
+        'lowerPage': lowerPage,
+        'upperPage': upperPage,
+        'lowerFirstPidNumber': lowerFirstPidNumber,
+        'upperFirstPidNumber': upperFirstPidNumber,
+      });
       return null;
     }
 
-    final denominator = lastPidNumber - firstPidNumber;
+    final denominator = upperFirstPidNumber - lowerFirstPidNumber;
     if (denominator <= 0) {
+      trace?.addStep('interpolation_invalid_denominator', <String, Object?>{
+        'stage': stage,
+        'denominator': denominator,
+        'lowerPage': lowerPage,
+        'upperPage': upperPage,
+        'lowerFirstPidNumber': lowerFirstPidNumber,
+        'upperFirstPidNumber': upperFirstPidNumber,
+      });
       return null;
     }
 
-    final ratio = (targetPidNumber - firstPidNumber) / denominator;
+    final ratio = (targetPidNumber - lowerFirstPidNumber) / denominator;
     if (!ratio.isFinite) {
+      trace?.addStep('interpolation_non_finite_ratio', <String, Object?>{
+        'stage': stage,
+        'ratio': ratio,
+      });
       return null;
     }
 
-    final interpolated = 1 + (ratio * (totalPages - 1)).floor();
-    return interpolated.clamp(1, totalPages).toInt();
+    final pageSpan = upperPage - lowerPage;
+    final interpolated = lowerPage + (ratio * pageSpan).floor();
+    final clamped = interpolated.clamp(lowerPage, upperPage).toInt();
+    trace?.addStep('interpolation_computed', <String, Object?>{
+      'stage': stage,
+      'targetPidNumber': targetPidNumber,
+      'lowerPage': lowerPage,
+      'upperPage': upperPage,
+      'lowerFirstPidNumber': lowerFirstPidNumber,
+      'upperFirstPidNumber': upperFirstPidNumber,
+      'ratio': ratio,
+      'pageSpan': pageSpan,
+      'interpolated': interpolated,
+      'clamped': clamped,
+      'totalPages': totalPages,
+    });
+    return clamped;
+  }
+
+  Future<ReplyPageLocateResult?> _scanDirectionalByPageRange({
+    required int seedPage,
+    required String targetPid,
+    required int targetPidNumber,
+    required int totalPages,
+    required int probeBudget,
+    required int Function() currentProbesUsed,
+    required Future<_ProbeOutcome> Function(int page) probePage,
+    _LocateTrace? trace,
+  }) async {
+    var currentPage = seedPage.clamp(1, totalPages).toInt();
+    final scannedPages = <int>{};
+    int? direction;
+
+    while (!scannedPages.contains(currentPage)) {
+      scannedPages.add(currentPage);
+      trace?.addStep('scan_by_page_range_iteration', <String, Object?>{
+        'currentPage': currentPage,
+        'targetPidNumber': targetPidNumber,
+        'direction': direction,
+      });
+
+      final outcome = await probePage(currentPage);
+      if (outcome.terminal != null) {
+        _traceResult(
+          trace,
+          'scan_by_page_range_probe_terminal',
+          outcome.terminal!,
+        );
+        return outcome.terminal;
+      }
+
+      final detail = outcome.detail;
+      if (detail == null) {
+        return null;
+      }
+
+      switch (_classifyPageRange(detail, targetPidNumber)) {
+        case _PageTargetRelation.within:
+          trace?.addStep('scan_by_page_range_relation', <String, Object?>{
+            'relation': _PageTargetRelation.within.name,
+            'currentPage': currentPage,
+            ..._detailSummary(detail),
+          });
+          return _evaluateCandidatePage(
+                detail: detail,
+                targetPid: targetPid,
+                targetPidNumber: targetPidNumber,
+                probesUsed: currentProbesUsed(),
+                probeBudget: probeBudget,
+              ) ??
+              ReplyPageLocateResult.fallbackPage1(
+                probesUsed: currentProbesUsed(),
+                probeBudget: probeBudget,
+              );
+        case _PageTargetRelation.before:
+          trace?.addStep('scan_by_page_range_relation', <String, Object?>{
+            'relation': _PageTargetRelation.before.name,
+            'currentPage': currentPage,
+            ..._detailSummary(detail),
+          });
+          if (detail.currentPage <= 1) {
+            return ReplyPageLocateResult.errorOutOfLowBound(
+              probesUsed: currentProbesUsed(),
+              probeBudget: probeBudget,
+            );
+          }
+          direction = -1;
+          break;
+        case _PageTargetRelation.after:
+          trace?.addStep('scan_by_page_range_relation', <String, Object?>{
+            'relation': _PageTargetRelation.after.name,
+            'currentPage': currentPage,
+            ..._detailSummary(detail),
+          });
+          if (detail.currentPage >= totalPages) {
+            return ReplyPageLocateResult.tailLastPage(
+              page: detail.currentPage,
+              probesUsed: currentProbesUsed(),
+              probeBudget: probeBudget,
+            );
+          }
+          direction = 1;
+          break;
+        case _PageTargetRelation.unknown:
+          trace?.addStep('scan_by_page_range_relation', <String, Object?>{
+            'relation': _PageTargetRelation.unknown.name,
+            'currentPage': currentPage,
+            ..._detailSummary(detail),
+          });
+          if (direction == null) {
+            return null;
+          }
+          break;
+      }
+
+      final nextPage = currentPage + direction;
+      if (nextPage < 1 || nextPage > totalPages) {
+        trace?.addStep(
+          'scan_by_page_range_next_page_out_of_bounds',
+          <String, Object?>{
+            'currentPage': currentPage,
+            'nextPage': nextPage,
+            'totalPages': totalPages,
+          },
+        );
+        return null;
+      }
+      currentPage = nextPage;
+    }
+
+    return null;
   }
 
   Future<ReplyPageLocateResult?> _scanDirectionalByFirstPid({
@@ -732,8 +1753,12 @@ class ReplyPageLocatorService {
     required Map<int, ThreadDetail> visitedPages,
     required Future<_ProbeOutcome> Function(int page, {bool evaluate})
     probePage,
+    _LocateTrace? trace,
   }) async {
     if (targetPidNumber == null) {
+      trace?.addStep('scan_by_first_pid_skipped', <String, Object?>{
+        'reason': 'target_pid_not_numeric',
+      });
       return null;
     }
 
@@ -741,6 +1766,11 @@ class ReplyPageLocatorService {
     if (seedDetail == null) {
       final seedOutcome = await probePage(seedPage, evaluate: false);
       if (seedOutcome.terminal != null) {
+        _traceResult(
+          trace,
+          'scan_by_first_pid_seed_terminal',
+          seedOutcome.terminal!,
+        );
         return seedOutcome.terminal;
       }
       seedDetail = seedOutcome.detail;
@@ -752,8 +1782,18 @@ class ReplyPageLocatorService {
     final resolvedSeedFirstPid =
         seedFirstPid ?? _parsePidNumber(_firstReplyPid(seedDetail));
     if (resolvedSeedFirstPid == null) {
+      trace?.addStep('scan_by_first_pid_seed_missing', <String, Object?>{
+        'seedPage': seedPage,
+      });
       return null;
     }
+
+    trace?.addStep('scan_by_first_pid_seed', <String, Object?>{
+      'seedPage': seedPage,
+      'resolvedSeedFirstPid': resolvedSeedFirstPid,
+      'targetPidNumber': targetPidNumber,
+      'totalPages': totalPages,
+    });
 
     if (resolvedSeedFirstPid == targetPidNumber) {
       return ReplyPageLocateResult.exact(
@@ -773,8 +1813,18 @@ class ReplyPageLocatorService {
       page >= 1 && page <= totalPages;
       page += step
     ) {
+      trace?.addStep('scan_by_first_pid_iteration', <String, Object?>{
+        'page': page,
+        'step': step,
+        'targetPidNumber': targetPidNumber,
+      });
       final outcome = await probePage(page, evaluate: false);
       if (outcome.terminal != null) {
+        _traceResult(
+          trace,
+          'scan_by_first_pid_probe_terminal',
+          outcome.terminal!,
+        );
         return outcome.terminal;
       }
 
@@ -786,8 +1836,18 @@ class ReplyPageLocatorService {
       edgePage = page;
       final currentFirstPid = _parsePidNumber(_firstReplyPid(detail));
       if (currentFirstPid == null) {
+        trace?.addStep('scan_by_first_pid_current_missing', <String, Object?>{
+          'page': page,
+        });
         continue;
       }
+
+      trace?.addStep('scan_by_first_pid_compare', <String, Object?>{
+        'page': page,
+        'previousFirstPid': previousFirstPid,
+        'currentFirstPid': currentFirstPid,
+        'targetPidNumber': targetPidNumber,
+      });
 
       if (currentFirstPid == targetPidNumber) {
         return ReplyPageLocateResult.exact(
@@ -818,6 +1878,8 @@ class ReplyPageLocatorService {
           targetPidNumber: targetPidNumber,
           probesUsed: currentProbesUsed(),
           probeBudget: probeBudget,
+          trace: trace,
+          stage: 'scan_by_first_pid_fine_scan',
         );
         return fineScanResult ??
             ReplyPageLocateResult.fallbackPage1(
@@ -838,6 +1900,8 @@ class ReplyPageLocatorService {
         targetPidNumber: targetPidNumber,
         probesUsed: currentProbesUsed(),
         probeBudget: probeBudget,
+        trace: trace,
+        stage: 'scan_by_first_pid_edge',
       );
     }
 
@@ -888,6 +1952,214 @@ class ReplyPageLocatorService {
     });
 
     return remaining;
+  }
+
+  List<int> _buildCoarseProbePages(int totalPages, int coarseProbeStride) {
+    if (totalPages < 1) {
+      return const <int>[];
+    }
+
+    final normalizedStride = coarseProbeStride < 1
+        ? AppSettings.defaultReplyLocateCoarseProbeStride
+        : coarseProbeStride;
+
+    final pages = <int>[1];
+    for (
+      var page = 1 + normalizedStride;
+      page <= totalPages;
+      page += normalizedStride
+    ) {
+      pages.add(page);
+    }
+
+    if (pages.last != totalPages) {
+      pages.add(totalPages);
+    }
+
+    return pages;
+  }
+
+  Future<_CoarseIntervalOutcome> _resolveCoarseInterpolationInterval({
+    required int totalPages,
+    required int? targetPidNumber,
+    required int coarseProbeStride,
+    required Future<_ProbeOutcome> Function(int page) probePage,
+    _LocateTrace? trace,
+    String? stage,
+  }) async {
+    if (targetPidNumber == null || totalPages <= 1) {
+      trace?.addStep('coarse_probe_skipped', <String, Object?>{
+        'stage': stage,
+        'reason': targetPidNumber == null
+            ? 'target_pid_not_numeric'
+            : 'single_page_thread',
+        'totalPages': totalPages,
+      });
+      return const _CoarseIntervalOutcome();
+    }
+
+    final coarsePages = _buildCoarseProbePages(totalPages, coarseProbeStride);
+    trace?.addStep('coarse_probe_start', <String, Object?>{
+      'stage': stage,
+      'targetPidNumber': targetPidNumber,
+      'totalPages': totalPages,
+      'coarseProbeStride': coarseProbeStride,
+      'pages': coarsePages,
+    });
+
+    final anchors = <_CoarseProbeAnchor>[];
+    _CoarseProbeAnchor? lowerAnchor;
+    _CoarseProbeAnchor? upperAnchor;
+
+    for (final page in coarsePages) {
+      final outcome = await probePage(page);
+      if (outcome.terminal != null) {
+        _traceResult(trace, 'coarse_probe_terminal', outcome.terminal!);
+        return _CoarseIntervalOutcome(terminal: outcome.terminal);
+      }
+
+      final detail = outcome.detail;
+      if (detail == null) {
+        trace?.addStep('coarse_probe_missing_detail', <String, Object?>{
+          'stage': stage,
+          'page': page,
+        });
+        continue;
+      }
+
+      final firstPidNumber = _parsePidNumber(_firstReplyPid(detail));
+      trace?.addStep('coarse_probe_anchor', <String, Object?>{
+        'stage': stage,
+        'page': detail.currentPage,
+        'firstPidNumber': firstPidNumber,
+        ..._detailSummary(detail),
+      });
+      if (firstPidNumber == null) {
+        continue;
+      }
+
+      anchors.add(
+        _CoarseProbeAnchor(
+          page: detail.currentPage,
+          firstPidNumber: firstPidNumber,
+          detail: detail,
+        ),
+      );
+
+      if (anchors.length < 2) {
+        continue;
+      }
+
+      final previous = anchors[anchors.length - 2];
+      final current = anchors[anchors.length - 1];
+
+      if (current.firstPidNumber <= previous.firstPidNumber) {
+        continue;
+      }
+
+      if (targetPidNumber == current.firstPidNumber) {
+        lowerAnchor = current;
+        upperAnchor = current;
+        trace
+            ?.addStep('coarse_probe_early_exit_exact_anchor', <String, Object?>{
+              'stage': stage,
+              'matchedPage': current.page,
+              'matchedFirstPid': current.firstPidNumber,
+              'anchorsProbed': anchors.length,
+            });
+        break;
+      }
+
+      if (previous.firstPidNumber < targetPidNumber &&
+          targetPidNumber < current.firstPidNumber) {
+        lowerAnchor = previous;
+        upperAnchor = current;
+        trace?.addStep('coarse_probe_early_exit_interval', <String, Object?>{
+          'stage': stage,
+          'targetPidNumber': targetPidNumber,
+          'lowerPage': previous.page,
+          'upperPage': current.page,
+          'lowerFirstPid': previous.firstPidNumber,
+          'upperFirstPid': current.firstPidNumber,
+          'anchorsProbed': anchors.length,
+        });
+        break;
+      }
+    }
+
+    if (anchors.length < 2) {
+      trace?.addStep('coarse_probe_interval_unavailable', <String, Object?>{
+        'stage': stage,
+        'reason': 'insufficient_anchors',
+        'anchorsCount': anchors.length,
+      });
+      return const _CoarseIntervalOutcome();
+    }
+
+    if (lowerAnchor == null || upperAnchor == null) {
+      if (targetPidNumber <= anchors.first.firstPidNumber) {
+        lowerAnchor = anchors.first;
+        upperAnchor = anchors[1];
+      } else {
+        for (var index = 1; index < anchors.length; index += 1) {
+          final previous = anchors[index - 1];
+          final current = anchors[index];
+
+          if (current.firstPidNumber <= previous.firstPidNumber) {
+            trace?.addStep('coarse_probe_non_monotonic_pair', <String, Object?>{
+              'stage': stage,
+              'leftPage': previous.page,
+              'leftFirstPid': previous.firstPidNumber,
+              'rightPage': current.page,
+              'rightFirstPid': current.firstPidNumber,
+            });
+            continue;
+          }
+
+          if (targetPidNumber == current.firstPidNumber) {
+            lowerAnchor = current;
+            upperAnchor = current;
+            break;
+          }
+
+          if (previous.firstPidNumber < targetPidNumber &&
+              targetPidNumber < current.firstPidNumber) {
+            lowerAnchor = previous;
+            upperAnchor = current;
+            break;
+          }
+        }
+      }
+    }
+
+    if (lowerAnchor == null || upperAnchor == null) {
+      if (targetPidNumber > anchors.last.firstPidNumber) {
+        lowerAnchor = anchors[anchors.length - 2];
+        upperAnchor = anchors.last;
+      } else {
+        trace?.addStep('coarse_probe_interval_unavailable', <String, Object?>{
+          'stage': stage,
+          'reason': 'target_not_bracketed_by_anchors',
+          'targetPidNumber': targetPidNumber,
+          'anchorsCount': anchors.length,
+        });
+        return const _CoarseIntervalOutcome();
+      }
+    }
+
+    final interval = _CoarseInterpolationInterval(
+      lowerBoundDetail: lowerAnchor.detail,
+      upperBoundDetail: upperAnchor.detail,
+    );
+    trace?.addStep('coarse_probe_interval_selected', <String, Object?>{
+      'stage': stage,
+      'targetPidNumber': targetPidNumber,
+      'lowerPage': interval.lowerBoundDetail.currentPage,
+      'upperPage': interval.upperBoundDetail.currentPage,
+      'lowerFirstPid': lowerAnchor.firstPidNumber,
+      'upperFirstPid': upperAnchor.firstPidNumber,
+    });
+    return _CoarseIntervalOutcome(interval: interval);
   }
 
   Future<int?> _fetchOfficialHintPage({
@@ -942,11 +2214,45 @@ class ReplyPageLocatorService {
     return rawBudget;
   }
 
+  int _normalizeCoarseProbeStride(int rawStride) {
+    return rawStride
+        .clamp(
+          AppSettings.minReplyLocateCoarseProbeStride,
+          AppSettings.maxReplyLocateCoarseProbeStride,
+        )
+        .toInt();
+  }
+
   String? _firstReplyPid(ThreadDetail detail) {
     if (detail.replies.isNotEmpty) {
       return detail.replies.first.pid;
     }
     return null;
+  }
+
+  String? _lastReplyPid(ThreadDetail detail) {
+    if (detail.replies.isNotEmpty) {
+      return detail.replies.last.pid;
+    }
+    return null;
+  }
+
+  _PageTargetRelation _classifyPageRange(
+    ThreadDetail detail,
+    int targetPidNumber,
+  ) {
+    final firstPidNumber = _parsePidNumber(_firstReplyPid(detail));
+    final lastPidNumber = _parsePidNumber(_lastReplyPid(detail));
+    if (firstPidNumber == null || lastPidNumber == null) {
+      return _PageTargetRelation.unknown;
+    }
+    if (firstPidNumber > targetPidNumber) {
+      return _PageTargetRelation.before;
+    }
+    if (lastPidNumber < targetPidNumber) {
+      return _PageTargetRelation.after;
+    }
+    return _PageTargetRelation.within;
   }
 
   int? _parsePidNumber(String? rawPid) {
@@ -956,9 +2262,154 @@ class ReplyPageLocatorService {
     return int.tryParse(rawPid);
   }
 
+  Map<String, Object?> _detailSummary(ThreadDetail detail) {
+    return <String, Object?>{
+      'currentPage': detail.currentPage,
+      'totalPages': detail.totalPagesNum,
+      'repliesCount': detail.replies.length,
+      'firstReplyPid': _firstReplyPid(detail),
+      'lastReplyPid': _lastReplyPid(detail),
+    };
+  }
+
+  void _traceResult(
+    _LocateTrace? trace,
+    String stage,
+    ReplyPageLocateResult result,
+  ) {
+    trace?.addStep(stage, <String, Object?>{
+      'resolutionType': result.resolutionType.name,
+      'resolvedPage': result.resolvedPage,
+      'probesUsed': result.probesUsed,
+      'probeBudget': result.probeBudget,
+      'shouldNavigate': result.shouldNavigate,
+      'message': result.message,
+    });
+  }
+
+  Future<void> _persistTraceRecord(ReplyPageLocatorLogRecord record) async {
+    if (!_shouldWriteJumpLogs()) {
+      return;
+    }
+
+    try {
+      await _logWriter.writeRecord(record);
+    } catch (error, stackTrace) {
+      debugPrint('Reply page locator log persistence failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
   bool _isCanceled(bool Function()? isCanceled) {
     return isCanceled?.call() == true;
   }
+}
+
+class _LocateTrace {
+  final String tid;
+  final String pid;
+  final int probeBudget;
+  final int _startedAtEpochMs;
+  final List<ReplyPageLocatorLogStep> _steps = <ReplyPageLocatorLogStep>[];
+
+  _LocateTrace({
+    required this.tid,
+    required this.pid,
+    required this.probeBudget,
+  }) : _startedAtEpochMs = DateTime.now().millisecondsSinceEpoch;
+
+  void addStep(String name, [Map<String, Object?> details = const {}]) {
+    _steps.add(
+      ReplyPageLocatorLogStep(
+        name: name,
+        atEpochMs: DateTime.now().millisecondsSinceEpoch,
+        details: _normalizeDetails(details),
+      ),
+    );
+  }
+
+  ReplyPageLocatorLogRecord completeWithResult(ReplyPageLocateResult result) {
+    return ReplyPageLocatorLogRecord(
+      tid: tid,
+      pid: pid,
+      probeBudget: probeBudget,
+      startedAtEpochMs: _startedAtEpochMs,
+      finishedAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+      outcome: result.resolutionType.name,
+      resolvedPage: result.resolvedPage,
+      shouldNavigate: result.shouldNavigate,
+      probesUsed: result.probesUsed,
+      resultMessage: result.message,
+      exceptionMessage: null,
+      steps: List<ReplyPageLocatorLogStep>.unmodifiable(_steps),
+    );
+  }
+
+  ReplyPageLocatorLogRecord completeWithException(String exceptionMessage) {
+    return ReplyPageLocatorLogRecord(
+      tid: tid,
+      pid: pid,
+      probeBudget: probeBudget,
+      startedAtEpochMs: _startedAtEpochMs,
+      finishedAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+      outcome: 'exception',
+      resolvedPage: null,
+      shouldNavigate: null,
+      probesUsed: null,
+      resultMessage: null,
+      exceptionMessage: exceptionMessage,
+      steps: List<ReplyPageLocatorLogStep>.unmodifiable(_steps),
+    );
+  }
+
+  Map<String, Object?> _normalizeDetails(Map<String, Object?> details) {
+    final normalized = <String, Object?>{};
+    details.forEach((key, value) {
+      normalized[key] = _normalizeValue(value);
+    });
+    return normalized;
+  }
+
+  Object? _normalizeValue(Object? value) {
+    if (value == null ||
+        value is num ||
+        value is bool ||
+        value is String ||
+        value is List ||
+        value is Map) {
+      return value;
+    }
+    return value.toString();
+  }
+}
+
+class _CoarseProbeAnchor {
+  final int page;
+  final int firstPidNumber;
+  final ThreadDetail detail;
+
+  const _CoarseProbeAnchor({
+    required this.page,
+    required this.firstPidNumber,
+    required this.detail,
+  });
+}
+
+class _CoarseInterpolationInterval {
+  final ThreadDetail lowerBoundDetail;
+  final ThreadDetail upperBoundDetail;
+
+  const _CoarseInterpolationInterval({
+    required this.lowerBoundDetail,
+    required this.upperBoundDetail,
+  });
+}
+
+class _CoarseIntervalOutcome {
+  final _CoarseInterpolationInterval? interval;
+  final ReplyPageLocateResult? terminal;
+
+  const _CoarseIntervalOutcome({this.interval, this.terminal});
 }
 
 class _ProbeOutcome {
@@ -967,3 +2418,5 @@ class _ProbeOutcome {
 
   const _ProbeOutcome({this.detail, this.terminal});
 }
+
+enum _PageTargetRelation { before, after, within, unknown }

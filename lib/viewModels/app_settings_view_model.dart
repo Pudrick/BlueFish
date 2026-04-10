@@ -120,6 +120,22 @@ class AppSettingsViewModel extends ChangeNotifier {
     );
   }
 
+  Future<void> updateReplyLocateCoarseProbeStride(
+    int replyLocateCoarseProbeStride,
+  ) {
+    return _applyAndPersist(
+      _settings.copyWith(
+        replyLocateCoarseProbeStride: replyLocateCoarseProbeStride,
+      ),
+    );
+  }
+
+  Future<void> updateGenerateJumpLogs(bool generateJumpLogs) {
+    return _applyAndPersist(
+      _settings.copyWith(generateJumpLogs: generateJumpLogs),
+    );
+  }
+
   Future<void> updateImageSaveDirectoryPath(String? imageSaveDirectoryPath) {
     return _applyAndPersist(
       _settings.copyWith(imageSaveDirectoryPath: imageSaveDirectoryPath),

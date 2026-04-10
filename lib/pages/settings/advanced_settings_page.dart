@@ -1,5 +1,6 @@
 import 'package:bluefish/network/api_config.dart';
 import 'package:bluefish/models/app_settings.dart';
+import 'package:bluefish/services/thread/reply_page_locator_log_sink.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -241,6 +242,68 @@ class AdvancedSettingsPage extends StatelessWidget {
                     children: [
                       Row(
                         children: [
+                          const Icon(Icons.linear_scale_rounded),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '回复定位粗探步长',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Text(
+                            '${settings.replyLocateCoarseProbeStride}',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '控制粗探阶段每次探测的页数间隔。',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Slider(
+                        value: settings.replyLocateCoarseProbeStride.toDouble(),
+                        min: AppSettings.minReplyLocateCoarseProbeStride
+                            .toDouble(),
+                        max: AppSettings.maxReplyLocateCoarseProbeStride
+                            .toDouble(),
+                        divisions:
+                            ((AppSettings.maxReplyLocateCoarseProbeStride -
+                                        AppSettings
+                                            .minReplyLocateCoarseProbeStride) /
+                                    10)
+                                .round(),
+                        onChanged: (value) {
+                          final rounded = ((value / 10).round() * 10)
+                              .clamp(
+                                AppSettings.minReplyLocateCoarseProbeStride,
+                                AppSettings.maxReplyLocateCoarseProbeStride,
+                              )
+                              .toInt();
+                          settingsViewModel.updateReplyLocateCoarseProbeStride(
+                            rounded,
+                          );
+                        },
+                      ),
+                      Text(
+                        '默认值：${AppSettings.defaultReplyLocateCoarseProbeStride}。',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
                           const Icon(Icons.storage_rounded),
                           const SizedBox(width: 10),
                           Expanded(
@@ -291,6 +354,33 @@ class AdvancedSettingsPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    SwitchListTile.adaptive(
+                      secondary: const Icon(Icons.receipt_long_rounded),
+                      title: const Text('生成跳转日志'),
+                      subtitle: const Text('记录回复跳转到详情页时的定位计算过程。'),
+                      value: settings.generateJumpLogs,
+                      onChanged: (value) {
+                        settingsViewModel.updateGenerateJumpLogs(value);
+                      },
+                    ),
+                    if (settings.generateJumpLogs) ...[
+                      const Divider(height: 1),
+                      const ListTile(
+                        leading: Icon(Icons.folder_open_rounded),
+                        title: Text('跳转日志保存目录'),
+                        subtitle: Text(
+                          '当前项目/${ReplyPageLocatorLogSink.defaultRelativeDirectory}/${ReplyPageLocatorLogSink.defaultFileName}',
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: 12),

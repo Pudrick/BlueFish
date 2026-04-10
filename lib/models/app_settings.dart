@@ -48,6 +48,10 @@ class AppSettings {
   static const int minReplyLocateCacheMaxEntries = 64;
   static const int maxReplyLocateCacheMaxEntries = 4096;
   static const int defaultReplyLocateCacheMaxEntries = 1024;
+  static const int minReplyLocateCoarseProbeStride = 20;
+  static const int maxReplyLocateCoarseProbeStride = 300;
+  static const int defaultReplyLocateCoarseProbeStride = 100;
+  static const bool defaultGenerateJumpLogs = true;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
   static const double _imageEdgeStepDp = 10;
   static const Object _unset = Object();
@@ -61,6 +65,8 @@ class AppSettings {
     imageShrinkTargetMaxEdgeDp: defaultImageShrinkTargetMaxEdgeDp,
     replyLocateTotalProbeBudget: defaultReplyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries: defaultReplyLocateCacheMaxEntries,
+    replyLocateCoarseProbeStride: defaultReplyLocateCoarseProbeStride,
+    generateJumpLogs: defaultGenerateJumpLogs,
     imageSaveDirectoryPath: null,
     videoSaveDirectoryPath: null,
     apiVersionOverride: null,
@@ -75,6 +81,8 @@ class AppSettings {
   final double imageShrinkTargetMaxEdgeDp;
   final int replyLocateTotalProbeBudget;
   final int replyLocateCacheMaxEntries;
+  final int replyLocateCoarseProbeStride;
+  final bool generateJumpLogs;
   final String? imageSaveDirectoryPath;
   final String? videoSaveDirectoryPath;
   final String? apiVersionOverride;
@@ -89,6 +97,8 @@ class AppSettings {
     required this.imageShrinkTargetMaxEdgeDp,
     required this.replyLocateTotalProbeBudget,
     required this.replyLocateCacheMaxEntries,
+    required this.replyLocateCoarseProbeStride,
+    required this.generateJumpLogs,
     required this.imageSaveDirectoryPath,
     required this.videoSaveDirectoryPath,
     required this.apiVersionOverride,
@@ -104,6 +114,8 @@ class AppSettings {
     required double imageShrinkTargetMaxEdgeDp,
     required int replyLocateTotalProbeBudget,
     required int replyLocateCacheMaxEntries,
+    required int replyLocateCoarseProbeStride,
+    bool generateJumpLogs = defaultGenerateJumpLogs,
     String? imageSaveDirectoryPath,
     String? videoSaveDirectoryPath,
     String? apiVersionOverride,
@@ -135,6 +147,10 @@ class AppSettings {
       replyLocateCacheMaxEntries: _normalizeReplyLocateCacheMaxEntries(
         replyLocateCacheMaxEntries,
       ),
+      replyLocateCoarseProbeStride: _normalizeReplyLocateCoarseProbeStride(
+        replyLocateCoarseProbeStride,
+      ),
+      generateJumpLogs: generateJumpLogs,
       imageSaveDirectoryPath: _normalizeDirectoryPath(imageSaveDirectoryPath),
       videoSaveDirectoryPath: _normalizeDirectoryPath(videoSaveDirectoryPath),
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
@@ -155,6 +171,8 @@ class AppSettings {
     double? imageShrinkTargetMaxEdgeDp,
     int? replyLocateTotalProbeBudget,
     int? replyLocateCacheMaxEntries,
+    int? replyLocateCoarseProbeStride,
+    bool? generateJumpLogs,
     Object? imageSaveDirectoryPath = _unset,
     Object? videoSaveDirectoryPath = _unset,
     Object? apiVersionOverride = _unset,
@@ -173,6 +191,9 @@ class AppSettings {
           replyLocateTotalProbeBudget ?? this.replyLocateTotalProbeBudget,
       replyLocateCacheMaxEntries:
           replyLocateCacheMaxEntries ?? this.replyLocateCacheMaxEntries,
+      replyLocateCoarseProbeStride:
+          replyLocateCoarseProbeStride ?? this.replyLocateCoarseProbeStride,
+      generateJumpLogs: generateJumpLogs ?? this.generateJumpLogs,
       imageSaveDirectoryPath: identical(imageSaveDirectoryPath, _unset)
           ? this.imageSaveDirectoryPath
           : imageSaveDirectoryPath as String?,
@@ -203,6 +224,12 @@ class AppSettings {
   static int _normalizeReplyLocateCacheMaxEntries(int value) {
     return value
         .clamp(minReplyLocateCacheMaxEntries, maxReplyLocateCacheMaxEntries)
+        .toInt();
+  }
+
+  static int _normalizeReplyLocateCoarseProbeStride(int value) {
+    return value
+        .clamp(minReplyLocateCoarseProbeStride, maxReplyLocateCoarseProbeStride)
         .toInt();
   }
 
@@ -248,6 +275,8 @@ class AppSettings {
         other.imageShrinkTargetMaxEdgeDp == imageShrinkTargetMaxEdgeDp &&
         other.replyLocateTotalProbeBudget == replyLocateTotalProbeBudget &&
         other.replyLocateCacheMaxEntries == replyLocateCacheMaxEntries &&
+        other.replyLocateCoarseProbeStride == replyLocateCoarseProbeStride &&
+        other.generateJumpLogs == generateJumpLogs &&
         other.imageSaveDirectoryPath == imageSaveDirectoryPath &&
         other.videoSaveDirectoryPath == videoSaveDirectoryPath &&
         other.apiVersionOverride == apiVersionOverride;
@@ -264,6 +293,8 @@ class AppSettings {
     imageShrinkTargetMaxEdgeDp,
     replyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries,
+    replyLocateCoarseProbeStride,
+    generateJumpLogs,
     imageSaveDirectoryPath,
     videoSaveDirectoryPath,
     apiVersionOverride,
