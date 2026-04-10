@@ -2,6 +2,7 @@ import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/models/thread/floor_meta.dart';
 import 'package:bluefish/widgets/thread/author_info_widget.dart';
 import 'package:bluefish/widgets/html/bluefish_html_widget.dart';
+import 'package:bluefish/widgets/thread/thread_inline_video_widget.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bluefish/models/thread/single_reply_floor.dart';
@@ -130,6 +131,9 @@ class _ReplyFloorContent extends StatelessWidget {
           floor: displayFloorNumber,
           onMoreTap: resolvedOnMoreTap,
         );
+    final SingleReplyFloor? singleReplyFloor = content is SingleReplyFloor
+        ? content as SingleReplyFloor
+        : null;
 
     final Widget bodyContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,6 +186,17 @@ class _ReplyFloorContent extends StatelessWidget {
               ),
             ),
           ),
+        if (!isQuote && singleReplyFloor != null) ...[
+          if (singleReplyFloor.hasInlineVideo) ...[
+            const SizedBox(height: 12),
+            ThreadInlineVideoWidget(
+              videoUrl: singleReplyFloor.resolvedReplyVideoUrl,
+              coverUrl: singleReplyFloor.resolvedReplyVideoCover,
+              sectionKey: ValueKey('reply-floor-video-section-${content.pid}'),
+              playButtonKey: ValueKey('reply-floor-video-play-${content.pid}'),
+            ),
+          ],
+        ],
         if (showActionRow && !isQuote && lightCount != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),

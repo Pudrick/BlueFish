@@ -61,6 +61,8 @@ class AppSettings {
     imageShrinkTargetMaxEdgeDp: defaultImageShrinkTargetMaxEdgeDp,
     replyLocateTotalProbeBudget: defaultReplyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries: defaultReplyLocateCacheMaxEntries,
+    imageSaveDirectoryPath: null,
+    videoSaveDirectoryPath: null,
     apiVersionOverride: null,
   );
 
@@ -73,6 +75,8 @@ class AppSettings {
   final double imageShrinkTargetMaxEdgeDp;
   final int replyLocateTotalProbeBudget;
   final int replyLocateCacheMaxEntries;
+  final String? imageSaveDirectoryPath;
+  final String? videoSaveDirectoryPath;
   final String? apiVersionOverride;
 
   const AppSettings._({
@@ -85,6 +89,8 @@ class AppSettings {
     required this.imageShrinkTargetMaxEdgeDp,
     required this.replyLocateTotalProbeBudget,
     required this.replyLocateCacheMaxEntries,
+    required this.imageSaveDirectoryPath,
+    required this.videoSaveDirectoryPath,
     required this.apiVersionOverride,
   });
 
@@ -98,6 +104,8 @@ class AppSettings {
     required double imageShrinkTargetMaxEdgeDp,
     required int replyLocateTotalProbeBudget,
     required int replyLocateCacheMaxEntries,
+    String? imageSaveDirectoryPath,
+    String? videoSaveDirectoryPath,
     String? apiVersionOverride,
   }) {
     final normalizedTrigger = _normalizeImageEdgeDp(
@@ -127,6 +135,8 @@ class AppSettings {
       replyLocateCacheMaxEntries: _normalizeReplyLocateCacheMaxEntries(
         replyLocateCacheMaxEntries,
       ),
+      imageSaveDirectoryPath: _normalizeDirectoryPath(imageSaveDirectoryPath),
+      videoSaveDirectoryPath: _normalizeDirectoryPath(videoSaveDirectoryPath),
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
     );
   }
@@ -145,6 +155,8 @@ class AppSettings {
     double? imageShrinkTargetMaxEdgeDp,
     int? replyLocateTotalProbeBudget,
     int? replyLocateCacheMaxEntries,
+    Object? imageSaveDirectoryPath = _unset,
+    Object? videoSaveDirectoryPath = _unset,
     Object? apiVersionOverride = _unset,
   }) {
     return AppSettings(
@@ -161,6 +173,12 @@ class AppSettings {
           replyLocateTotalProbeBudget ?? this.replyLocateTotalProbeBudget,
       replyLocateCacheMaxEntries:
           replyLocateCacheMaxEntries ?? this.replyLocateCacheMaxEntries,
+      imageSaveDirectoryPath: identical(imageSaveDirectoryPath, _unset)
+          ? this.imageSaveDirectoryPath
+          : imageSaveDirectoryPath as String?,
+      videoSaveDirectoryPath: identical(videoSaveDirectoryPath, _unset)
+          ? this.videoSaveDirectoryPath
+          : videoSaveDirectoryPath as String?,
       apiVersionOverride: identical(apiVersionOverride, _unset)
           ? this.apiVersionOverride
           : apiVersionOverride as String?,
@@ -206,6 +224,14 @@ class AppSettings {
     return normalizedValue;
   }
 
+  static String? _normalizeDirectoryPath(String? value) {
+    final normalizedValue = value?.trim();
+    if (normalizedValue == null || normalizedValue.isEmpty) {
+      return null;
+    }
+    return normalizedValue;
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) {
@@ -222,6 +248,8 @@ class AppSettings {
         other.imageShrinkTargetMaxEdgeDp == imageShrinkTargetMaxEdgeDp &&
         other.replyLocateTotalProbeBudget == replyLocateTotalProbeBudget &&
         other.replyLocateCacheMaxEntries == replyLocateCacheMaxEntries &&
+        other.imageSaveDirectoryPath == imageSaveDirectoryPath &&
+        other.videoSaveDirectoryPath == videoSaveDirectoryPath &&
         other.apiVersionOverride == apiVersionOverride;
   }
 
@@ -236,6 +264,8 @@ class AppSettings {
     imageShrinkTargetMaxEdgeDp,
     replyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries,
+    imageSaveDirectoryPath,
+    videoSaveDirectoryPath,
     apiVersionOverride,
   );
 }

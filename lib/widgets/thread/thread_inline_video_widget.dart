@@ -1,15 +1,26 @@
+import 'dart:async';
+
+import 'package:bluefish/services/media/media_save_service.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 class ThreadInlineVideoWidget extends StatefulWidget {
   final String? videoUrl;
   final String? coverUrl;
+  final Key? sectionKey;
+  final Key? playButtonKey;
+  final MediaSaveService? mediaSaveService;
 
   const ThreadInlineVideoWidget({
     super.key,
     required this.videoUrl,
     required this.coverUrl,
+    this.sectionKey = const ValueKey('thread-main-video-section'),
+    this.playButtonKey = const ValueKey('thread-main-video-play'),
+    this.mediaSaveService,
   });
 
   @override
@@ -18,9 +29,13 @@ class ThreadInlineVideoWidget extends StatefulWidget {
 }
 
 class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
+  late final MediaSaveService _mediaSaveService =
+      widget.mediaSaveService ?? MediaSaveService();
+
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isInitializing = false;
+  bool _isSaving = false;
   String? _errorMessage;
 
   @override
@@ -29,6 +44,7 @@ class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
     if (oldWidget.videoUrl != widget.videoUrl) {
       _disposeControllers();
       _isInitializing = false;
+      _isSaving = false;
       _errorMessage = null;
     }
   }
@@ -71,6 +87,17 @@ class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
         looping: false,
         allowMuting: true,
         showControlsOnInitialize: true,
+        additionalOptions: (context) => <OptionItem>[
+          OptionItem(
+            onTap: (_) => unawaited(_saveVideo()),
+            iconData: _isSaving
+                ? Icons.downloading_rounded
+                : Icons.download_rounded,
+            title: _isSaving ? '正在保存至本地' : '保存至本地',
+            subtitle: _resolveSaveDestinationSummary(context),
+          ),
+        ],
+        optionsBuilder: _showVideoOptionsSheet,
         materialProgressColors: ChewieProgressColors(
           playedColor: colorScheme.primary,
           handleColor: colorScheme.primary,
@@ -102,6 +129,151 @@ class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
     }
   }
 
+  Future<void> _saveVideo() async {
+    if (_isSaving || widget.videoUrl == null) {
+      return;
+    }
+
+    final settings = context.read<AppSettingsViewModel>().settings;
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final savedFile = await _mediaSaveService.saveVideo(
+        url: widget.videoUrl!,
+        preferredDirectoryPath: settings.videoSaveDirectoryPath,
+      );
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar('已保存至 ${savedFile.path}');
+    } on MediaSaveException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar('保存视频失败，请稍后重试。');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showVideoOptionsSheet(
+    BuildContext context,
+    List<OptionItem> options,
+  ) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final selectedOption = await showModalBottomSheet<OptionItem>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Material(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(24),
+                clipBehavior: Clip.antiAlias,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.42),
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: colorScheme.outlineVariant.withValues(
+                                alpha: 0.7,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '视频操作',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        for (final option in options)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _VideoOptionTile(
+                              icon: option.iconData,
+                              title: option.title,
+                              subtitle: option.subtitle,
+                              onTap: () =>
+                                  Navigator.of(sheetContext).pop(option),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!context.mounted || selectedOption == null) {
+      return;
+    }
+
+    selectedOption.onTap(context);
+  }
+
+  String _resolveSaveDestinationSummary(BuildContext context) {
+    final configuredPath = context
+        .read<AppSettingsViewModel>()
+        .settings
+        .videoSaveDirectoryPath;
+    if (configuredPath == null || configuredPath.isEmpty) {
+      return '默认下载目录';
+    }
+
+    return configuredPath;
+  }
+
+  void _showSnackBar(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+  }
+
   void _disposeControllers() {
     _chewieController?.dispose();
     _chewieController = null;
@@ -118,7 +290,7 @@ class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
     final double aspectRatio = _resolvedAspectRatio();
 
     return Container(
-      key: const ValueKey('thread-main-video-section'),
+      key: widget.sectionKey,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
@@ -152,6 +324,7 @@ class _ThreadInlineVideoWidgetState extends State<ThreadInlineVideoWidget> {
                       ),
                       Center(
                         child: _VideoPosterAction(
+                          key: widget.playButtonKey,
                           isLoading: _isInitializing,
                           hasVideoUrl: hasVideoUrl,
                           onPressed: hasVideoUrl ? _startPlayback : null,
@@ -242,6 +415,7 @@ class _VideoPosterAction extends StatelessWidget {
   final VoidCallback? onPressed;
 
   const _VideoPosterAction({
+    super.key,
     required this.isLoading,
     required this.hasVideoUrl,
     required this.onPressed,
@@ -269,7 +443,6 @@ class _VideoPosterAction extends StatelessWidget {
     }
 
     return IconButton.filled(
-      key: const ValueKey('thread-main-video-play'),
       onPressed: onPressed,
       style: IconButton.styleFrom(
         backgroundColor: hasVideoUrl
@@ -282,6 +455,69 @@ class _VideoPosterAction extends StatelessWidget {
         hasVideoUrl ? Icons.play_arrow_rounded : Icons.info_outline_rounded,
       ),
       tooltip: hasVideoUrl ? '播放视频' : '视频暂不可播放',
+    );
+  }
+}
+
+class _VideoOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  const _VideoOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: colorScheme.onSurface),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

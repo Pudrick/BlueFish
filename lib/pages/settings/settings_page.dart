@@ -101,6 +101,42 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  Future<void> _openMediaSaveDirectoryDialog(
+    BuildContext context, {
+    required AppSettingsViewModel settingsViewModel,
+    required bool isImage,
+  }) async {
+    final submittedValue = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        return _MediaSaveDirectoryDialog(
+          title: isImage ? '图片默认保存位置' : '视频默认保存位置',
+          initialValue: isImage
+              ? settingsViewModel.settings.imageSaveDirectoryPath
+              : settingsViewModel.settings.videoSaveDirectoryPath,
+          helperText: '留空时使用默认下载目录。当前版本可直接输入目标目录路径。',
+        );
+      },
+    );
+
+    if (submittedValue == null) {
+      return;
+    }
+
+    if (isImage) {
+      await settingsViewModel.updateImageSaveDirectoryPath(submittedValue);
+    } else {
+      await settingsViewModel.updateVideoSaveDirectoryPath(submittedValue);
+    }
+  }
+
+  String _mediaSaveDirectorySummary(String? path) {
+    if (path == null || path.isEmpty) {
+      return '默认下载目录';
+    }
+    return path;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppSettingsViewModel, AuthSessionManager>(
@@ -233,6 +269,49 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SettingsSection(
+                title: '保存',
+                child: Column(
+                  children: [
+                    _SettingsActionTile(
+                      leading: const Icon(Icons.image_outlined),
+                      title: const Text('图片默认保存位置'),
+                      subtitle: Text(
+                        _mediaSaveDirectorySummary(
+                          settings.imageSaveDirectoryPath,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () {
+                        _openMediaSaveDirectoryDialog(
+                          context,
+                          settingsViewModel: settingsViewModel,
+                          isImage: true,
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _SettingsActionTile(
+                      leading: const Icon(Icons.video_library_outlined),
+                      title: const Text('视频默认保存位置'),
+                      subtitle: Text(
+                        _mediaSaveDirectorySummary(
+                          settings.videoSaveDirectoryPath,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () {
+                        _openMediaSaveDirectoryDialog(
+                          context,
+                          settingsViewModel: settingsViewModel,
+                          isImage: false,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _SettingsSection(
                 title: '关于',
                 child: Column(
                   children: [
@@ -261,7 +340,7 @@ class SettingsPage extends StatelessWidget {
                     _SettingsActionTile(
                       leading: const Icon(Icons.restart_alt_rounded),
                       title: const Text('恢复默认设置'),
-                      subtitle: const Text('重置外观、字号缩放和高级设置'),
+                      subtitle: const Text('重置外观、字号缩放、保存位置和高级设置'),
                       onTap: settingsViewModel.reset,
                     ),
                   ],
@@ -755,6 +834,84 @@ class _PreviewScaleChip extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+class _MediaSaveDirectoryDialog extends StatefulWidget {
+  final String title;
+  final String? initialValue;
+  final String helperText;
+
+  const _MediaSaveDirectoryDialog({
+    required this.title,
+    required this.initialValue,
+    required this.helperText,
+  });
+
+  @override
+  State<_MediaSaveDirectoryDialog> createState() =>
+      _MediaSaveDirectoryDialogState();
+}
+
+class _MediaSaveDirectoryDialogState extends State<_MediaSaveDirectoryDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.helperText,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: '目录路径',
+                  hintText: r'C:\Users\Example\Downloads',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(''),
+          child: const Text('使用默认'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }

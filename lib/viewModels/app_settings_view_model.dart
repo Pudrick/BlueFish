@@ -120,6 +120,18 @@ class AppSettingsViewModel extends ChangeNotifier {
     );
   }
 
+  Future<void> updateImageSaveDirectoryPath(String? imageSaveDirectoryPath) {
+    return _applyAndPersist(
+      _settings.copyWith(imageSaveDirectoryPath: imageSaveDirectoryPath),
+    );
+  }
+
+  Future<void> updateVideoSaveDirectoryPath(String? videoSaveDirectoryPath) {
+    return _applyAndPersist(
+      _settings.copyWith(videoSaveDirectoryPath: videoSaveDirectoryPath),
+    );
+  }
+
   Future<void> updateApiVersionOverride(String? apiVersionOverride) {
     return _applyAndPersist(
       _settings.copyWith(apiVersionOverride: apiVersionOverride),

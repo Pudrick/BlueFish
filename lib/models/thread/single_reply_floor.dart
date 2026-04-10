@@ -145,6 +145,13 @@ class SingleReplyFloor implements ReplyContent {
 
   bool get canDisplay => visibility.canDisplay;
 
+  String? get resolvedReplyVideoUrl => _normalizeMediaField(replyVideo);
+
+  String? get resolvedReplyVideoCover => _normalizeMediaField(replyVideoCover);
+
+  bool get hasInlineVideo =>
+      resolvedReplyVideoUrl != null || resolvedReplyVideoCover != null;
+
   int resolveFloorNumber({
     required int currentPage,
     required int repliesPerPage,
@@ -178,6 +185,15 @@ class SingleReplyFloor implements ReplyContent {
       quote: _parseQuote(json['quote']),
     );
   }
+}
+
+String? _normalizeMediaField(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final normalized = value.trim();
+  return normalized.isEmpty ? null : normalized;
 }
 
 Author _parseReplyAuthor(Map<String, dynamic> json) {

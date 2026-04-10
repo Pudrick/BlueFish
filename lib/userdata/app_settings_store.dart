@@ -15,6 +15,10 @@ class AppSettingsStore {
       'settings.reply_locate_total_probe_budget';
   static const String _replyLocateCacheMaxEntriesKey =
       'settings.reply_locate_cache_max_entries';
+  static const String _imageSaveDirectoryPathKey =
+      'settings.image_save_directory_path';
+  static const String _videoSaveDirectoryPathKey =
+      'settings.video_save_directory_path';
   static const String _apiVersionOverrideKey = 'settings.api_version_override';
 
   SharedPreferences? _prefs;
@@ -54,6 +58,8 @@ class AppSettingsStore {
       replyLocateCacheMaxEntries:
           prefs.getInt(_replyLocateCacheMaxEntriesKey) ??
           AppSettings.defaults.replyLocateCacheMaxEntries,
+      imageSaveDirectoryPath: prefs.getString(_imageSaveDirectoryPathKey),
+      videoSaveDirectoryPath: prefs.getString(_videoSaveDirectoryPathKey),
       apiVersionOverride: prefs.getString(_apiVersionOverrideKey),
     );
   }
@@ -85,6 +91,22 @@ class AppSettingsStore {
       _replyLocateCacheMaxEntriesKey,
       settings.replyLocateCacheMaxEntries,
     );
+    if (settings.imageSaveDirectoryPath == null) {
+      await prefs.remove(_imageSaveDirectoryPathKey);
+    } else {
+      await prefs.setString(
+        _imageSaveDirectoryPathKey,
+        settings.imageSaveDirectoryPath!,
+      );
+    }
+    if (settings.videoSaveDirectoryPath == null) {
+      await prefs.remove(_videoSaveDirectoryPathKey);
+    } else {
+      await prefs.setString(
+        _videoSaveDirectoryPathKey,
+        settings.videoSaveDirectoryPath!,
+      );
+    }
     if (settings.apiVersionOverride == null) {
       await prefs.remove(_apiVersionOverrideKey);
     } else {
@@ -107,6 +129,8 @@ class AppSettingsStore {
     await prefs.remove(_imageShrinkTargetMaxEdgeDpKey);
     await prefs.remove(_replyLocateTotalProbeBudgetKey);
     await prefs.remove(_replyLocateCacheMaxEntriesKey);
+    await prefs.remove(_imageSaveDirectoryPathKey);
+    await prefs.remove(_videoSaveDirectoryPathKey);
     await prefs.remove(_apiVersionOverrideKey);
   }
 }
