@@ -319,6 +319,8 @@ class _UserHomePageViewState extends State<UserHomePageView> {
 }
 
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
+  static const double _verticalPadding = 8;
+
   final Widget child;
 
   _StickyTabBarDelegate({required this.child});
@@ -329,19 +331,34 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      alignment: Alignment.center,
-      child: child,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: overlapsContent
+                ? colorScheme.outlineVariant.withValues(alpha: 0.3)
+                : Colors.transparent,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, _verticalPadding),
+        child: Align(alignment: Alignment.center, child: child),
+      ),
     );
   }
 
   @override
-  double get maxExtent => 56;
+  double get maxExtent =>
+      UserHomeDisplaySelectWidget.preferredHeight + _verticalPadding + 4;
 
   @override
-  double get minExtent => 56;
+  double get minExtent =>
+      UserHomeDisplaySelectWidget.preferredHeight + _verticalPadding + 4;
 
   @override
   bool shouldRebuild(covariant _StickyTabBarDelegate oldDelegate) {
