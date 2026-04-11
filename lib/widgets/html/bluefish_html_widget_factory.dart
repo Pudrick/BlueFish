@@ -356,15 +356,12 @@ class _ShrinkableHtmlImageState extends State<_ShrinkableHtmlImage> {
         if (shouldShrink) {
           display = Align(
             alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: effectiveAvailableWidth,
-              child: _ShrunkImageNotice(
-                image: SizedBox(
-                  width: shrinkWidth,
-                  height: shrinkHeight,
-                  child: widget.child,
-                ),
-                onViewOriginal: () => _handleTap(context, shouldShrink: true),
+            child: _ShrunkImageNotice(
+              width: shrinkWidth,
+              image: SizedBox(
+                width: shrinkWidth,
+                height: shrinkHeight,
+                child: widget.child,
               ),
             ),
           );
@@ -420,88 +417,60 @@ class _ShrinkableHtmlImageState extends State<_ShrinkableHtmlImage> {
 }
 
 class _ShrunkImageNotice extends StatelessWidget {
+  final double width;
   final Widget image;
-  final VoidCallback onViewOriginal;
 
-  const _ShrunkImageNotice({required this.image, required this.onViewOriginal});
+  const _ShrunkImageNotice({required this.width, required this.image});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.9),
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(11),
-            child: image,
+    return SizedBox(
+      width: width,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.9),
           ),
         ),
-        const SizedBox(height: 8),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1),
-                      child: Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              image,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  border: Border(
+                    top: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.45),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '原图过大，已缩放显示',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: onViewOriginal,
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    icon: const Icon(Icons.open_in_full_rounded, size: 18),
-                    label: const Text('查看原图'),
                   ),
                 ),
-              ],
-            ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.open_in_full_rounded,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
