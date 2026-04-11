@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:bluefish/models/app_settings.dart';
 import 'package:bluefish/widgets/html/details/bluefish_details_build_op.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart' as fwfh;
-import 'package:flutter/widgets.dart';
 
 const bluefishGalleryIndexAttribute = 'data-bluefish-gallery-index';
 const bluefishHeroTagAttribute = 'data-bluefish-hero-tag';
@@ -356,16 +356,16 @@ class _ShrinkableHtmlImageState extends State<_ShrinkableHtmlImage> {
         if (shouldShrink) {
           display = Align(
             alignment: Alignment.centerLeft,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                SizedBox(
+            child: SizedBox(
+              width: effectiveAvailableWidth,
+              child: _ShrunkImageNotice(
+                image: SizedBox(
                   width: shrinkWidth,
                   height: shrinkHeight,
                   child: widget.child,
                 ),
-                const Positioned(top: 8, right: 8, child: _ImageShrinkBadge()),
-              ],
+                onViewOriginal: () => _handleTap(context, shouldShrink: true),
+              ),
             ),
           );
         }
@@ -394,48 +394,114 @@ class _ShrinkableHtmlImageState extends State<_ShrinkableHtmlImage> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          if (shouldShrink) {
-            setState(() {
-              _expanded = true;
-            });
-            return;
-          }
-
-          final galleryIndex = widget.galleryIndex;
-          final onTapImageAtIndex = widget.onTapImageAtIndex;
-          if (galleryIndex == null || onTapImageAtIndex == null) {
-            return;
-          }
-
-          onTapImageAtIndex(context, galleryIndex);
-        },
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _handleTap(context, shouldShrink: shouldShrink),
         child: child,
       ),
     );
   }
+
+  void _handleTap(BuildContext context, {required bool shouldShrink}) {
+    if (shouldShrink) {
+      setState(() {
+        _expanded = true;
+      });
+      return;
+    }
+
+    final galleryIndex = widget.galleryIndex;
+    final onTapImageAtIndex = widget.onTapImageAtIndex;
+    if (galleryIndex == null || onTapImageAtIndex == null) {
+      return;
+    }
+
+    onTapImageAtIndex(context, galleryIndex);
+  }
 }
 
-class _ImageShrinkBadge extends StatelessWidget {
-  const _ImageShrinkBadge();
+class _ShrunkImageNotice extends StatelessWidget {
+  final Widget image;
+  final VoidCallback onViewOriginal;
+
+  const _ShrunkImageNotice({required this.image, required this.onViewOriginal});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xB3000000),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Text(
-        '已缩小',
-        style: TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.9),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: image,
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '原图过大，已缩放显示',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: onViewOriginal,
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                    label: const Text('查看原图'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
