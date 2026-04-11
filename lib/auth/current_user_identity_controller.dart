@@ -1,40 +1,13 @@
 import 'package:bluefish/auth/auth_session_manager.dart';
+import 'package:bluefish/auth/current_user_identity.dart';
+import 'package:bluefish/auth/current_user_identity_resolver.dart';
 import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:flutter/foundation.dart';
-
-@immutable
-class CurrentUserIdentity {
-  final bool isLoggedIn;
-  final int? euid;
-  final String? puid;
-
-  const CurrentUserIdentity({
-    required this.isLoggedIn,
-    required this.euid,
-    required this.puid,
-  });
-
-  static const CurrentUserIdentity signedOut = CurrentUserIdentity(
-    isLoggedIn: false,
-    euid: null,
-    puid: null,
-  );
-
-  @override
-  bool operator ==(Object other) {
-    return other is CurrentUserIdentity &&
-        other.isLoggedIn == isLoggedIn &&
-        other.euid == euid &&
-        other.puid == puid;
-  }
-
-  @override
-  int get hashCode => Object.hash(isLoggedIn, euid, puid);
-}
 
 class CurrentUserIdentityController extends ChangeNotifier {
   AuthSessionManager? _authSessionManager;
   CurrentUserProfileViewModel? _currentUserProfileViewModel;
+  CurrentUserIdentityResolver? _resolver;
   CurrentUserIdentity _identity = CurrentUserIdentity.signedOut;
 
   CurrentUserIdentity get identity => _identity;
@@ -45,6 +18,7 @@ class CurrentUserIdentityController extends ChangeNotifier {
   void update({
     required AuthSessionManager authSessionManager,
     required CurrentUserProfileViewModel currentUserProfileViewModel,
+    required CurrentUserIdentityResolver resolver,
   }) {
     if (!identical(_authSessionManager, authSessionManager)) {
       _authSessionManager?.removeListener(_handleDependencyChanged);
@@ -58,6 +32,7 @@ class CurrentUserIdentityController extends ChangeNotifier {
       _currentUserProfileViewModel?.addListener(_handleDependencyChanged);
     }
 
+    _resolver = resolver;
     _recomputeIdentity();
   }
 
@@ -67,7 +42,8 @@ class CurrentUserIdentityController extends ChangeNotifier {
 
   void _recomputeIdentity() {
     final authSessionManager = _authSessionManager;
-    if (authSessionManager == null || !authSessionManager.isLoggedIn) {
+    final resolver = _resolver;
+    if (authSessionManager == null || resolver == null) {
       if (_identity != CurrentUserIdentity.signedOut) {
         _identity = CurrentUserIdentity.signedOut;
         notifyListeners();
@@ -75,12 +51,9 @@ class CurrentUserIdentityController extends ChangeNotifier {
       return;
     }
 
-    final nextIdentity = CurrentUserIdentity(
-      isLoggedIn: true,
-      euid: _currentUserProfileViewModel?.profile?.euid,
-      puid: resolveCurrentUserPuidFromCookies(
-        authSessionManager.getCookiesSync(),
-      ),
+    final nextIdentity = resolver.resolve(
+      authSessionManager: authSessionManager,
+      currentUserProfile: _currentUserProfileViewModel?.profile,
     );
     if (nextIdentity == _identity) {
       return;
@@ -96,49 +69,4 @@ class CurrentUserIdentityController extends ChangeNotifier {
     _currentUserProfileViewModel?.removeListener(_handleDependencyChanged);
     super.dispose();
   }
-}
-
-String? resolveCurrentUserPuidFromCookies(String cookies) {
-  final normalizedCookies = cookies.trim();
-  if (normalizedCookies.isEmpty) {
-    return null;
-  }
-
-  const cookieKeyCandidates = <String>['uid', 'puid', 'u', 'g'];
-  for (final key in cookieKeyCandidates) {
-    final parsedPuid = _extractNumericIdentityFromCookie(
-      normalizedCookies,
-      key,
-    );
-    if (parsedPuid != null) {
-      return parsedPuid;
-    }
-  }
-
-  return null;
-}
-
-String? _extractNumericIdentityFromCookie(String cookies, String key) {
-  final match = RegExp(
-    '(?:^|;\\s*)${RegExp.escape(key)}=([^;]+)',
-  ).firstMatch(cookies);
-  if (match == null) {
-    return null;
-  }
-
-  final decodedValue = Uri.decodeComponent(match.group(1)!);
-  final separatorIndex = decodedValue.indexOf('|');
-  final rawId = separatorIndex >= 0
-      ? decodedValue.substring(0, separatorIndex)
-      : decodedValue;
-  final normalizedId = rawId.trim();
-  if (normalizedId.isEmpty) {
-    return null;
-  }
-
-  if (!RegExp(r'^\d+$').hasMatch(normalizedId)) {
-    return null;
-  }
-
-  return normalizedId;
 }
