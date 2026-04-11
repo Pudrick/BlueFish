@@ -80,22 +80,22 @@ class AppSettingsViewModel extends ChangeNotifier {
     return _applyAndPersist(_settings.copyWith(metaFontScale: metaFontScale));
   }
 
-  Future<void> updateImageShrinkTriggerMaxEdgeDp(
-    double imageShrinkTriggerMaxEdgeDp,
+  Future<void> updateImageShrinkTriggerWidthFactor(
+    double imageShrinkTriggerWidthFactor,
   ) {
     return _applyAndPersist(
       _settings.copyWith(
-        imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
+        imageShrinkTriggerWidthFactor: imageShrinkTriggerWidthFactor,
       ),
     );
   }
 
-  Future<void> updateImageShrinkTargetMaxEdgeDp(
-    double imageShrinkTargetMaxEdgeDp,
+  Future<void> updateImageShrinkTargetWidthFactor(
+    double imageShrinkTargetWidthFactor,
   ) {
     return _applyAndPersist(
       _settings.copyWith(
-        imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+        imageShrinkTargetWidthFactor: imageShrinkTargetWidthFactor,
       ),
     );
   }

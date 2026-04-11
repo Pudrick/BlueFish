@@ -391,16 +391,16 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
 
   Widget _buildHtmlWidget({
     required Color linkColor,
-    required double imageShrinkTriggerMaxEdgeDp,
-    required double imageShrinkTargetMaxEdgeDp,
+    required double imageShrinkTriggerWidthFactor,
+    required double imageShrinkTargetWidthFactor,
   }) {
     return HtmlWidget(
       widget.html,
       textStyle: widget.textStyle,
       factoryBuilder: () => BluefishHtmlWidgetFactory(
         enableImageShrink: false,
-        imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
-        imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+        imageShrinkTriggerWidthFactor: imageShrinkTriggerWidthFactor,
+        imageShrinkTargetWidthFactor: imageShrinkTargetWidthFactor,
       ),
       customStylesBuilder: (element) {
         if (element.localName == 'a') {
@@ -421,12 +421,12 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
     final settings = context.select<AppSettingsViewModel?, AppSettings?>(
       (vm) => vm?.settings,
     );
-    final imageShrinkTriggerMaxEdgeDp =
-        settings?.imageShrinkTriggerMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
-    final imageShrinkTargetMaxEdgeDp =
-        settings?.imageShrinkTargetMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
+    final imageShrinkTriggerWidthFactor =
+        settings?.imageShrinkTriggerWidthFactor ??
+        AppSettings.defaultImageShrinkTriggerWidthFactor;
+    final imageShrinkTargetWidthFactor =
+        settings?.imageShrinkTargetWidthFactor ??
+        AppSettings.defaultImageShrinkTargetWidthFactor;
     final linkColor = semanticColors.mentionQuoteAccent;
 
     return LayoutBuilder(
@@ -450,9 +450,10 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                       maxHeight: double.infinity,
                       child: _buildHtmlWidget(
                         linkColor: linkColor,
-                        imageShrinkTriggerMaxEdgeDp:
-                            imageShrinkTriggerMaxEdgeDp,
-                        imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+                        imageShrinkTriggerWidthFactor:
+                            imageShrinkTriggerWidthFactor,
+                        imageShrinkTargetWidthFactor:
+                            imageShrinkTargetWidthFactor,
                       ),
                     ),
                   ),
@@ -517,10 +518,10 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
                     child: _expanded
                         ? _buildHtmlWidget(
                             linkColor: linkColor,
-                            imageShrinkTriggerMaxEdgeDp:
-                                imageShrinkTriggerMaxEdgeDp,
-                            imageShrinkTargetMaxEdgeDp:
-                                imageShrinkTargetMaxEdgeDp,
+                            imageShrinkTriggerWidthFactor:
+                                imageShrinkTriggerWidthFactor,
+                            imageShrinkTargetWidthFactor:
+                                imageShrinkTargetWidthFactor,
                           )
                         : collapsedHtml,
                   ),
@@ -529,8 +530,8 @@ class _ExpandableHtmlSectionState extends State<_ExpandableHtmlSection> {
             else
               _buildHtmlWidget(
                 linkColor: linkColor,
-                imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
-                imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+                imageShrinkTriggerWidthFactor: imageShrinkTriggerWidthFactor,
+                imageShrinkTargetWidthFactor: imageShrinkTargetWidthFactor,
               ),
             if (_shouldCollapse && _expanded)
               Padding(

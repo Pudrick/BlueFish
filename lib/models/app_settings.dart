@@ -36,12 +36,12 @@ enum AppThemePreference {
 class AppSettings {
   static const double minFontScale = 0.85;
   static const double maxFontScale = 1.35;
-  static const double minImageShrinkTriggerMaxEdgeDp = 400;
-  static const double maxImageShrinkTriggerMaxEdgeDp = 1200;
-  static const double defaultImageShrinkTriggerMaxEdgeDp = 640;
-  static const double minImageShrinkTargetMaxEdgeDp = 240;
-  static const double maxImageShrinkTargetMaxEdgeDp = 640;
-  static const double defaultImageShrinkTargetMaxEdgeDp = 360;
+  static const double minImageShrinkTriggerWidthFactor = 0.6;
+  static const double maxImageShrinkTriggerWidthFactor = 1.8;
+  static const double defaultImageShrinkTriggerWidthFactor = 1.4;
+  static const double minImageShrinkTargetWidthFactor = 0.35;
+  static const double maxImageShrinkTargetWidthFactor = 0.7;
+  static const double defaultImageShrinkTargetWidthFactor = 0.5;
   static const int minReplyLocateTotalProbeBudget = 3;
   static const int maxReplyLocateTotalProbeBudget = 40;
   static const int defaultReplyLocateTotalProbeBudget = 15;
@@ -54,7 +54,7 @@ class AppSettings {
   static const bool defaultGenerateJumpLogs = true;
   static const bool defaultCollapseLightedRepliesEnabled = false;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
-  static const double _imageEdgeStepDp = 10;
+  static const double _imageWidthFactorStep = 0.05;
   static const Object _unset = Object();
   static const AppSettings defaults = AppSettings._(
     themePreference: AppThemePreference.system,
@@ -62,8 +62,8 @@ class AppSettings {
     contentFontScale: 1,
     titleFontScale: 1,
     metaFontScale: 1,
-    imageShrinkTriggerMaxEdgeDp: defaultImageShrinkTriggerMaxEdgeDp,
-    imageShrinkTargetMaxEdgeDp: defaultImageShrinkTargetMaxEdgeDp,
+    imageShrinkTriggerWidthFactor: defaultImageShrinkTriggerWidthFactor,
+    imageShrinkTargetWidthFactor: defaultImageShrinkTargetWidthFactor,
     replyLocateTotalProbeBudget: defaultReplyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries: defaultReplyLocateCacheMaxEntries,
     replyLocateCoarseProbeStride: defaultReplyLocateCoarseProbeStride,
@@ -79,8 +79,8 @@ class AppSettings {
   final double contentFontScale;
   final double titleFontScale;
   final double metaFontScale;
-  final double imageShrinkTriggerMaxEdgeDp;
-  final double imageShrinkTargetMaxEdgeDp;
+  final double imageShrinkTriggerWidthFactor;
+  final double imageShrinkTargetWidthFactor;
   final int replyLocateTotalProbeBudget;
   final int replyLocateCacheMaxEntries;
   final int replyLocateCoarseProbeStride;
@@ -96,8 +96,8 @@ class AppSettings {
     required this.contentFontScale,
     required this.titleFontScale,
     required this.metaFontScale,
-    required this.imageShrinkTriggerMaxEdgeDp,
-    required this.imageShrinkTargetMaxEdgeDp,
+    required this.imageShrinkTriggerWidthFactor,
+    required this.imageShrinkTargetWidthFactor,
     required this.replyLocateTotalProbeBudget,
     required this.replyLocateCacheMaxEntries,
     required this.replyLocateCoarseProbeStride,
@@ -114,8 +114,8 @@ class AppSettings {
     required double contentFontScale,
     required double titleFontScale,
     required double metaFontScale,
-    required double imageShrinkTriggerMaxEdgeDp,
-    required double imageShrinkTargetMaxEdgeDp,
+    required double imageShrinkTriggerWidthFactor,
+    required double imageShrinkTargetWidthFactor,
     required int replyLocateTotalProbeBudget,
     required int replyLocateCacheMaxEntries,
     required int replyLocateCoarseProbeStride,
@@ -126,15 +126,11 @@ class AppSettings {
     String? videoSaveDirectoryPath,
     String? apiVersionOverride,
   }) {
-    final normalizedTrigger = _normalizeImageEdgeDp(
-      value: imageShrinkTriggerMaxEdgeDp,
-      min: minImageShrinkTriggerMaxEdgeDp,
-      max: maxImageShrinkTriggerMaxEdgeDp,
+    final normalizedTrigger = normalizeImageShrinkTriggerWidthFactor(
+      imageShrinkTriggerWidthFactor,
     );
-    final normalizedTarget = _normalizeImageEdgeDp(
-      value: imageShrinkTargetMaxEdgeDp,
-      min: minImageShrinkTargetMaxEdgeDp,
-      max: maxImageShrinkTargetMaxEdgeDp,
+    final normalizedTarget = normalizeImageShrinkTargetWidthFactor(
+      imageShrinkTargetWidthFactor,
     );
 
     return AppSettings._(
@@ -143,8 +139,8 @@ class AppSettings {
       contentFontScale: _normalizeFontScale(contentFontScale),
       titleFontScale: _normalizeFontScale(titleFontScale),
       metaFontScale: _normalizeFontScale(metaFontScale),
-      imageShrinkTriggerMaxEdgeDp: normalizedTrigger,
-      imageShrinkTargetMaxEdgeDp: normalizedTarget > normalizedTrigger
+      imageShrinkTriggerWidthFactor: normalizedTrigger,
+      imageShrinkTargetWidthFactor: normalizedTarget > normalizedTrigger
           ? normalizedTrigger
           : normalizedTarget,
       replyLocateTotalProbeBudget: _normalizeReplyLocateTotalProbeBudget(
@@ -174,8 +170,8 @@ class AppSettings {
     double? contentFontScale,
     double? titleFontScale,
     double? metaFontScale,
-    double? imageShrinkTriggerMaxEdgeDp,
-    double? imageShrinkTargetMaxEdgeDp,
+    double? imageShrinkTriggerWidthFactor,
+    double? imageShrinkTargetWidthFactor,
     int? replyLocateTotalProbeBudget,
     int? replyLocateCacheMaxEntries,
     int? replyLocateCoarseProbeStride,
@@ -191,10 +187,10 @@ class AppSettings {
       contentFontScale: contentFontScale ?? this.contentFontScale,
       titleFontScale: titleFontScale ?? this.titleFontScale,
       metaFontScale: metaFontScale ?? this.metaFontScale,
-      imageShrinkTriggerMaxEdgeDp:
-          imageShrinkTriggerMaxEdgeDp ?? this.imageShrinkTriggerMaxEdgeDp,
-      imageShrinkTargetMaxEdgeDp:
-          imageShrinkTargetMaxEdgeDp ?? this.imageShrinkTargetMaxEdgeDp,
+      imageShrinkTriggerWidthFactor:
+          imageShrinkTriggerWidthFactor ?? this.imageShrinkTriggerWidthFactor,
+      imageShrinkTargetWidthFactor:
+          imageShrinkTargetWidthFactor ?? this.imageShrinkTargetWidthFactor,
       replyLocateTotalProbeBudget:
           replyLocateTotalProbeBudget ?? this.replyLocateTotalProbeBudget,
       replyLocateCacheMaxEntries:
@@ -225,6 +221,22 @@ class AppSettings {
     return value | 0xFF000000;
   }
 
+  static double normalizeImageShrinkTriggerWidthFactor(double value) {
+    return _normalizeImageWidthFactor(
+      value: value,
+      min: minImageShrinkTriggerWidthFactor,
+      max: maxImageShrinkTriggerWidthFactor,
+    );
+  }
+
+  static double normalizeImageShrinkTargetWidthFactor(double value) {
+    return _normalizeImageWidthFactor(
+      value: value,
+      min: minImageShrinkTargetWidthFactor,
+      max: maxImageShrinkTargetWidthFactor,
+    );
+  }
+
   static int _normalizeReplyLocateTotalProbeBudget(int value) {
     return value
         .clamp(minReplyLocateTotalProbeBudget, maxReplyLocateTotalProbeBudget)
@@ -243,14 +255,17 @@ class AppSettings {
         .toInt();
   }
 
-  static double _normalizeImageEdgeDp({
+  static double _normalizeImageWidthFactor({
     required double value,
     required double min,
     required double max,
   }) {
     final normalizedValue = value.isFinite ? value : min;
     final clampedValue = normalizedValue.clamp(min, max).toDouble();
-    return (clampedValue / _imageEdgeStepDp).roundToDouble() * _imageEdgeStepDp;
+    final steppedValue =
+        (clampedValue / _imageWidthFactorStep).roundToDouble() *
+        _imageWidthFactorStep;
+    return double.parse(steppedValue.toStringAsFixed(2));
   }
 
   static String? _normalizeApiVersionOverride(String? value) {
@@ -281,8 +296,8 @@ class AppSettings {
         other.contentFontScale == contentFontScale &&
         other.titleFontScale == titleFontScale &&
         other.metaFontScale == metaFontScale &&
-        other.imageShrinkTriggerMaxEdgeDp == imageShrinkTriggerMaxEdgeDp &&
-        other.imageShrinkTargetMaxEdgeDp == imageShrinkTargetMaxEdgeDp &&
+        other.imageShrinkTriggerWidthFactor == imageShrinkTriggerWidthFactor &&
+        other.imageShrinkTargetWidthFactor == imageShrinkTargetWidthFactor &&
         other.replyLocateTotalProbeBudget == replyLocateTotalProbeBudget &&
         other.replyLocateCacheMaxEntries == replyLocateCacheMaxEntries &&
         other.replyLocateCoarseProbeStride == replyLocateCoarseProbeStride &&
@@ -300,8 +315,8 @@ class AppSettings {
     contentFontScale,
     titleFontScale,
     metaFontScale,
-    imageShrinkTriggerMaxEdgeDp,
-    imageShrinkTargetMaxEdgeDp,
+    imageShrinkTriggerWidthFactor,
+    imageShrinkTargetWidthFactor,
     replyLocateTotalProbeBudget,
     replyLocateCacheMaxEntries,
     replyLocateCoarseProbeStride,

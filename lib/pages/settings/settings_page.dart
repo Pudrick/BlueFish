@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/auth/web_login_session_service.dart';
 import 'package:bluefish/models/app_settings.dart';
@@ -142,10 +140,6 @@ class SettingsPage extends StatelessWidget {
     return Consumer2<AppSettingsViewModel, AuthSessionManager>(
       builder: (context, settingsViewModel, authSessionManager, _) {
         final settings = settingsViewModel.settings;
-        final imageShrinkTargetSliderMax = math.min(
-          AppSettings.maxImageShrinkTargetMaxEdgeDp,
-          settings.imageShrinkTriggerMaxEdgeDp,
-        );
 
         return Scaffold(
           appBar: AppBar(title: const Text('设置')),
@@ -236,30 +230,30 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _ImageEdgeSlider(
+                    _ImageWidthFactorSlider(
                       icon: Icons.photo_size_select_large_rounded,
-                      label: '大图触发最长边',
-                      helperText: '超过此值时，图片会先按比例缩小显示。',
-                      value: settings.imageShrinkTriggerMaxEdgeDp,
-                      min: AppSettings.minImageShrinkTriggerMaxEdgeDp,
-                      max: AppSettings.maxImageShrinkTriggerMaxEdgeDp,
+                      label: '大图触发倍率',
+                      helperText: '当图片渲染后的最长边超过当前卡片宽度的此倍率时，会先按比例缩小显示。',
+                      value: settings.imageShrinkTriggerWidthFactor,
+                      min: AppSettings.minImageShrinkTriggerWidthFactor,
+                      max: AppSettings.maxImageShrinkTriggerWidthFactor,
                       onChanged:
-                          settingsViewModel.updateImageShrinkTriggerMaxEdgeDp,
+                          settingsViewModel.updateImageShrinkTriggerWidthFactor,
                     ),
                     const SizedBox(height: 12),
-                    _ImageEdgeSlider(
+                    _ImageWidthFactorSlider(
                       icon: Icons.fit_screen_rounded,
-                      label: '缩小后最长边',
-                      helperText: '首次点击图片会还原到未缩小时的尺寸。',
-                      value: settings.imageShrinkTargetMaxEdgeDp,
-                      min: AppSettings.minImageShrinkTargetMaxEdgeDp,
-                      max: imageShrinkTargetSliderMax,
+                      label: '缩小目标倍率',
+                      helperText: '缩小后最长边约为当前卡片宽度的此倍率，首次点击图片会还原到未缩小时的尺寸。',
+                      value: settings.imageShrinkTargetWidthFactor,
+                      min: AppSettings.minImageShrinkTargetWidthFactor,
+                      max: AppSettings.maxImageShrinkTargetWidthFactor,
                       onChanged:
-                          settingsViewModel.updateImageShrinkTargetMaxEdgeDp,
+                          settingsViewModel.updateImageShrinkTargetWidthFactor,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '默认值：触发 640dp，目标 360dp。',
+                      '默认值：触发 1.40x 卡片宽度，目标 0.50x 卡片宽度。',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -802,7 +796,7 @@ class _TextPreviewCard extends StatelessWidget {
   }
 }
 
-class _ImageEdgeSlider extends StatelessWidget {
+class _ImageWidthFactorSlider extends StatelessWidget {
   final IconData icon;
   final String label;
   final String helperText;
@@ -811,7 +805,7 @@ class _ImageEdgeSlider extends StatelessWidget {
   final double max;
   final ValueChanged<double> onChanged;
 
-  const _ImageEdgeSlider({
+  const _ImageWidthFactorSlider({
     required this.icon,
     required this.label,
     required this.helperText,
@@ -824,7 +818,7 @@ class _ImageEdgeSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final safeValue = value.clamp(min, max).toDouble();
-    final divisions = ((max - min) / 10).round();
+    final divisions = ((max - min) / 0.05).round();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -834,7 +828,7 @@ class _ImageEdgeSlider extends StatelessWidget {
             Icon(icon, size: 18),
             const SizedBox(width: 8),
             Expanded(child: Text(label)),
-            Text('${safeValue.toStringAsFixed(0)}dp'),
+            Text('${safeValue.toStringAsFixed(2)}x'),
           ],
         ),
         const SizedBox(height: 2),

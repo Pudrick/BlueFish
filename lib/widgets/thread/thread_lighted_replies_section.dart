@@ -170,7 +170,7 @@ class _ThreadLightedRepliesHeader extends StatelessWidget {
                         Text(
                           isCollapsed
                               ? '已收起 · 共 $replyCount 条'
-                              : '共 $replyCount 条',
+                              : '点击收起 · 共 $replyCount 条',
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),

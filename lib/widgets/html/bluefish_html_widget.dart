@@ -28,12 +28,12 @@ class BluefishHtmlWidget extends StatelessWidget {
     final settings = context.select<AppSettingsViewModel?, AppSettings?>(
       (vm) => vm?.settings,
     );
-    final imageShrinkTriggerMaxEdgeDp =
-        settings?.imageShrinkTriggerMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTriggerMaxEdgeDp;
-    final imageShrinkTargetMaxEdgeDp =
-        settings?.imageShrinkTargetMaxEdgeDp ??
-        AppSettings.defaultImageShrinkTargetMaxEdgeDp;
+    final imageShrinkTriggerWidthFactor =
+        settings?.imageShrinkTriggerWidthFactor ??
+        AppSettings.defaultImageShrinkTriggerWidthFactor;
+    final imageShrinkTargetWidthFactor =
+        settings?.imageShrinkTargetWidthFactor ??
+        AppSettings.defaultImageShrinkTargetWidthFactor;
     final galleryData = enableImageGallery
         ? _prepareImageGalleryHtml()
         : const _PreparedImageGalleryHtml(
@@ -48,8 +48,8 @@ class BluefishHtmlWidget extends StatelessWidget {
         renderedHtml,
         textStyle: textStyle,
         factoryBuilder: () => BluefishHtmlWidgetFactory(
-          imageShrinkTriggerMaxEdgeDp: imageShrinkTriggerMaxEdgeDp,
-          imageShrinkTargetMaxEdgeDp: imageShrinkTargetMaxEdgeDp,
+          imageShrinkTriggerWidthFactor: imageShrinkTriggerWidthFactor,
+          imageShrinkTargetWidthFactor: imageShrinkTargetWidthFactor,
           onTapImageAtIndex: enableImageGallery
               ? (context, galleryIndex) => _openPhotoGallery(
                   context,

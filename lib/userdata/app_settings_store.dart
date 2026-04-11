@@ -7,9 +7,13 @@ class AppSettingsStore {
   static const String _contentFontScaleKey = 'settings.content_font_scale';
   static const String _titleFontScaleKey = 'settings.title_font_scale';
   static const String _metaFontScaleKey = 'settings.meta_font_scale';
-  static const String _imageShrinkTriggerMaxEdgeDpKey =
+  static const String _imageShrinkTriggerWidthFactorKey =
+      'settings.image_shrink_trigger_width_factor';
+  static const String _imageShrinkTargetWidthFactorKey =
+      'settings.image_shrink_target_width_factor';
+  static const String _legacyImageShrinkTriggerMaxEdgeDpKey =
       'settings.image_shrink_trigger_max_edge_dp';
-  static const String _imageShrinkTargetMaxEdgeDpKey =
+  static const String _legacyImageShrinkTargetMaxEdgeDpKey =
       'settings.image_shrink_target_max_edge_dp';
   static const String _replyLocateTotalProbeBudgetKey =
       'settings.reply_locate_total_probe_budget';
@@ -25,6 +29,7 @@ class AppSettingsStore {
   static const String _videoSaveDirectoryPathKey =
       'settings.video_save_directory_path';
   static const String _apiVersionOverrideKey = 'settings.api_version_override';
+  static const double _legacyImageShrinkReferenceWidthDp = 500;
 
   SharedPreferences? _prefs;
 
@@ -51,12 +56,14 @@ class AppSettingsStore {
       metaFontScale:
           prefs.getDouble(_metaFontScaleKey) ??
           AppSettings.defaults.metaFontScale,
-      imageShrinkTriggerMaxEdgeDp:
-          prefs.getDouble(_imageShrinkTriggerMaxEdgeDpKey) ??
-          AppSettings.defaults.imageShrinkTriggerMaxEdgeDp,
-      imageShrinkTargetMaxEdgeDp:
-          prefs.getDouble(_imageShrinkTargetMaxEdgeDpKey) ??
-          AppSettings.defaults.imageShrinkTargetMaxEdgeDp,
+      imageShrinkTriggerWidthFactor:
+          prefs.getDouble(_imageShrinkTriggerWidthFactorKey) ??
+          _loadLegacyImageShrinkTriggerWidthFactor(prefs) ??
+          AppSettings.defaults.imageShrinkTriggerWidthFactor,
+      imageShrinkTargetWidthFactor:
+          prefs.getDouble(_imageShrinkTargetWidthFactorKey) ??
+          _loadLegacyImageShrinkTargetWidthFactor(prefs) ??
+          AppSettings.defaults.imageShrinkTargetWidthFactor,
       replyLocateTotalProbeBudget:
           prefs.getInt(_replyLocateTotalProbeBudgetKey) ??
           AppSettings.defaults.replyLocateTotalProbeBudget,
@@ -90,13 +97,15 @@ class AppSettingsStore {
     await prefs.setDouble(_titleFontScaleKey, settings.titleFontScale);
     await prefs.setDouble(_metaFontScaleKey, settings.metaFontScale);
     await prefs.setDouble(
-      _imageShrinkTriggerMaxEdgeDpKey,
-      settings.imageShrinkTriggerMaxEdgeDp,
+      _imageShrinkTriggerWidthFactorKey,
+      settings.imageShrinkTriggerWidthFactor,
     );
     await prefs.setDouble(
-      _imageShrinkTargetMaxEdgeDpKey,
-      settings.imageShrinkTargetMaxEdgeDp,
+      _imageShrinkTargetWidthFactorKey,
+      settings.imageShrinkTargetWidthFactor,
     );
+    await prefs.remove(_legacyImageShrinkTriggerMaxEdgeDpKey);
+    await prefs.remove(_legacyImageShrinkTargetMaxEdgeDpKey);
     await prefs.setInt(
       _replyLocateTotalProbeBudgetKey,
       settings.replyLocateTotalProbeBudget,
@@ -148,8 +157,10 @@ class AppSettingsStore {
     await prefs.remove(_contentFontScaleKey);
     await prefs.remove(_titleFontScaleKey);
     await prefs.remove(_metaFontScaleKey);
-    await prefs.remove(_imageShrinkTriggerMaxEdgeDpKey);
-    await prefs.remove(_imageShrinkTargetMaxEdgeDpKey);
+    await prefs.remove(_imageShrinkTriggerWidthFactorKey);
+    await prefs.remove(_imageShrinkTargetWidthFactorKey);
+    await prefs.remove(_legacyImageShrinkTriggerMaxEdgeDpKey);
+    await prefs.remove(_legacyImageShrinkTargetMaxEdgeDpKey);
     await prefs.remove(_replyLocateTotalProbeBudgetKey);
     await prefs.remove(_replyLocateCacheMaxEntriesKey);
     await prefs.remove(_replyLocateCoarseProbeStrideKey);
@@ -158,5 +169,27 @@ class AppSettingsStore {
     await prefs.remove(_imageSaveDirectoryPathKey);
     await prefs.remove(_videoSaveDirectoryPathKey);
     await prefs.remove(_apiVersionOverrideKey);
+  }
+
+  double? _loadLegacyImageShrinkTriggerWidthFactor(SharedPreferences prefs) {
+    final legacyValue = prefs.getDouble(_legacyImageShrinkTriggerMaxEdgeDpKey);
+    if (legacyValue == null) {
+      return null;
+    }
+
+    return AppSettings.normalizeImageShrinkTriggerWidthFactor(
+      legacyValue / _legacyImageShrinkReferenceWidthDp,
+    );
+  }
+
+  double? _loadLegacyImageShrinkTargetWidthFactor(SharedPreferences prefs) {
+    final legacyValue = prefs.getDouble(_legacyImageShrinkTargetMaxEdgeDpKey);
+    if (legacyValue == null) {
+      return null;
+    }
+
+    return AppSettings.normalizeImageShrinkTargetWidthFactor(
+      legacyValue / _legacyImageShrinkReferenceWidthDp,
+    );
   }
 }
