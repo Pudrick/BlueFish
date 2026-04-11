@@ -18,6 +18,8 @@ class AppSettingsStore {
   static const String _replyLocateCoarseProbeStrideKey =
       'settings.reply_locate_coarse_probe_stride';
   static const String _generateJumpLogsKey = 'settings.generate_jump_logs';
+  static const String _defaultCollapseLightedRepliesKey =
+      'settings.default_collapse_lighted_replies';
   static const String _imageSaveDirectoryPathKey =
       'settings.image_save_directory_path';
   static const String _videoSaveDirectoryPathKey =
@@ -67,6 +69,9 @@ class AppSettingsStore {
       generateJumpLogs:
           prefs.getBool(_generateJumpLogsKey) ??
           AppSettings.defaults.generateJumpLogs,
+      defaultCollapseLightedReplies:
+          prefs.getBool(_defaultCollapseLightedRepliesKey) ??
+          AppSettings.defaults.defaultCollapseLightedReplies,
       imageSaveDirectoryPath: prefs.getString(_imageSaveDirectoryPathKey),
       videoSaveDirectoryPath: prefs.getString(_videoSaveDirectoryPathKey),
       apiVersionOverride: prefs.getString(_apiVersionOverrideKey),
@@ -105,6 +110,10 @@ class AppSettingsStore {
       settings.replyLocateCoarseProbeStride,
     );
     await prefs.setBool(_generateJumpLogsKey, settings.generateJumpLogs);
+    await prefs.setBool(
+      _defaultCollapseLightedRepliesKey,
+      settings.defaultCollapseLightedReplies,
+    );
     if (settings.imageSaveDirectoryPath == null) {
       await prefs.remove(_imageSaveDirectoryPathKey);
     } else {
@@ -145,6 +154,7 @@ class AppSettingsStore {
     await prefs.remove(_replyLocateCacheMaxEntriesKey);
     await prefs.remove(_replyLocateCoarseProbeStrideKey);
     await prefs.remove(_generateJumpLogsKey);
+    await prefs.remove(_defaultCollapseLightedRepliesKey);
     await prefs.remove(_imageSaveDirectoryPathKey);
     await prefs.remove(_videoSaveDirectoryPathKey);
     await prefs.remove(_apiVersionOverrideKey);

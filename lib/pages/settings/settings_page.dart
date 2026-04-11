@@ -269,6 +269,18 @@ class SettingsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SettingsSection(
+                title: '阅读',
+                child: _SettingsSwitchTile(
+                  leading: const Icon(Icons.wb_incandescent_outlined),
+                  title: const Text('默认折叠亮回复'),
+                  subtitle: const Text('在帖子详情第 1 页中默认收起亮回复列表。'),
+                  value: settings.defaultCollapseLightedReplies,
+                  onChanged:
+                      settingsViewModel.updateDefaultCollapseLightedReplies,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _SettingsSection(
                 title: '保存',
                 child: Column(
                   children: [
@@ -555,6 +567,44 @@ class _SettingsActionTile extends StatelessWidget {
         subtitle: subtitle,
         trailing: trailing,
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _SettingsSwitchTile extends StatelessWidget {
+  final Widget? leading;
+  final Widget title;
+  final Widget? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingsSwitchTile({
+    this.leading,
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: SwitchListTile.adaptive(
+        shape: shape,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        secondary: leading,
+        title: title,
+        subtitle: subtitle,
+        value: value,
+        onChanged: onChanged,
       ),
     );
   }

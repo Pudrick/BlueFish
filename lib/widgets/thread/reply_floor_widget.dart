@@ -12,6 +12,7 @@ class ReplyFloor extends StatelessWidget {
   final int? floorNumber;
   final double contentMaxWidth;
   final String? imageHeroScope;
+  final String cardKeyPrefix;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
   final VoidCallback? onOnlySeeAuthorTap;
@@ -26,6 +27,7 @@ class ReplyFloor extends StatelessWidget {
     this.floorNumber,
     this.contentMaxWidth = double.infinity,
     this.imageHeroScope,
+    this.cardKeyPrefix = 'reply-floor-card',
     this.onReplyTap,
     this.onReplyChainTap,
     this.onOnlySeeAuthorTap,
@@ -44,6 +46,7 @@ class ReplyFloor extends StatelessWidget {
       showOpBadge: replyFloor.isOp,
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
+      cardKeyPrefix: cardKeyPrefix,
       replyCount: replyFloor.replyNum,
       onReplyTap: onReplyTap,
       onReplyChainTap: onReplyChainTap,
@@ -63,6 +66,7 @@ class _ReplyFloorContent extends StatelessWidget {
   final bool showOpBadge;
   final double contentMaxWidth;
   final String? imageHeroScope;
+  final String cardKeyPrefix;
   final int? replyCount;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
@@ -79,6 +83,7 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.showOpBadge,
     required this.contentMaxWidth,
     required this.imageHeroScope,
+    required this.cardKeyPrefix,
     required this.replyCount,
     required this.onReplyTap,
     required this.onReplyChainTap,
@@ -157,6 +162,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 showOpBadge: content.quote!.isOp,
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
+                cardKeyPrefix: cardKeyPrefix,
                 replyCount: null,
                 onReplyTap: null,
                 onReplyChainTap: null,
@@ -257,7 +263,7 @@ class _ReplyFloorContent extends StatelessWidget {
     }
 
     final Widget card = Card(
-      key: ValueKey('reply-floor-card-${content.pid}'),
+      key: ValueKey('$cardKeyPrefix-${content.pid}'),
       margin: EdgeInsets.zero,
       elevation: 0,
       color: colorScheme.surface,

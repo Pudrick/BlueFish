@@ -1,12 +1,15 @@
 import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
+import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
+import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
 import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
+import 'package:bluefish/widgets/thread/thread_lighted_replies_section.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:bluefish/widgets/thread/page_pill.dart';
@@ -516,6 +519,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         .select<CurrentUserIdentityController, String?>(
           (identity) => identity.currentUserPuid,
         );
+    final defaultCollapseLightedReplies = context
+        .select<AppSettingsViewModel, bool>(
+          (settings) => settings.settings.defaultCollapseLightedReplies,
+        );
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
@@ -696,6 +703,65 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                       mainFloor: data.mainFloor,
                                       contentMaxWidth: contentBodyMaxWidth,
                                     ),
+                                  ),
+                                ),
+
+                              if (viewModel.currentPage == 1 &&
+                                  data.lightedReplies.isNotEmpty)
+                                SliverPadding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: horizontalPadding,
+                                  ),
+                                  sliver: ThreadLightedRepliesSection(
+                                    lightedReplies: data.lightedReplies,
+                                    initiallyCollapsed:
+                                        defaultCollapseLightedReplies,
+                                    contentMaxWidth: contentBodyMaxWidth,
+                                    viewerPuid: currentUserPuid,
+                                    onOnlySeeAuthorTapBuilder: (reply) {
+                                      final identity = reply.meta.author
+                                          .preferredIdentity();
+                                      if (identity == null) {
+                                        return null;
+                                      }
+                                      return () {
+                                        _applyAuthorFilter(identity);
+                                      };
+                                    },
+                                    onReplyTapBuilder: (reply) {
+                                      return () {
+                                        context.pushThreadReplyComposer(
+                                          tid: viewModel.tid,
+                                          pid: reply.pid,
+                                          page: viewModel.currentPage,
+                                          onlyEuid: viewModel.filterEuid,
+                                          onlyPuid: viewModel.filterPuid,
+                                          contextLabel:
+                                              _lightedReplyContextLabel(reply),
+                                          contextPreview:
+                                              _replyContextPreviewFromHtml(
+                                                reply.contentHtml,
+                                              ),
+                                        );
+                                      };
+                                    },
+                                    onReplyChainTapBuilder: (reply) {
+                                      if (reply.replyNum <= 0) {
+                                        return null;
+                                      }
+                                      return () {
+                                        showThreadReplySheet(
+                                          context: context,
+                                          tid: viewModel.tid,
+                                          rootReply: reply,
+                                          rootFloorNumber:
+                                              reply.serverFloorNumber,
+                                          threadPage: viewModel.currentPage,
+                                          onlyEuid: viewModel.filterEuid,
+                                          onlyPuid: viewModel.filterPuid,
+                                        );
+                                      };
+                                    },
                                   ),
                                 ),
 
@@ -1026,4 +1092,12 @@ String _replyContextPreviewFromHtml(String html) {
   }
 
   return '该回复包含图片或其他暂不支持预览的内容。';
+}
+
+String _lightedReplyContextLabel(SingleReplyFloor reply) {
+  final floorNumber = reply.serverFloorNumber;
+  if (floorNumber != null && floorNumber > 0) {
+    return '回复给 $floorNumber 楼 · ${reply.meta.author.name}';
+  }
+  return '回复给亮回复 · ${reply.meta.author.name}';
 }

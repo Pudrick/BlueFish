@@ -52,6 +52,7 @@ class AppSettings {
   static const int maxReplyLocateCoarseProbeStride = 300;
   static const int defaultReplyLocateCoarseProbeStride = 100;
   static const bool defaultGenerateJumpLogs = true;
+  static const bool defaultCollapseLightedRepliesEnabled = false;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
   static const double _imageEdgeStepDp = 10;
   static const Object _unset = Object();
@@ -67,6 +68,7 @@ class AppSettings {
     replyLocateCacheMaxEntries: defaultReplyLocateCacheMaxEntries,
     replyLocateCoarseProbeStride: defaultReplyLocateCoarseProbeStride,
     generateJumpLogs: defaultGenerateJumpLogs,
+    defaultCollapseLightedReplies: defaultCollapseLightedRepliesEnabled,
     imageSaveDirectoryPath: null,
     videoSaveDirectoryPath: null,
     apiVersionOverride: null,
@@ -83,6 +85,7 @@ class AppSettings {
   final int replyLocateCacheMaxEntries;
   final int replyLocateCoarseProbeStride;
   final bool generateJumpLogs;
+  final bool defaultCollapseLightedReplies;
   final String? imageSaveDirectoryPath;
   final String? videoSaveDirectoryPath;
   final String? apiVersionOverride;
@@ -99,6 +102,7 @@ class AppSettings {
     required this.replyLocateCacheMaxEntries,
     required this.replyLocateCoarseProbeStride,
     required this.generateJumpLogs,
+    required this.defaultCollapseLightedReplies,
     required this.imageSaveDirectoryPath,
     required this.videoSaveDirectoryPath,
     required this.apiVersionOverride,
@@ -116,6 +120,8 @@ class AppSettings {
     required int replyLocateCacheMaxEntries,
     required int replyLocateCoarseProbeStride,
     bool generateJumpLogs = defaultGenerateJumpLogs,
+    bool defaultCollapseLightedReplies =
+        AppSettings.defaultCollapseLightedRepliesEnabled,
     String? imageSaveDirectoryPath,
     String? videoSaveDirectoryPath,
     String? apiVersionOverride,
@@ -151,6 +157,7 @@ class AppSettings {
         replyLocateCoarseProbeStride,
       ),
       generateJumpLogs: generateJumpLogs,
+      defaultCollapseLightedReplies: defaultCollapseLightedReplies,
       imageSaveDirectoryPath: _normalizeDirectoryPath(imageSaveDirectoryPath),
       videoSaveDirectoryPath: _normalizeDirectoryPath(videoSaveDirectoryPath),
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
@@ -173,6 +180,7 @@ class AppSettings {
     int? replyLocateCacheMaxEntries,
     int? replyLocateCoarseProbeStride,
     bool? generateJumpLogs,
+    bool? defaultCollapseLightedReplies,
     Object? imageSaveDirectoryPath = _unset,
     Object? videoSaveDirectoryPath = _unset,
     Object? apiVersionOverride = _unset,
@@ -194,6 +202,8 @@ class AppSettings {
       replyLocateCoarseProbeStride:
           replyLocateCoarseProbeStride ?? this.replyLocateCoarseProbeStride,
       generateJumpLogs: generateJumpLogs ?? this.generateJumpLogs,
+      defaultCollapseLightedReplies:
+          defaultCollapseLightedReplies ?? this.defaultCollapseLightedReplies,
       imageSaveDirectoryPath: identical(imageSaveDirectoryPath, _unset)
           ? this.imageSaveDirectoryPath
           : imageSaveDirectoryPath as String?,
@@ -277,6 +287,7 @@ class AppSettings {
         other.replyLocateCacheMaxEntries == replyLocateCacheMaxEntries &&
         other.replyLocateCoarseProbeStride == replyLocateCoarseProbeStride &&
         other.generateJumpLogs == generateJumpLogs &&
+        other.defaultCollapseLightedReplies == defaultCollapseLightedReplies &&
         other.imageSaveDirectoryPath == imageSaveDirectoryPath &&
         other.videoSaveDirectoryPath == videoSaveDirectoryPath &&
         other.apiVersionOverride == apiVersionOverride;
@@ -295,6 +306,7 @@ class AppSettings {
     replyLocateCacheMaxEntries,
     replyLocateCoarseProbeStride,
     generateJumpLogs,
+    defaultCollapseLightedReplies,
     imageSaveDirectoryPath,
     videoSaveDirectoryPath,
     apiVersionOverride,

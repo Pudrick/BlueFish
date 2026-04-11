@@ -136,6 +136,16 @@ class AppSettingsViewModel extends ChangeNotifier {
     );
   }
 
+  Future<void> updateDefaultCollapseLightedReplies(
+    bool defaultCollapseLightedReplies,
+  ) {
+    return _applyAndPersist(
+      _settings.copyWith(
+        defaultCollapseLightedReplies: defaultCollapseLightedReplies,
+      ),
+    );
+  }
+
   Future<void> updateImageSaveDirectoryPath(String? imageSaveDirectoryPath) {
     return _applyAndPersist(
       _settings.copyWith(imageSaveDirectoryPath: imageSaveDirectoryPath),
