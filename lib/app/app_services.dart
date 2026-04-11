@@ -1,9 +1,11 @@
+import 'package:bluefish/data/local/app_database.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/services/media/media_save_service.dart';
 import 'package:bluefish/services/mention/mention_light_service.dart';
 import 'package:bluefish/services/mention/mention_reply_service.dart';
 import 'package:bluefish/services/private_message/private_message_detail_service.dart';
 import 'package:bluefish/services/private_message/private_message_list_service.dart';
+import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
@@ -15,6 +17,8 @@ import 'package:bluefish/services/vote/vote_service.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 
 class AppServices {
+  final AppDatabase appDatabase;
+  final ReplyLightRecordService replyLightRecordService;
   final ReplyPageLocatorCacheService replyPageLocatorCacheService;
   final ThreadDetailService threadDetailService;
   final ReplyPageLocatorService replyPageLocatorService;
@@ -30,6 +34,8 @@ class AppServices {
   final MediaSaveService mediaSaveService;
 
   const AppServices._({
+    required this.appDatabase,
+    required this.replyLightRecordService,
     required this.replyPageLocatorCacheService,
     required this.threadDetailService,
     required this.replyPageLocatorService,
@@ -56,9 +62,14 @@ class AppServices {
       await cacheService.ensureInitialized();
     }
 
+    final appDatabase = AppDatabase();
     final threadDetailService = ThreadDetailService(client: httpClient);
 
     return AppServices._(
+      appDatabase: appDatabase,
+      replyLightRecordService: ReplyLightRecordService(
+        dao: appDatabase.replyLightRecordDao,
+      ),
       replyPageLocatorCacheService: cacheService,
       threadDetailService: threadDetailService,
       replyPageLocatorService: ReplyPageLocatorService(

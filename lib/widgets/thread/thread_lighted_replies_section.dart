@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 class ThreadLightedRepliesSection extends StatefulWidget {
   final List<SingleReplyFloor> lightedReplies;
+  final Set<String> persistedLightedPids;
   final bool initiallyCollapsed;
   final double contentMaxWidth;
   final String? viewerPuid;
@@ -16,6 +17,7 @@ class ThreadLightedRepliesSection extends StatefulWidget {
   const ThreadLightedRepliesSection({
     super.key,
     required this.lightedReplies,
+    this.persistedLightedPids = const <String>{},
     required this.initiallyCollapsed,
     required this.contentMaxWidth,
     this.viewerPuid,
@@ -77,6 +79,9 @@ class _ThreadLightedRepliesSectionState
                       padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
                       child: ReplyFloor(
                         replyFloor: replies[i],
+                        isLightedByViewer: widget.persistedLightedPids.contains(
+                          replies[i].pid,
+                        ),
                         isQuote: false,
                         contentMaxWidth: widget.contentMaxWidth,
                         imageHeroScope:

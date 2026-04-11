@@ -8,6 +8,7 @@ import 'package:bluefish/models/thread/single_reply_floor.dart';
 
 class ReplyFloor extends StatelessWidget {
   final SingleReplyFloor replyFloor;
+  final bool isLightedByViewer;
   final bool isQuote;
   final int? floorNumber;
   final double contentMaxWidth;
@@ -23,6 +24,7 @@ class ReplyFloor extends StatelessWidget {
   const ReplyFloor({
     super.key,
     required this.replyFloor,
+    this.isLightedByViewer = false,
     required this.isQuote,
     this.floorNumber,
     this.contentMaxWidth = double.infinity,
@@ -40,6 +42,7 @@ class ReplyFloor extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ReplyFloorContent(
       content: replyFloor,
+      isLightedByViewer: isLightedByViewer,
       isQuote: isQuote,
       floorNumber: floorNumber ?? replyFloor.serverFloorNumber,
       lightCount: replyFloor.lightCount,
@@ -60,6 +63,7 @@ class ReplyFloor extends StatelessWidget {
 
 class _ReplyFloorContent extends StatelessWidget {
   final ReplyContent content;
+  final bool isLightedByViewer;
   final bool isQuote;
   final int? floorNumber;
   final int? lightCount;
@@ -77,6 +81,7 @@ class _ReplyFloorContent extends StatelessWidget {
 
   const _ReplyFloorContent({
     required this.content,
+    required this.isLightedByViewer,
     required this.isQuote,
     required this.floorNumber,
     required this.lightCount,
@@ -156,6 +161,7 @@ class _ReplyFloorContent extends StatelessWidget {
             child: _QuoteWidget(
               quoteWidget: _ReplyFloorContent(
                 content: content.quote!,
+                isLightedByViewer: false,
                 isQuote: true,
                 floorNumber: null,
                 lightCount: null,
@@ -204,7 +210,9 @@ class _ReplyFloorContent extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: _ReplyActionRow(
+              replyPid: content.pid,
               lightCount: lightCount!,
+              isLightedByViewer: isLightedByViewer,
               replyCount: replyCount ?? 0,
               onLightTap: () {},
               onReplyChainTap: onReplyChainTap,
@@ -607,7 +615,9 @@ class _QuoteWidgetState extends State<_QuoteWidget> {
 }
 
 class _ReplyActionRow extends StatelessWidget {
+  final String replyPid;
   final int lightCount;
+  final bool isLightedByViewer;
   final int replyCount;
   final VoidCallback onLightTap;
   final VoidCallback? onReplyChainTap;
@@ -615,7 +625,9 @@ class _ReplyActionRow extends StatelessWidget {
   final VoidCallback onReplyTap;
 
   const _ReplyActionRow({
+    required this.replyPid,
     required this.lightCount,
+    required this.isLightedByViewer,
     required this.replyCount,
     required this.onLightTap,
     required this.onReplyChainTap,
@@ -627,9 +639,13 @@ class _ReplyActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final compactActions = <Widget>[
       _CountActionChip(
-        icon: Icons.wb_incandescent_outlined,
+        actionKey: ValueKey('reply-light-chip-$replyPid'),
+        icon: isLightedByViewer
+            ? Icons.wb_incandescent
+            : Icons.wb_incandescent_outlined,
         count: lightCount,
-        tooltip: '亮了 $lightCount',
+        isActive: isLightedByViewer,
+        tooltip: isLightedByViewer ? '已点亮 · 亮了 $lightCount' : '亮了 $lightCount',
         onTap: onLightTap,
       ),
       if (replyCount > 0 && onReplyChainTap != null)
@@ -724,14 +740,18 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 class _CountActionChip extends StatelessWidget {
+  final Key? actionKey;
   final IconData icon;
   final int count;
+  final bool isActive;
   final String tooltip;
   final VoidCallback onTap;
 
   const _CountActionChip({
+    this.actionKey,
     required this.icon,
     required this.count,
+    this.isActive = false,
     required this.tooltip,
     required this.onTap,
   });
@@ -740,16 +760,22 @@ class _CountActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final backgroundColor = isActive
+        ? colorScheme.tertiaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final foregroundColor = isActive
+        ? colorScheme.onTertiaryContainer
+        : colorScheme.onSurfaceVariant;
+    final borderColor = isActive
+        ? colorScheme.tertiary.withValues(alpha: 0.22)
+        : colorScheme.outlineVariant.withValues(alpha: 0.38);
 
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: colorScheme.surfaceContainerHighest,
-        shape: StadiumBorder(
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.38),
-          ),
-        ),
+        key: actionKey,
+        color: backgroundColor,
+        shape: StadiumBorder(side: BorderSide(color: borderColor)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -758,12 +784,12 @@ class _CountActionChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+                Icon(icon, size: 16, color: foregroundColor),
                 const SizedBox(width: 6),
                 Text(
                   _formatCompactCount(count),
                   style: textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                    color: foregroundColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

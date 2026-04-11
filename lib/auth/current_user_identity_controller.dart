@@ -14,6 +14,19 @@ class CurrentUserIdentityController extends ChangeNotifier {
   bool get isLoggedIn => _identity.isLoggedIn;
   int? get currentUserEuid => _identity.euid;
   String? get currentUserPuid => _identity.puid;
+  String? get currentActorKey {
+    final puid = _identity.puid?.trim();
+    if (puid != null && puid.isNotEmpty) {
+      return 'puid:$puid';
+    }
+
+    final euid = _identity.euid;
+    if (euid != null) {
+      return 'euid:$euid';
+    }
+
+    return null;
+  }
 
   void update({
     required AuthSessionManager authSessionManager,

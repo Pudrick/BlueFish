@@ -5,12 +5,14 @@ import 'package:bluefish/app/app_session.dart';
 import 'package:bluefish/auth/auth_session_manager.dart';
 import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/auth/current_user_identity_resolver.dart';
+import 'package:bluefish/data/local/app_database.dart';
 import 'package:bluefish/network/http_client.dart';
 import 'package:bluefish/services/media/media_save_service.dart';
 import 'package:bluefish/services/mention/mention_light_service.dart';
 import 'package:bluefish/services/mention/mention_reply_service.dart';
 import 'package:bluefish/services/private_message/private_message_detail_service.dart';
 import 'package:bluefish/services/private_message/private_message_list_service.dart';
+import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
@@ -47,6 +49,10 @@ class AppProviderScope extends StatelessWidget {
           value: appSession.authSessionManager,
         ),
         Provider<AppHttpClient>.value(value: appSession.httpClient),
+        Provider<AppDatabase>.value(value: appServices.appDatabase),
+        Provider<ReplyLightRecordService>.value(
+          value: appServices.replyLightRecordService,
+        ),
         Provider<ReplyPageLocatorCacheService>.value(
           value: appServices.replyPageLocatorCacheService,
         ),

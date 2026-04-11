@@ -3,6 +3,7 @@ import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
@@ -103,6 +104,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   final ScrollController _scrollController = ScrollController();
   String? _lastSyncedLocation;
   String? _pendingTargetPid;
+  String? _persistedLightedRequestKey;
+  Future<Set<String>>? _persistedLightedFuture;
   bool _showScrollToTop = false;
   bool _showScrollToBottom = false;
   bool _quickActionSyncScheduled = false;
@@ -485,6 +488,40 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       );
   }
 
+  void _ensurePersistedLightedFuture({
+    required ReplyLightRecordService replyLightRecordService,
+    required String? actorKey,
+    required String tid,
+    required Set<String> trackedReplyPids,
+  }) {
+    final requestKey = _persistedLightedRequestKeyFor(
+      actorKey: actorKey,
+      tid: tid,
+      trackedReplyPids: trackedReplyPids,
+    );
+    if (_persistedLightedRequestKey == requestKey &&
+        _persistedLightedFuture != null) {
+      return;
+    }
+
+    _persistedLightedRequestKey = requestKey;
+    _persistedLightedFuture = replyLightRecordService.findThreadLightedPids(
+      actorKey: actorKey,
+      tid: tid,
+      pids: trackedReplyPids,
+    );
+  }
+
+  String _persistedLightedRequestKeyFor({
+    required String? actorKey,
+    required String tid,
+    required Set<String> trackedReplyPids,
+  }) {
+    final sortedPids = trackedReplyPids.toList()..sort();
+    final normalizedActorKey = actorKey?.trim() ?? '';
+    return '$normalizedActorKey|$tid|${sortedPids.join(',')}';
+  }
+
   @override
   void dispose() {
     _scrollController.removeListener(_handleScrollPositionChanged);
@@ -519,10 +556,15 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         .select<CurrentUserIdentityController, String?>(
           (identity) => identity.currentUserPuid,
         );
+    final currentActorKey = context
+        .select<CurrentUserIdentityController, String?>(
+          (identity) => identity.currentActorKey,
+        );
     final defaultCollapseLightedReplies = context
         .select<AppSettingsViewModel, bool>(
           (settings) => settings.settings.defaultCollapseLightedReplies,
         );
+    final replyLightRecordService = context.read<ReplyLightRecordService>();
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
@@ -594,405 +636,440 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         final bool canPrev = viewModel.canGoPrev;
         final bool canNext = viewModel.canGoNext;
         final activeFilterLabel = _resolveActiveFilterLabel(viewModel, data);
+        final trackedReplyPids = _trackedReplyPids(
+          currentPage: viewModel.currentPage,
+          data: data,
+        );
+        _ensurePersistedLightedFuture(
+          replyLightRecordService: replyLightRecordService,
+          actorKey: currentActorKey,
+          tid: viewModel.tid,
+          trackedReplyPids: trackedReplyPids,
+        );
 
-        return Scaffold(
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              final double horizontalPadding = constraints.maxWidth >= 720
-                  ? 16
-                  : 12;
-              final double contentBodyMaxWidth = _contentBodyMaxWidth(
-                constraints.maxWidth,
-              );
+        return FutureBuilder<Set<String>>(
+          key: ValueKey<String>(
+            'persisted-lighted-${_persistedLightedRequestKey ?? ''}',
+          ),
+          initialData: const <String>{},
+          future: _persistedLightedFuture,
+          builder: (context, lightedPidsSnapshot) {
+            final persistedLightedPids =
+                lightedPidsSnapshot.data ?? const <String>{};
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  SafeArea(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: _pageMaxWidth(constraints.maxWidth),
-                        ),
-                        child: RefreshIndicator(
-                          onRefresh: viewModel.refresh,
-                          child: CustomScrollView(
-                            controller: _scrollController,
-                            physics: const AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics(),
+            return Scaffold(
+              body: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double horizontalPadding = constraints.maxWidth >= 720
+                      ? 16
+                      : 12;
+                  final double contentBodyMaxWidth = _contentBodyMaxWidth(
+                    constraints.maxWidth,
+                  );
+
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      SafeArea(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: _pageMaxWidth(constraints.maxWidth),
                             ),
-                            slivers: [
-                              SliverPersistentHeader(
-                                delegate: StickyHeaderDelegate(
-                                  height: viewModel.totalPages > 1 ? 76 : 64,
-                                  child: ThreadTitleWidget(
-                                    title: data.mainFloor.title,
-                                    currentPage: viewModel.currentPage,
-                                    totalPages: viewModel.totalPages,
-                                    onBack: _handleBack,
-                                  ),
+                            child: RefreshIndicator(
+                              onRefresh: viewModel.refresh,
+                              child: CustomScrollView(
+                                controller: _scrollController,
+                                physics: const AlwaysScrollableScrollPhysics(
+                                  parent: BouncingScrollPhysics(),
                                 ),
-                                pinned: true,
-                              ),
-
-                              if (viewModel.hasAuthorFilter)
-                                SliverPadding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    horizontalPadding,
-                                    8,
-                                    horizontalPadding,
-                                    0,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: _ThreadAuthorFilterBanner(
-                                      label: activeFilterLabel,
-                                      onClearTap: () {
-                                        _clearAuthorFilter();
-                                      },
+                                slivers: [
+                                  SliverPersistentHeader(
+                                    delegate: StickyHeaderDelegate(
+                                      height: viewModel.totalPages > 1
+                                          ? 76
+                                          : 64,
+                                      child: ThreadTitleWidget(
+                                        title: data.mainFloor.title,
+                                        currentPage: viewModel.currentPage,
+                                        totalPages: viewModel.totalPages,
+                                        onBack: _handleBack,
+                                      ),
                                     ),
+                                    pinned: true,
                                   ),
-                                ),
 
-                              if (viewModel.totalPages >= 1)
-                                SliverPadding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    horizontalPadding,
-                                    8,
-                                    horizontalPadding,
-                                    0,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: ThreadPaginationBar(
-                                      currentPage: viewModel.currentPage,
-                                      totalPages: viewModel.totalPages,
-                                      firstButtonLabel: '跳至首页',
-                                      lastButtonLabel: '跳至末页',
-                                      onFirst: canPrev
-                                          ? () => _jumpToPage(1)
-                                          : null,
-                                      onPrev: canPrev
-                                          ? () => _jumpToPage(
-                                              viewModel.currentPage - 1,
-                                            )
-                                          : null,
-                                      onNext: canNext
-                                          ? () => _jumpToPage(
-                                              viewModel.currentPage + 1,
-                                            )
-                                          : null,
-                                      onLast: canNext
-                                          ? () => _jumpToPage(
-                                              viewModel.totalPages,
-                                            )
-                                          : null,
+                                  if (viewModel.hasAuthorFilter)
+                                    SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        horizontalPadding,
+                                        8,
+                                        horizontalPadding,
+                                        0,
+                                      ),
+                                      sliver: SliverToBoxAdapter(
+                                        child: _ThreadAuthorFilterBanner(
+                                          label: activeFilterLabel,
+                                          onClearTap: () {
+                                            _clearAuthorFilter();
+                                          },
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
 
-                              if (viewModel.currentPage == 1)
-                                SliverPadding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    horizontalPadding,
-                                    4,
-                                    horizontalPadding,
-                                    0,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: ThreadMainFloorWidget(
-                                      mainFloor: data.mainFloor,
-                                      contentMaxWidth: contentBodyMaxWidth,
-                                    ),
-                                  ),
-                                ),
-
-                              if (viewModel.currentPage == 1 &&
-                                  data.lightedReplies.isNotEmpty)
-                                SliverPadding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: horizontalPadding,
-                                  ),
-                                  sliver: ThreadLightedRepliesSection(
-                                    lightedReplies: data.lightedReplies,
-                                    initiallyCollapsed:
-                                        defaultCollapseLightedReplies,
-                                    contentMaxWidth: contentBodyMaxWidth,
-                                    viewerPuid: currentUserPuid,
-                                    onOnlySeeAuthorTapBuilder: (reply) {
-                                      final identity = reply.meta.author
-                                          .preferredIdentity();
-                                      if (identity == null) {
-                                        return null;
-                                      }
-                                      return () {
-                                        _applyAuthorFilter(identity);
-                                      };
-                                    },
-                                    onReplyTapBuilder: (reply) {
-                                      return () {
-                                        context.pushThreadReplyComposer(
-                                          tid: viewModel.tid,
-                                          pid: reply.pid,
-                                          page: viewModel.currentPage,
-                                          onlyEuid: viewModel.filterEuid,
-                                          onlyPuid: viewModel.filterPuid,
-                                          contextLabel:
-                                              _lightedReplyContextLabel(reply),
-                                          contextPreview:
-                                              _replyContextPreviewFromHtml(
-                                                reply.contentHtml,
-                                              ),
-                                        );
-                                      };
-                                    },
-                                    onReplyChainTapBuilder: (reply) {
-                                      if (reply.replyNum <= 0) {
-                                        return null;
-                                      }
-                                      return () {
-                                        showThreadReplySheet(
-                                          context: context,
-                                          tid: viewModel.tid,
-                                          rootReply: reply,
-                                          rootFloorNumber:
-                                              reply.serverFloorNumber,
-                                          threadPage: viewModel.currentPage,
-                                          onlyEuid: viewModel.filterEuid,
-                                          onlyPuid: viewModel.filterPuid,
-                                        );
-                                      };
-                                    },
-                                  ),
-                                ),
-
-                              SliverPadding(
-                                padding: EdgeInsets.fromLTRB(
-                                  horizontalPadding,
-                                  8,
-                                  horizontalPadding,
-                                  0,
-                                ),
-                                sliver: SliverList(
-                                  delegate: SliverChildBuilderDelegate((
-                                    context,
-                                    index,
-                                  ) {
-                                    final reply = data.replies[index];
-                                    final displayFloorNumber = reply
-                                        .resolveFloorNumber(
+                                  if (viewModel.totalPages >= 1)
+                                    SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        horizontalPadding,
+                                        8,
+                                        horizontalPadding,
+                                        0,
+                                      ),
+                                      sliver: SliverToBoxAdapter(
+                                        child: ThreadPaginationBar(
                                           currentPage: viewModel.currentPage,
-                                          repliesPerPage:
-                                              viewModel.repliesPerPage,
-                                          indexInPage: index,
-                                        );
-
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 10,
+                                          totalPages: viewModel.totalPages,
+                                          firstButtonLabel: '跳至首页',
+                                          lastButtonLabel: '跳至末页',
+                                          onFirst: canPrev
+                                              ? () => _jumpToPage(1)
+                                              : null,
+                                          onPrev: canPrev
+                                              ? () => _jumpToPage(
+                                                  viewModel.currentPage - 1,
+                                                )
+                                              : null,
+                                          onNext: canNext
+                                              ? () => _jumpToPage(
+                                                  viewModel.currentPage + 1,
+                                                )
+                                              : null,
+                                          onLast: canNext
+                                              ? () => _jumpToPage(
+                                                  viewModel.totalPages,
+                                                )
+                                              : null,
+                                        ),
                                       ),
-                                      child: ReplyFloor(
-                                        replyFloor: reply,
-                                        isQuote: false,
-                                        viewerPuid: currentUserPuid,
-                                        floorNumber: displayFloorNumber,
+                                    ),
+
+                                  if (viewModel.currentPage == 1)
+                                    SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        horizontalPadding,
+                                        4,
+                                        horizontalPadding,
+                                        0,
+                                      ),
+                                      sliver: SliverToBoxAdapter(
+                                        child: ThreadMainFloorWidget(
+                                          mainFloor: data.mainFloor,
+                                          contentMaxWidth: contentBodyMaxWidth,
+                                        ),
+                                      ),
+                                    ),
+
+                                  if (viewModel.currentPage == 1 &&
+                                      data.lightedReplies.isNotEmpty)
+                                    SliverPadding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: horizontalPadding,
+                                      ),
+                                      sliver: ThreadLightedRepliesSection(
+                                        lightedReplies: data.lightedReplies,
+                                        persistedLightedPids:
+                                            persistedLightedPids,
+                                        initiallyCollapsed:
+                                            defaultCollapseLightedReplies,
                                         contentMaxWidth: contentBodyMaxWidth,
-                                        onOnlySeeAuthorTap:
-                                            reply.meta.author
-                                                    .preferredIdentity() ==
-                                                null
-                                            ? null
-                                            : () {
-                                                _applyAuthorFilter(
-                                                  reply.meta.author
-                                                      .preferredIdentity()!,
-                                                );
-                                              },
-                                        onReplyTap: () {
-                                          context.pushThreadReplyComposer(
-                                            tid: viewModel.tid,
-                                            pid: reply.pid,
-                                            page: viewModel.currentPage,
-                                            onlyEuid: viewModel.filterEuid,
-                                            onlyPuid: viewModel.filterPuid,
-                                            contextLabel:
-                                                '回复给 $displayFloorNumber 楼 · ${reply.meta.author.name}',
-                                            contextPreview:
-                                                _replyContextPreviewFromHtml(
-                                                  reply.contentHtml,
-                                                ),
-                                          );
+                                        viewerPuid: currentUserPuid,
+                                        onOnlySeeAuthorTapBuilder: (reply) {
+                                          final identity = reply.meta.author
+                                              .preferredIdentity();
+                                          if (identity == null) {
+                                            return null;
+                                          }
+                                          return () {
+                                            _applyAuthorFilter(identity);
+                                          };
                                         },
-                                        onReplyChainTap: reply.replyNum > 0
-                                            ? () {
-                                                showThreadReplySheet(
-                                                  context: context,
-                                                  tid: viewModel.tid,
-                                                  rootReply: reply,
-                                                  rootFloorNumber:
-                                                      displayFloorNumber,
-                                                  threadPage:
-                                                      viewModel.currentPage,
-                                                  onlyEuid:
-                                                      viewModel.filterEuid,
-                                                  onlyPuid:
-                                                      viewModel.filterPuid,
-                                                );
-                                              }
-                                            : null,
+                                        onReplyTapBuilder: (reply) {
+                                          return () {
+                                            context.pushThreadReplyComposer(
+                                              tid: viewModel.tid,
+                                              pid: reply.pid,
+                                              page: viewModel.currentPage,
+                                              onlyEuid: viewModel.filterEuid,
+                                              onlyPuid: viewModel.filterPuid,
+                                              contextLabel:
+                                                  _lightedReplyContextLabel(
+                                                    reply,
+                                                  ),
+                                              contextPreview:
+                                                  _replyContextPreviewFromHtml(
+                                                    reply.contentHtml,
+                                                  ),
+                                            );
+                                          };
+                                        },
+                                        onReplyChainTapBuilder: (reply) {
+                                          if (reply.replyNum <= 0) {
+                                            return null;
+                                          }
+                                          return () {
+                                            showThreadReplySheet(
+                                              context: context,
+                                              tid: viewModel.tid,
+                                              rootReply: reply,
+                                              rootFloorNumber:
+                                                  reply.serverFloorNumber,
+                                              threadPage: viewModel.currentPage,
+                                              onlyEuid: viewModel.filterEuid,
+                                              onlyPuid: viewModel.filterPuid,
+                                            );
+                                          };
+                                        },
                                       ),
-                                    );
-                                  }, childCount: data.replies.length),
-                                ),
-                              ),
+                                    ),
 
-                              if (viewModel.totalPages >= 1)
-                                SliverPadding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    horizontalPadding,
-                                    4,
-                                    horizontalPadding,
-                                    0,
-                                  ),
-                                  sliver: SliverToBoxAdapter(
-                                    child: ThreadPaginationBar(
-                                      currentPage: viewModel.currentPage,
-                                      totalPages: viewModel.totalPages,
-                                      firstButtonLabel: '跳至首页',
-                                      lastButtonLabel: '跳至末页',
-                                      onFirst: canPrev
-                                          ? () => _jumpToPage(1)
-                                          : null,
-                                      onPrev: canPrev
-                                          ? () => _jumpToPage(
-                                              viewModel.currentPage - 1,
-                                            )
-                                          : null,
-                                      onNext: canNext
-                                          ? () => _jumpToPage(
-                                              viewModel.currentPage + 1,
-                                            )
-                                          : null,
-                                      onLast: canNext
-                                          ? () => _jumpToPage(
-                                              viewModel.totalPages,
-                                            )
-                                          : null,
+                                  SliverPadding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      horizontalPadding,
+                                      8,
+                                      horizontalPadding,
+                                      0,
+                                    ),
+                                    sliver: SliverList(
+                                      delegate: SliverChildBuilderDelegate((
+                                        context,
+                                        index,
+                                      ) {
+                                        final reply = data.replies[index];
+                                        final displayFloorNumber = reply
+                                            .resolveFloorNumber(
+                                              currentPage:
+                                                  viewModel.currentPage,
+                                              repliesPerPage:
+                                                  viewModel.repliesPerPage,
+                                              indexInPage: index,
+                                            );
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 10,
+                                          ),
+                                          child: ReplyFloor(
+                                            replyFloor: reply,
+                                            isLightedByViewer:
+                                                persistedLightedPids.contains(
+                                                  reply.pid,
+                                                ),
+                                            isQuote: false,
+                                            viewerPuid: currentUserPuid,
+                                            floorNumber: displayFloorNumber,
+                                            contentMaxWidth:
+                                                contentBodyMaxWidth,
+                                            onOnlySeeAuthorTap:
+                                                reply.meta.author
+                                                        .preferredIdentity() ==
+                                                    null
+                                                ? null
+                                                : () {
+                                                    _applyAuthorFilter(
+                                                      reply.meta.author
+                                                          .preferredIdentity()!,
+                                                    );
+                                                  },
+                                            onReplyTap: () {
+                                              context.pushThreadReplyComposer(
+                                                tid: viewModel.tid,
+                                                pid: reply.pid,
+                                                page: viewModel.currentPage,
+                                                onlyEuid: viewModel.filterEuid,
+                                                onlyPuid: viewModel.filterPuid,
+                                                contextLabel:
+                                                    '回复给 $displayFloorNumber 楼 · ${reply.meta.author.name}',
+                                                contextPreview:
+                                                    _replyContextPreviewFromHtml(
+                                                      reply.contentHtml,
+                                                    ),
+                                              );
+                                            },
+                                            onReplyChainTap: reply.replyNum > 0
+                                                ? () {
+                                                    showThreadReplySheet(
+                                                      context: context,
+                                                      tid: viewModel.tid,
+                                                      rootReply: reply,
+                                                      rootFloorNumber:
+                                                          displayFloorNumber,
+                                                      threadPage:
+                                                          viewModel.currentPage,
+                                                      onlyEuid:
+                                                          viewModel.filterEuid,
+                                                      onlyPuid:
+                                                          viewModel.filterPuid,
+                                                    );
+                                                  }
+                                                : null,
+                                          ),
+                                        );
+                                      }, childCount: data.replies.length),
                                     ),
                                   ),
-                                ),
 
-                              const SliverToBoxAdapter(
-                                child: SizedBox(height: 68),
+                                  if (viewModel.totalPages >= 1)
+                                    SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        horizontalPadding,
+                                        4,
+                                        horizontalPadding,
+                                        0,
+                                      ),
+                                      sliver: SliverToBoxAdapter(
+                                        child: ThreadPaginationBar(
+                                          currentPage: viewModel.currentPage,
+                                          totalPages: viewModel.totalPages,
+                                          firstButtonLabel: '跳至首页',
+                                          lastButtonLabel: '跳至末页',
+                                          onFirst: canPrev
+                                              ? () => _jumpToPage(1)
+                                              : null,
+                                          onPrev: canPrev
+                                              ? () => _jumpToPage(
+                                                  viewModel.currentPage - 1,
+                                                )
+                                              : null,
+                                          onNext: canNext
+                                              ? () => _jumpToPage(
+                                                  viewModel.currentPage + 1,
+                                                )
+                                              : null,
+                                          onLast: canNext
+                                              ? () => _jumpToPage(
+                                                  viewModel.totalPages,
+                                                )
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+
+                                  const SliverToBoxAdapter(
+                                    child: SizedBox(height: 68),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: PagePill(
-                        currentPage: viewModel.currentPage,
-                        totalPages: viewModel.totalPages,
-                        onPageTap: () {
-                          showPageMenu(
-                            context: context,
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: PagePill(
                             currentPage: viewModel.currentPage,
                             totalPages: viewModel.totalPages,
-                            onPageSelected: (int selectedPage) {
-                              _jumpToPage(selectedPage);
+                            onPageTap: () {
+                              showPageMenu(
+                                context: context,
+                                currentPage: viewModel.currentPage,
+                                totalPages: viewModel.totalPages,
+                                onPageSelected: (int selectedPage) {
+                                  _jumpToPage(selectedPage);
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  // Loading overlay when switching pages
-                  if (viewModel.isLoading && viewModel.data != null)
-                    Container(
-                      color: colorScheme.surface.withAlpha(180),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: colorScheme.primary,
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              );
-            },
-          ),
+                      // Loading overlay when switching pages
+                      if (viewModel.isLoading && viewModel.data != null)
+                        Container(
+                          color: colorScheme.surface.withAlpha(180),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
 
-          bottomNavigationBar: ThreadBottomBar(
-            hasRecommended: true,
-            hasFavorated: false,
-            threadTid: viewModel.tid,
-            threadTitle: data.mainFloor.title,
-            isOnlyOpMode: viewModel.isOnlyOp,
-            onOnlyOpTap: () {
-              if (viewModel.isOnlyOp) {
-                _clearAuthorFilter();
-                return;
-              }
-              final opIdentity = data.mainFloor.meta.author.preferredIdentity();
-              if (opIdentity == null) {
-                return;
-              }
-              _applyAuthorFilter(opIdentity);
-            },
-          ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildAnimatedQuickScrollFab(
-                  visible: _showScrollToTop,
-                  heroTag: 'thread_detail_scroll_top_fab',
-                  onPressed: _scrollToTopIfNeeded,
-                  tooltip: '滑至顶部',
-                  icon: Icons.keyboard_double_arrow_up_rounded,
-                ),
-                _buildAnimatedQuickScrollFab(
-                  visible: _showScrollToBottom,
-                  heroTag: 'thread_detail_scroll_bottom_fab',
-                  onPressed: _scrollToBottomIfNeeded,
-                  tooltip: '滑至底部',
-                  icon: Icons.keyboard_double_arrow_down_rounded,
-                ),
-                if (_showScrollToTop || _showScrollToBottom)
-                  const SizedBox(height: 4),
-                FloatingActionButton(
-                  heroTag: 'thread_detail_reply_fab',
-                  onPressed: () {
-                    showReplyComposerSheet(
-                      context: context,
-                      title: '发送回复',
-                      contextLabel: '当前帖子',
-                      contextPreview: data.mainFloor.title,
-                      onSubmit: (draft) async {
-                        if (!draft.hasPublishableContent) {
-                          return;
-                        }
-                        // TODO: Implement reply submission
-                        // After successful submission:
-                        // viewModel.invalidateCache();
-                        // viewModel.refresh();
+              bottomNavigationBar: ThreadBottomBar(
+                hasRecommended: true,
+                hasFavorated: false,
+                threadTid: viewModel.tid,
+                threadTitle: data.mainFloor.title,
+                isOnlyOpMode: viewModel.isOnlyOp,
+                onOnlyOpTap: () {
+                  if (viewModel.isOnlyOp) {
+                    _clearAuthorFilter();
+                    return;
+                  }
+                  final opIdentity = data.mainFloor.meta.author
+                      .preferredIdentity();
+                  if (opIdentity == null) {
+                    return;
+                  }
+                  _applyAuthorFilter(opIdentity);
+                },
+              ),
+              floatingActionButton: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildAnimatedQuickScrollFab(
+                      visible: _showScrollToTop,
+                      heroTag: 'thread_detail_scroll_top_fab',
+                      onPressed: _scrollToTopIfNeeded,
+                      tooltip: '滑至顶部',
+                      icon: Icons.keyboard_double_arrow_up_rounded,
+                    ),
+                    _buildAnimatedQuickScrollFab(
+                      visible: _showScrollToBottom,
+                      heroTag: 'thread_detail_scroll_bottom_fab',
+                      onPressed: _scrollToBottomIfNeeded,
+                      tooltip: '滑至底部',
+                      icon: Icons.keyboard_double_arrow_down_rounded,
+                    ),
+                    if (_showScrollToTop || _showScrollToBottom)
+                      const SizedBox(height: 4),
+                    FloatingActionButton(
+                      heroTag: 'thread_detail_reply_fab',
+                      onPressed: () {
+                        showReplyComposerSheet(
+                          context: context,
+                          title: '发送回复',
+                          contextLabel: '当前帖子',
+                          contextPreview: data.mainFloor.title,
+                          onSubmit: (draft) async {
+                            if (!draft.hasPublishableContent) {
+                              return;
+                            }
+                            // TODO: Implement reply submission
+                            // After successful submission:
+                            // viewModel.invalidateCache();
+                            // viewModel.refresh();
+                          },
+                        );
                       },
-                    );
-                  },
-                  tooltip: '发送回复',
-                  elevation: 0,
-                  child: const Icon(Icons.edit_outlined, size: 20),
+                      tooltip: '发送回复',
+                      elevation: 0,
+                      child: const Icon(Icons.edit_outlined, size: 20),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.endContained,
+              ),
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.endContained,
+            );
+          },
         );
       },
     );
@@ -1100,4 +1177,15 @@ String _lightedReplyContextLabel(SingleReplyFloor reply) {
     return '回复给 $floorNumber 楼 · ${reply.meta.author.name}';
   }
   return '回复给亮回复 · ${reply.meta.author.name}';
+}
+
+Set<String> _trackedReplyPids({
+  required int currentPage,
+  required ThreadDetail data,
+}) {
+  final trackedPids = <String>{for (final reply in data.replies) reply.pid};
+  if (currentPage == 1) {
+    trackedPids.addAll(data.lightedReplies.map((reply) => reply.pid));
+  }
+  return trackedPids;
 }
