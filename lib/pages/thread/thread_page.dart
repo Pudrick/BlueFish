@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
@@ -6,10 +8,14 @@ import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/services/thread/reply_light_action_service.dart';
 import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
+import 'package:bluefish/services/thread/thread_gift_service.dart';
+import 'package:bluefish/utils/result.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
 import 'package:bluefish/widgets/composer/reply_composer_sheet.dart';
 import 'package:bluefish/widgets/common/fullscreen_feedback_scaffold.dart';
+import 'package:bluefish/widgets/thread/reply_gift_sheet.dart';
+import 'package:bluefish/widgets/thread/reply_received_gift_sheet.dart';
 import 'package:bluefish/widgets/thread/thread_bottom_bar.dart';
 import 'package:bluefish/widgets/thread/thread_lighted_replies_section.dart';
 import 'package:bluefish/widgets/thread/thread_main_widget.dart';
@@ -106,6 +112,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   final Map<String, bool> _lightStateOverrides = <String, bool>{};
   final Set<String> _lightingReplyPids = <String>{};
   final Map<String, int> _lightCountOverrides = <String, int>{};
+  final Map<String, int> _giftTotalOverrides = <String, int>{};
+  final Set<String> _refreshingGiftTotalPids = <String>{};
   String? _lastSyncedLocation;
   String? _pendingTargetPid;
   String? _persistedLightedRequestKey;
@@ -122,6 +130,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   );
   static const int _maxTargetLocateAttempts = 5;
   static const double _targetReplyAlignment = 0.04;
+  static const String _giftTotalPlaceholder = '--';
+  static const int _giftTotalRefreshPageSize = 20;
 
   @override
   void initState() {
@@ -535,6 +545,127 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     return _lightCountOverrides[reply.pid] ?? reply.lightCount;
   }
 
+  String _effectiveGiftTotalDisplayText(SingleReplyFloor reply) {
+    final total = _giftTotalOverrides[reply.pid];
+    if (total == null) {
+      return _giftTotalPlaceholder;
+    }
+    return '${total < 0 ? 0 : total}';
+  }
+
+  bool _isReplyGiftTotalRefreshing(String pid) {
+    return _refreshingGiftTotalPids.contains(pid);
+  }
+
+  Future<void> _handleReplyGiftTotalRefreshTap({
+    required SingleReplyFloor reply,
+    required String tid,
+    required ThreadGiftService threadGiftService,
+  }) async {
+    if (_refreshingGiftTotalPids.contains(reply.pid)) {
+      return;
+    }
+
+    setState(() {
+      _refreshingGiftTotalPids.add(reply.pid);
+    });
+
+    int? refreshedTotal;
+    String? failureMessage;
+
+    try {
+      final result = await threadGiftService.getThreadGiftDetailList(
+        tid: tid,
+        pid: reply.pid,
+        page: 1,
+        pageSize: _giftTotalRefreshPageSize,
+      );
+      if (!mounted) {
+        return;
+      }
+
+      result.when(
+        success: (pageData) {
+          refreshedTotal = pageData.total < 0 ? 0 : pageData.total;
+        },
+        failure: (message, exception) {
+          final normalized = message.trim();
+          failureMessage = normalized.isEmpty
+              ? '收到礼物列表加载失败，请稍后重试。'
+              : normalized;
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _refreshingGiftTotalPids.remove(reply.pid);
+          if (refreshedTotal != null) {
+            _giftTotalOverrides[reply.pid] = refreshedTotal!;
+          }
+        });
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (failureMessage != null) {
+      _showTransientSnackBar(failureMessage!);
+    }
+  }
+
+  Future<void> _handleReplyGiftTap({
+    required SingleReplyFloor reply,
+    required String tid,
+    required String? currentUserPuid,
+    required ThreadGiftService threadGiftService,
+  }) async {
+    final errorMessage = await showReplyGiftBottomSheetForReply(
+      context: context,
+      reply: reply,
+      threadGiftService: threadGiftService,
+      onGiftTap: (targetReply, gift) {
+        final normalizedCurrentUserPuid = currentUserPuid?.trim();
+        if (normalizedCurrentUserPuid == null ||
+            normalizedCurrentUserPuid.isEmpty) {
+          return Future<Result<String>>.value(
+            const Failure<String>('请先登录后再送礼'),
+          );
+        }
+
+        final receiverPuid = targetReply.meta.author.puid.trim();
+        if (receiverPuid.isEmpty) {
+          return Future<Result<String>>.value(
+            const Failure<String>('目标用户信息异常，暂时无法送礼'),
+          );
+        }
+
+        return threadGiftService.giveGift(
+          giftId: gift.giftId,
+          givePuid: normalizedCurrentUserPuid,
+          pid: targetReply.pid,
+          receivePuid: receiverPuid,
+          tid: tid,
+        );
+      },
+      onViewReceivedGiftsTap: (targetReply) {
+        unawaited(
+          showReplyReceivedGiftDetailSheet(
+            context: context,
+            threadGiftService: threadGiftService,
+            tid: tid,
+            pid: targetReply.pid,
+          ),
+        );
+      },
+    );
+    if (!mounted || errorMessage == null || errorMessage.isEmpty) {
+      return;
+    }
+    _showTransientSnackBar(errorMessage);
+  }
+
   VoidCallback? _buildReplyLightTapCallback({
     required SingleReplyFloor reply,
     required Set<String> persistedLightedPids,
@@ -834,6 +965,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         );
     final replyLightActionService = context.read<ReplyLightActionService>();
     final replyLightRecordService = context.read<ReplyLightRecordService>();
+    final threadGiftService = context.read<ThreadGiftService>();
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
@@ -1074,6 +1206,42 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                             currentUserPuid: currentUserPuid,
                                           );
                                         },
+                                        onGiftTapBuilder: (reply) {
+                                          return () {
+                                            unawaited(
+                                              _handleReplyGiftTap(
+                                                reply: reply,
+                                                tid: viewModel.tid,
+                                                currentUserPuid:
+                                                    currentUserPuid,
+                                                threadGiftService:
+                                                    threadGiftService,
+                                              ),
+                                            );
+                                          };
+                                        },
+                                        giftTotalDisplayTextBuilder: (reply) {
+                                          return _effectiveGiftTotalDisplayText(
+                                            reply,
+                                          );
+                                        },
+                                        isGiftTotalRefreshingBuilder: (reply) {
+                                          return _isReplyGiftTotalRefreshing(
+                                            reply.pid,
+                                          );
+                                        },
+                                        onGiftRefreshTapBuilder: (reply) {
+                                          return () {
+                                            unawaited(
+                                              _handleReplyGiftTotalRefreshTap(
+                                                reply: reply,
+                                                tid: viewModel.tid,
+                                                threadGiftService:
+                                                    threadGiftService,
+                                              ),
+                                            );
+                                          };
+                                        },
                                         onOnlySeeAuthorTapBuilder: (reply) {
                                           final identity = reply.meta.author
                                               .preferredIdentity();
@@ -1162,10 +1330,40 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                             isQuote: false,
                                             lightCountOverride:
                                                 _lightCountOverrides[reply.pid],
+                                            giftTotalDisplayText:
+                                                _effectiveGiftTotalDisplayText(
+                                                  reply,
+                                                ),
+                                            isGiftTotalRefreshing:
+                                                _isReplyGiftTotalRefreshing(
+                                                  reply.pid,
+                                                ),
                                             viewerPuid: currentUserPuid,
                                             floorNumber: displayFloorNumber,
                                             contentMaxWidth:
                                                 contentBodyMaxWidth,
+                                            onGiftTap: () {
+                                              unawaited(
+                                                _handleReplyGiftTap(
+                                                  reply: reply,
+                                                  tid: viewModel.tid,
+                                                  currentUserPuid:
+                                                      currentUserPuid,
+                                                  threadGiftService:
+                                                      threadGiftService,
+                                                ),
+                                              );
+                                            },
+                                            onGiftRefreshTap: () {
+                                              unawaited(
+                                                _handleReplyGiftTotalRefreshTap(
+                                                  reply: reply,
+                                                  tid: viewModel.tid,
+                                                  threadGiftService:
+                                                      threadGiftService,
+                                                ),
+                                              );
+                                            },
                                             onLightTap:
                                                 _buildReplyLightTapCallback(
                                                   reply: reply,

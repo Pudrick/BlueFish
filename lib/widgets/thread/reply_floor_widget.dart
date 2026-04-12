@@ -13,12 +13,16 @@ class ReplyFloor extends StatelessWidget {
   final bool isQuote;
   final int? floorNumber;
   final int? lightCountOverride;
+  final String? giftTotalDisplayText;
+  final bool isGiftTotalRefreshing;
+  final VoidCallback? onGiftRefreshTap;
   final double contentMaxWidth;
   final String? imageHeroScope;
   final String cardKeyPrefix;
   final VoidCallback? onLightTap;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
+  final VoidCallback? onGiftTap;
   final VoidCallback? onOnlySeeAuthorTap;
   final bool showActionRow;
   final bool showOverflowAction;
@@ -38,10 +42,14 @@ class ReplyFloor extends StatelessWidget {
     this.onLightTap,
     this.onReplyTap,
     this.onReplyChainTap,
+    this.onGiftTap,
     this.onOnlySeeAuthorTap,
     this.showActionRow = true,
     this.showOverflowAction = true,
     this.viewerPuid,
+    this.giftTotalDisplayText,
+    this.isGiftTotalRefreshing = false,
+    this.onGiftRefreshTap,
   });
 
   @override
@@ -53,6 +61,9 @@ class ReplyFloor extends StatelessWidget {
       isQuote: isQuote,
       floorNumber: floorNumber ?? replyFloor.serverFloorNumber,
       lightCount: lightCountOverride ?? replyFloor.lightCount,
+      giftTotalDisplayText: giftTotalDisplayText,
+      isGiftTotalRefreshing: isGiftTotalRefreshing,
+      onGiftRefreshTap: onGiftRefreshTap,
       showOpBadge: replyFloor.isOp,
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
@@ -61,6 +72,7 @@ class ReplyFloor extends StatelessWidget {
       replyCount: replyFloor.replyNum,
       onReplyTap: onReplyTap,
       onReplyChainTap: onReplyChainTap,
+      onGiftTap: onGiftTap,
       onOnlySeeAuthorTap: onOnlySeeAuthorTap,
       showActionRow: showActionRow,
       showOverflowAction: showOverflowAction,
@@ -76,6 +88,9 @@ class _ReplyFloorContent extends StatelessWidget {
   final bool isQuote;
   final int? floorNumber;
   final int? lightCount;
+  final String? giftTotalDisplayText;
+  final bool isGiftTotalRefreshing;
+  final VoidCallback? onGiftRefreshTap;
   final bool showOpBadge;
   final double contentMaxWidth;
   final String? imageHeroScope;
@@ -84,6 +99,7 @@ class _ReplyFloorContent extends StatelessWidget {
   final int? replyCount;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
+  final VoidCallback? onGiftTap;
   final VoidCallback? onOnlySeeAuthorTap;
   final bool showActionRow;
   final bool showOverflowAction;
@@ -96,6 +112,9 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.isQuote,
     required this.floorNumber,
     required this.lightCount,
+    required this.giftTotalDisplayText,
+    required this.isGiftTotalRefreshing,
+    required this.onGiftRefreshTap,
     required this.showOpBadge,
     required this.contentMaxWidth,
     required this.imageHeroScope,
@@ -104,6 +123,7 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.replyCount,
     required this.onReplyTap,
     required this.onReplyChainTap,
+    required this.onGiftTap,
     required this.onOnlySeeAuthorTap,
     required this.showActionRow,
     required this.showOverflowAction,
@@ -178,6 +198,9 @@ class _ReplyFloorContent extends StatelessWidget {
                 isQuote: true,
                 floorNumber: null,
                 lightCount: null,
+                giftTotalDisplayText: null,
+                isGiftTotalRefreshing: false,
+                onGiftRefreshTap: null,
                 showOpBadge: content.quote!.isOp,
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
@@ -186,6 +209,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 replyCount: null,
                 onReplyTap: null,
                 onReplyChainTap: null,
+                onGiftTap: null,
                 onOnlySeeAuthorTap: null,
                 showActionRow: false,
                 showOverflowAction: false,
@@ -231,7 +255,10 @@ class _ReplyFloorContent extends StatelessWidget {
               replyCount: replyCount ?? 0,
               onLightTap: onLightTap,
               onReplyChainTap: onReplyChainTap,
-              onGiftTap: () {},
+              onGiftTap: onGiftTap ?? () {},
+              giftTotalDisplayText: giftTotalDisplayText,
+              isGiftTotalRefreshing: isGiftTotalRefreshing,
+              onGiftRefreshTap: onGiftRefreshTap,
               onReplyTap: onReplyTap ?? () {},
             ),
           ),
@@ -638,6 +665,9 @@ class _ReplyActionRow extends StatelessWidget {
   final VoidCallback? onLightTap;
   final VoidCallback? onReplyChainTap;
   final VoidCallback onGiftTap;
+  final String? giftTotalDisplayText;
+  final bool isGiftTotalRefreshing;
+  final VoidCallback? onGiftRefreshTap;
   final VoidCallback onReplyTap;
 
   const _ReplyActionRow({
@@ -650,10 +680,27 @@ class _ReplyActionRow extends StatelessWidget {
     required this.onReplyChainTap,
     required this.onGiftTap,
     required this.onReplyTap,
+    this.giftTotalDisplayText,
+    this.isGiftTotalRefreshing = false,
+    this.onGiftRefreshTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final giftAction = giftTotalDisplayText == null && onGiftRefreshTap == null
+        ? _IconActionChip(
+            icon: Icons.card_giftcard_rounded,
+            tooltip: '送礼',
+            onTap: onGiftTap,
+          )
+        : _GiftActionPill(
+            replyPid: replyPid,
+            displayText: giftTotalDisplayText ?? '--',
+            isRefreshing: isGiftTotalRefreshing,
+            onGiftTap: onGiftTap,
+            onRefreshTap: onGiftRefreshTap,
+          );
+
     final compactActions = <Widget>[
       _CountActionChip(
         actionKey: ValueKey('reply-light-chip-$replyPid'),
@@ -673,11 +720,7 @@ class _ReplyActionRow extends StatelessWidget {
           tooltip: '查看回复 $replyCount',
           onTap: onReplyChainTap!,
         ),
-      _IconActionChip(
-        icon: Icons.card_giftcard_rounded,
-        tooltip: '送礼',
-        onTap: onGiftTap,
-      ),
+      giftAction,
     ];
 
     return LayoutBuilder(
@@ -718,6 +761,111 @@ class _ReplyActionRow extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _GiftActionPill extends StatelessWidget {
+  final String replyPid;
+  final String displayText;
+  final bool isRefreshing;
+  final VoidCallback onGiftTap;
+  final VoidCallback? onRefreshTap;
+
+  const _GiftActionPill({
+    required this.replyPid,
+    required this.displayText,
+    required this.isRefreshing,
+    required this.onGiftTap,
+    required this.onRefreshTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final borderColor = colorScheme.outlineVariant.withValues(alpha: 0.38);
+    final foregroundColor = colorScheme.onSurfaceVariant;
+
+    return Material(
+      key: ValueKey('reply-gift-pill-$replyPid'),
+      color: colorScheme.surfaceContainerHighest,
+      shape: StadiumBorder(side: BorderSide(color: borderColor)),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: '送礼',
+            child: InkWell(
+              key: ValueKey('reply-gift-pill-left-$replyPid'),
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(999),
+              ),
+              onTap: onGiftTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.card_giftcard_rounded,
+                      size: 17,
+                      color: foregroundColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      displayText,
+                      key: ValueKey('reply-gift-pill-text-$replyPid'),
+                      style: textTheme.labelMedium?.copyWith(
+                        color: foregroundColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 20,
+            child: VerticalDivider(width: 1, thickness: 1, color: borderColor),
+          ),
+          Tooltip(
+            message: '刷新收到礼物数量',
+            child: InkWell(
+              key: ValueKey('reply-gift-pill-refresh-$replyPid'),
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(999),
+              ),
+              onTap: isRefreshing ? null : onRefreshTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                child: isRefreshing
+                    ? SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: foregroundColor,
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh_rounded,
+                        size: 16,
+                        color: foregroundColor,
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

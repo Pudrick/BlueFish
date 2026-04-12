@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/thread_gift_service.dart';
 import 'package:bluefish/services/thread/thread_reply_service.dart';
+import 'package:bluefish/utils/result.dart';
+import 'package:bluefish/widgets/thread/reply_gift_sheet.dart';
+import 'package:bluefish/widgets/thread/reply_received_gift_sheet.dart';
 import 'package:bluefish/widgets/thread/reply_floor_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
@@ -232,6 +236,56 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     );
   }
 
+  Future<void> _handleGiftTap({
+    required SingleReplyFloor reply,
+    required String? currentUserPuid,
+    required ThreadGiftService threadGiftService,
+  }) async {
+    final errorMessage = await showReplyGiftBottomSheetForReply(
+      context: context,
+      reply: reply,
+      threadGiftService: threadGiftService,
+      onGiftTap: (targetReply, gift) {
+        final normalizedCurrentUserPuid = currentUserPuid?.trim();
+        if (normalizedCurrentUserPuid == null ||
+            normalizedCurrentUserPuid.isEmpty) {
+          return Future<Result<String>>.value(
+            const Failure<String>('请先登录后再送礼'),
+          );
+        }
+
+        final receiverPuid = targetReply.meta.author.puid.trim();
+        if (receiverPuid.isEmpty) {
+          return Future<Result<String>>.value(
+            const Failure<String>('目标用户信息异常，暂时无法送礼'),
+          );
+        }
+
+        return threadGiftService.giveGift(
+          giftId: gift.giftId,
+          givePuid: normalizedCurrentUserPuid,
+          pid: targetReply.pid,
+          receivePuid: receiverPuid,
+          tid: widget.tid,
+        );
+      },
+      onViewReceivedGiftsTap: (targetReply) {
+        unawaited(
+          showReplyReceivedGiftDetailSheet(
+            context: context,
+            threadGiftService: threadGiftService,
+            tid: widget.tid,
+            pid: targetReply.pid,
+          ),
+        );
+      },
+    );
+    if (!mounted || errorMessage == null || errorMessage.isEmpty) {
+      return;
+    }
+    _showSnackBar(errorMessage);
+  }
+
   void _resetBodyScrollPosition() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_contentScrollController.hasClients) {
@@ -239,6 +293,15 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
       }
       _contentScrollController.jumpTo(0);
     });
+  }
+
+  void _showSnackBar(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
   }
 
   double get _currentSheetSize => _sheetSize;
@@ -370,6 +433,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
     final textTheme = theme.textTheme;
     final currentNode = _currentNode;
     final canGoBack = _navigationStack.length > 1;
+    final threadGiftService = context.read<ThreadGiftService>();
     final currentUserPuid = context
         .select<CurrentUserIdentityController, String?>(
           (identity) => identity.currentUserPuid,
@@ -495,6 +559,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                             child: _buildSheetBody(
                               currentNode,
                               viewerPuid: currentUserPuid,
+                              threadGiftService: threadGiftService,
                             ),
                           ),
                         ),
@@ -513,6 +578,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   Widget _buildSheetBody(
     _ReplyChainNodeState node, {
     required String? viewerPuid,
+    required ThreadGiftService threadGiftService,
   }) {
     return NotificationListener<ScrollNotification>(
       key: ValueKey('list-${node.reply.pid}'),
@@ -560,7 +626,11 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          ..._buildReplyListSlivers(node, viewerPuid: viewerPuid),
+          ..._buildReplyListSlivers(
+            node,
+            viewerPuid: viewerPuid,
+            threadGiftService: threadGiftService,
+          ),
         ],
       ),
     );
@@ -579,6 +649,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
   List<Widget> _buildReplyListSlivers(
     _ReplyChainNodeState node, {
     required String? viewerPuid,
+    required ThreadGiftService threadGiftService,
   }) {
     if (node.isLoadingInitial && node.replies.isEmpty) {
       return const <Widget>[
@@ -652,6 +723,15 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                 floorNumber: reply.serverFloorNumber,
                 imageHeroScope:
                     'thread-reply-sheet:${node.reply.pid}:reply:${reply.pid}',
+                onGiftTap: () {
+                  unawaited(
+                    _handleGiftTap(
+                      reply: reply,
+                      currentUserPuid: viewerPuid,
+                      threadGiftService: threadGiftService,
+                    ),
+                  );
+                },
                 onReplyTap: () => _handleReplyTap(reply),
                 onReplyChainTap: reply.replyNum > 0
                     ? () => _openReplyChain(reply)

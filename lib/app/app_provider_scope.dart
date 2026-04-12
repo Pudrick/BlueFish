@@ -17,6 +17,7 @@ import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
+import 'package:bluefish/services/thread/thread_gift_service.dart';
 import 'package:bluefish/services/thread/thread_list_service.dart';
 import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/services/user_home/current_user_profile_service.dart';
@@ -63,6 +64,7 @@ class AppProviderScope extends StatelessWidget {
         Provider<ThreadDetailService>.value(
           value: appServices.threadDetailService,
         ),
+        Provider<ThreadGiftService>.value(value: appServices.threadGiftService),
         Provider<ReplyPageLocatorService>.value(
           value: appServices.replyPageLocatorService,
         ),

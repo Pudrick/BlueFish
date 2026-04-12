@@ -10,6 +10,7 @@ import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
+import 'package:bluefish/services/thread/thread_gift_service.dart';
 import 'package:bluefish/services/thread/thread_list_service.dart';
 import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/services/user_home/current_user_profile_service.dart';
@@ -23,6 +24,7 @@ class AppServices {
   final ReplyLightRecordService replyLightRecordService;
   final ReplyPageLocatorCacheService replyPageLocatorCacheService;
   final ThreadDetailService threadDetailService;
+  final ThreadGiftService threadGiftService;
   final ReplyPageLocatorService replyPageLocatorService;
   final ThreadListService threadListService;
   final ThreadReplyService threadReplyService;
@@ -41,6 +43,7 @@ class AppServices {
     required this.replyLightRecordService,
     required this.replyPageLocatorCacheService,
     required this.threadDetailService,
+    required this.threadGiftService,
     required this.replyPageLocatorService,
     required this.threadListService,
     required this.threadReplyService,
@@ -76,6 +79,7 @@ class AppServices {
       ),
       replyPageLocatorCacheService: cacheService,
       threadDetailService: threadDetailService,
+      threadGiftService: ThreadGiftService(client: httpClient),
       replyPageLocatorService: ReplyPageLocatorService(
         client: httpClient,
         threadDetailService: threadDetailService,
