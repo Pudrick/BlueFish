@@ -5,6 +5,7 @@ class ApiConfig {
   ApiConfig._();
 
   static const String baseUrl = 'https://bbs.mobileapi.hupu.com';
+  static const String liteBaseUrl = 'https://lite.hupu.com';
   static String? _apiVersionOverride;
 
   static String get defaultApiVersion => apiVersionSegment;
@@ -25,5 +26,11 @@ class ApiConfig {
   static String apiPath(String path, {String gatewayVersion = '1'}) {
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
     return '$baseUrl/$gatewayVersion/$apiVersion/$normalizedPath';
+  }
+
+  /// Builds a lite-host API path with gateway and API-version path segments.
+  static String liteApiPath(String path, {String gatewayVersion = '3'}) {
+    final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+    return '$liteBaseUrl/$gatewayVersion/$apiVersion/$normalizedPath';
   }
 }

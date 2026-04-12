@@ -1,5 +1,6 @@
 import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/thread_gift_service.dart';
 import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -160,26 +161,10 @@ class MePage extends StatelessWidget {
                         const SizedBox(height: 20),
                         _NotchedSection(
                           key: const ValueKey('me-section-assets'),
-                          title: '资产',
-                          child: _FeatureGrid(
-                            items: [
-                              _MeFeatureItemData(
-                                key: 'hcoin',
-                                title: 'H币',
-                                icon: Icons.monetization_on_outlined,
-                                statusLabel: '即将上线',
-                                tone: _MeFeatureTone.secondary,
-                                onTap: () {
-                                  _openPlaceholderPage(
-                                    context,
-                                    title: 'H币',
-                                    icon: Icons.monetization_on_outlined,
-                                    statusLabel: '即将上线',
-                                    description: '这里后续会承载 H 币相关的查看、说明和扩展能力。',
-                                  );
-                                },
-                              ),
-                            ],
+                          title: '礼物',
+                          child: _HcoinAssetCard(
+                            isLoggedIn: isLoggedIn,
+                            currentUserPuid: currentUserPuid,
                           ),
                         ),
                       ],
@@ -511,6 +496,297 @@ class _FeatureGrid extends StatelessWidget {
       return 2;
     }
     return 1;
+  }
+}
+
+class _HcoinAssetCard extends StatefulWidget {
+  final bool isLoggedIn;
+  final String? currentUserPuid;
+
+  const _HcoinAssetCard({
+    required this.isLoggedIn,
+    required this.currentUserPuid,
+  });
+
+  @override
+  State<_HcoinAssetCard> createState() => _HcoinAssetCardState();
+}
+
+class _HcoinAssetCardState extends State<_HcoinAssetCard> {
+  int? _hcoinBalance;
+  bool _isRefreshing = false;
+  bool _isReceiving = false;
+
+  String get _balanceDisplay => _hcoinBalance?.toString() ?? '--';
+
+  Future<void> _handleRefreshTap() async {
+    if (_isRefreshing || _isReceiving) {
+      return;
+    }
+
+    if (!_ensureReadyForAuthenticatedAction()) {
+      return;
+    }
+
+    await _refreshBalance();
+  }
+
+  Future<void> _refreshBalance({bool silentFailure = false}) async {
+    if (_isRefreshing || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    final result = await context.read<ThreadGiftService>().getHcoin(
+      forceRefresh: true,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    String? snackBarMessage;
+    final nextBalance = result.when<int?>(
+      success: (balance) => balance,
+      failure: (message, exception) {
+        snackBarMessage = message;
+        return null;
+      },
+    );
+
+    setState(() {
+      _isRefreshing = false;
+      if (nextBalance != null) {
+        _hcoinBalance = nextBalance;
+      }
+    });
+
+    if (!silentFailure &&
+        snackBarMessage != null &&
+        snackBarMessage!.isNotEmpty) {
+      _showSnackBar(snackBarMessage!);
+    }
+  }
+
+  Future<void> _handleReceiveTap() async {
+    if (_isRefreshing || _isReceiving) {
+      return;
+    }
+
+    if (!_ensureReadyForAuthenticatedAction()) {
+      return;
+    }
+
+    final currentUserPuid = widget.currentUserPuid?.trim();
+    if (currentUserPuid == null || currentUserPuid.isEmpty) {
+      _showSnackBar('当前账号信息不完整，暂时无法领取H币。');
+      return;
+    }
+
+    setState(() {
+      _isReceiving = true;
+    });
+
+    final threadGiftService = context.read<ThreadGiftService>();
+    final receivableResult = await threadGiftService.getReceivableHcoinList();
+    if (!mounted) {
+      return;
+    }
+
+    final receivableItems = receivableResult.dataOrNull;
+    if (receivableItems == null) {
+      final message = receivableResult.when<String?>(
+        success: (_) => null,
+        failure: (message, exception) => message,
+      );
+      setState(() {
+        _isReceiving = false;
+      });
+      if (message?.isNotEmpty ?? false) {
+        _showSnackBar(message!);
+      }
+      return;
+    }
+
+    if (receivableItems.isEmpty) {
+      setState(() {
+        _isReceiving = false;
+      });
+      _showSnackBar('当前没有可领取的H币', width: 260);
+      return;
+    }
+
+    final receiveResult = await threadGiftService.receiveHcoin(
+      puid: currentUserPuid,
+      ids: receivableItems.map((item) => item.id).toList(growable: false),
+    );
+    if (!mounted) {
+      return;
+    }
+
+    final receiveSucceeded = receiveResult.isSuccess;
+    final snackBarMessage = receiveResult.when<String>(
+      success: (_) => '获取成功',
+      failure: (message, exception) => message,
+    );
+
+    setState(() {
+      _isReceiving = false;
+    });
+
+    if (receiveSucceeded) {
+      await _refreshBalance(silentFailure: true);
+      if (!mounted) {
+        return;
+      }
+    }
+
+    _showSnackBar(snackBarMessage);
+  }
+
+  bool _ensureReadyForAuthenticatedAction() {
+    if (widget.isLoggedIn) {
+      return true;
+    }
+
+    context.pushLogin();
+    return false;
+  }
+
+  void _showSnackBar(String message, {double? width}) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final resolvedWidth = width?.clamp(0.0, screenWidth - 24.0).toDouble();
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          width: resolvedWidth,
+        ),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final accentColors = _MeFeatureTone.secondary.resolve(colorScheme);
+
+    return Material(
+      key: const ValueKey('me-feature-hcoin'),
+      color: colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: accentColors.background,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.monetization_on_outlined,
+                      color: accentColors.foreground,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'H币',
+                        style: textTheme.titleLarge?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    key: const ValueKey('me-hcoin-refresh-button'),
+                    onPressed: _isReceiving || _isRefreshing
+                        ? null
+                        : _handleRefreshTap,
+                    tooltip: '刷新',
+                    icon: _isRefreshing
+                        ? SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.primary,
+                            ),
+                          )
+                        : const Icon(Icons.refresh_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '当前持有',
+                key: const ValueKey('me-hcoin-balance-label'),
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Text(
+                  _balanceDisplay,
+                  key: ValueKey('me-hcoin-balance-$_balanceDisplay'),
+                  style: textTheme.displaySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.8,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const ValueKey('me-hcoin-receive-button'),
+                  onPressed: _isRefreshing || _isReceiving
+                      ? null
+                      : _handleReceiveTap,
+                  icon: _isReceiving
+                      ? SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.download_rounded),
+                  label: const Text('领取'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

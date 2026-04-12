@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bluefish/models/model_parsing.dart';
+import 'package:bluefish/models/thread/hcoin_receivable_item.dart';
 import 'package:bluefish/models/thread/thread_gift.dart';
 import 'package:bluefish/models/thread/thread_gift_detail_page.dart';
 import 'package:bluefish/network/api_config.dart';
@@ -11,12 +12,19 @@ import 'package:http/http.dart' as http;
 class ThreadGiftService {
   static const String _threadGiftsPath = 'bbsallapi/hcoin/v1/getThreadGifts';
   static const String _hCoinPath = 'bbsallapi/hcoin/v1/getHcoin';
+  static const String _receivableHcoinPath =
+      'bbsallapi/hcoin/v1/getToReceiveList';
+  static const String _receiveHcoinPath = 'bbsallapi/hcoin/v1/receive';
   static const String _giveGiftPath = 'bbsallapi/gift/v1/giveGift';
   static const String _giftDetailListPath =
       'bbsallapi/gift/v1/getThreadGiftDetailList';
   static const String _requestFailureMessage = '礼物列表加载失败，请稍后重试。';
   static const String _emptyGiftMessage = '礼物列表暂时为空。';
   static const String _hCoinRequestFailureMessage = '当前币数加载失败，请稍后重试。';
+  static const String _receivableHcoinRequestFailureMessage =
+      '可领取H币加载失败，请稍后重试。';
+  static const String _receiveHcoinFailureMessage = '领取H币失败，请稍后重试。';
+  static const String _receiveHcoinInvalidParamsMessage = '参数异常，暂时无法领取H币。';
   static const String _giveGiftFailureMessage = '送礼失败，请稍后重试。';
   static const String _invalidGiftIdMessage = '礼物信息无效，请刷新后重试。';
   static const String _giftDetailRequestFailureMessage = '收到礼物列表加载失败，请稍后重试。';
@@ -69,6 +77,121 @@ class ThreadGiftService {
       }
     });
     return request;
+  }
+
+  Future<Result<List<HcoinReceivableItem>>> getReceivableHcoinList() async {
+    final uri = Uri.parse(ApiConfig.liteApiPath(_receivableHcoinPath)).replace(
+      queryParameters: const <String, String>{
+        'offline': 'json',
+        'h5Nosign': '0',
+      },
+    );
+
+    try {
+      final response = await _client.get(
+        uri,
+        headers: const <String, String>{
+          'content-type': 'application/json;charset=UTF-8',
+        },
+      );
+
+      if (response.statusCode != HttpStatus.ok) {
+        return const Failure<List<HcoinReceivableItem>>(
+          _receivableHcoinRequestFailureMessage,
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const Failure<List<HcoinReceivableItem>>(
+          _receivableHcoinRequestFailureMessage,
+        );
+      }
+
+      final success = parseBool(decoded['success']);
+      final message = parseString(decoded['msg']).trim();
+      if (!success) {
+        return Failure<List<HcoinReceivableItem>>(
+          message.isNotEmpty ? message : _receivableHcoinRequestFailureMessage,
+        );
+      }
+
+      return Success<List<HcoinReceivableItem>>(
+        _parseReceivableHcoinList(decoded['data']),
+      );
+    } on FormatException {
+      return const Failure<List<HcoinReceivableItem>>(
+        _receivableHcoinRequestFailureMessage,
+      );
+    } on http.ClientException {
+      return const Failure<List<HcoinReceivableItem>>(
+        _receivableHcoinRequestFailureMessage,
+      );
+    } on SocketException {
+      return const Failure<List<HcoinReceivableItem>>(
+        _receivableHcoinRequestFailureMessage,
+      );
+    }
+  }
+
+  Future<Result<String>> receiveHcoin({
+    required String puid,
+    required List<String> ids,
+  }) async {
+    final normalizedPuid = puid.trim();
+    final normalizedIds = ids
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+
+    if (normalizedPuid.isEmpty || normalizedIds.isEmpty) {
+      return const Failure<String>(_receiveHcoinInvalidParamsMessage);
+    }
+
+    final uri = Uri.parse(ApiConfig.liteApiPath(_receiveHcoinPath)).replace(
+      queryParameters: <String, String>{
+        'puid': normalizedPuid,
+        'h5Nosign': '1',
+      },
+    );
+
+    try {
+      final response = await _client.post(
+        uri,
+        headers: const <String, String>{'content-type': 'application/json'},
+        body: jsonEncode(<String, Object>{'ids': normalizedIds}),
+      );
+
+      if (response.statusCode != HttpStatus.ok) {
+        return const Failure<String>(_receiveHcoinFailureMessage);
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const Failure<String>(_receiveHcoinFailureMessage);
+      }
+
+      final success = parseBool(decoded['success']);
+      final message = parseString(decoded['msg']).trim();
+      if (!success) {
+        return Failure<String>(
+          message.isNotEmpty ? message : _receiveHcoinFailureMessage,
+        );
+      }
+
+      _cachedHCoin = null;
+      return Success<String>(
+        message.isNotEmpty && message.toLowerCase() != 'success'
+            ? message
+            : '获取成功',
+      );
+    } on FormatException {
+      return const Failure<String>(_receiveHcoinFailureMessage);
+    } on http.ClientException {
+      return const Failure<String>(_receiveHcoinFailureMessage);
+    } on SocketException {
+      return const Failure<String>(_receiveHcoinFailureMessage);
+    }
   }
 
   Future<Result<String>> giveGift({
@@ -303,5 +426,26 @@ class ThreadGiftService {
       }
     }
     return gifts;
+  }
+
+  List<HcoinReceivableItem> _parseReceivableHcoinList(Object? rawData) {
+    if (rawData is! List) {
+      return const <HcoinReceivableItem>[];
+    }
+
+    final items = <HcoinReceivableItem>[];
+    for (final item in rawData) {
+      if (item is! Map) {
+        continue;
+      }
+
+      final receivableItem = HcoinReceivableItem.tryFromJson(
+        Map<String, dynamic>.from(item),
+      );
+      if (receivableItem != null) {
+        items.add(receivableItem);
+      }
+    }
+    return List<HcoinReceivableItem>.unmodifiable(items);
   }
 }
