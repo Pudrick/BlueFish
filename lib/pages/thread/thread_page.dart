@@ -4,11 +4,13 @@ import 'package:bluefish/auth/current_user_identity_controller.dart';
 import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
+import 'package:bluefish/models/thread/thread_recommend_state.dart';
 import 'package:bluefish/router/app_routes.dart';
 import 'package:bluefish/services/thread/reply_light_action_service.dart';
 import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/services/thread/thread_gift_service.dart';
+import 'package:bluefish/userdata/thread_recommend_status_store.dart';
 import 'package:bluefish/utils/result.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/thread_detail_view_model.dart';
@@ -123,6 +125,9 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   bool _quickActionSyncScheduled = false;
   bool _targetLocateScheduled = false;
   int _targetLocateAttempts = 0;
+  ThreadRecommendState _threadRecommendState = ThreadRecommendState.unknown;
+  String? _threadRecommendHydratedTid;
+  bool _didAttemptAutomaticThreadRecommendProbe = false;
 
   static const Duration _scrollAnimationDuration = Duration(milliseconds: 260);
   static const Duration _quickActionAnimationDuration = Duration(
@@ -132,6 +137,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   static const double _targetReplyAlignment = 0.04;
   static const String _giftTotalPlaceholder = '--';
   static const int _giftTotalRefreshPageSize = 20;
+  static const double _floatingActionGroupBottomOffset = 12;
 
   @override
   void initState() {
@@ -501,6 +507,64 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
       ..showSnackBar(
         SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
+  }
+
+  void _ensureThreadRecommendStateHydrated({
+    required String tid,
+    required ThreadRecommendStatusStore store,
+  }) {
+    if (_threadRecommendHydratedTid == tid) {
+      return;
+    }
+
+    _threadRecommendHydratedTid = tid;
+    _didAttemptAutomaticThreadRecommendProbe = false;
+    _threadRecommendState = ThreadRecommendState.unknown;
+    unawaited(_loadPersistedThreadRecommendState(tid: tid, store: store));
+  }
+
+  Future<void> _loadPersistedThreadRecommendState({
+    required String tid,
+    required ThreadRecommendStatusStore store,
+  }) async {
+    final snapshot = await store.read(tid);
+    if (!mounted || _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    final nextState = snapshot?.state ?? ThreadRecommendState.unknown;
+    if (_threadRecommendState == nextState) {
+      return;
+    }
+
+    setState(() {
+      _threadRecommendState = nextState;
+    });
+  }
+
+  void _maybeScheduleAutomaticThreadRecommendProbe({
+    required bool autoProbeEnabled,
+    required String tid,
+  }) {
+    if (!autoProbeEnabled ||
+        _didAttemptAutomaticThreadRecommendProbe ||
+        _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    _didAttemptAutomaticThreadRecommendProbe = true;
+
+    // TODO: Trigger automatic "recommend then cancel" probing after the
+    // thread recommend action service is implemented.
+  }
+
+  void _handleThreadRecommendTap() {
+    // TODO: Implement main thread recommend / cancel action flow.
+  }
+
+  void _handleThreadRecommendProbeTap() {
+    // TODO: Implement manual "recommend then cancel" probing.
+    _showTransientSnackBar('主贴推荐状态探测暂未实现。');
   }
 
   String? _resolvedActorKey({
@@ -963,9 +1027,15 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         .select<AppSettingsViewModel, bool>(
           (settings) => settings.settings.defaultCollapseLightedReplies,
         );
+    final autoProbeThreadRecommendStatus = context
+        .select<AppSettingsViewModel, bool>(
+          (settings) => settings.settings.autoProbeThreadRecommendStatus,
+        );
     final replyLightActionService = context.read<ReplyLightActionService>();
     final replyLightRecordService = context.read<ReplyLightRecordService>();
     final threadGiftService = context.read<ThreadGiftService>();
+    final threadRecommendStatusStore = context
+        .read<ThreadRecommendStatusStore>();
 
     return Consumer<ThreadDetailViewModel>(
       builder: (context, viewModel, child) {
@@ -1040,6 +1110,14 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         final trackedReplyPids = _trackedReplyPids(
           currentPage: viewModel.currentPage,
           data: data,
+        );
+        _ensureThreadRecommendStateHydrated(
+          tid: viewModel.tid,
+          store: threadRecommendStatusStore,
+        );
+        _maybeScheduleAutomaticThreadRecommendProbe(
+          autoProbeEnabled: autoProbeThreadRecommendStatus,
+          tid: viewModel.tid,
         );
         _ensurePersistedLightedFuture(
           replyLightRecordService: replyLightRecordService,
@@ -1509,11 +1587,15 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
               ),
 
               bottomNavigationBar: ThreadBottomBar(
-                hasRecommended: true,
+                recommendState: _threadRecommendState,
+                autoProbeThreadRecommendStatusEnabled:
+                    autoProbeThreadRecommendStatus,
                 hasFavorated: false,
                 threadTid: viewModel.tid,
                 threadTitle: data.mainFloor.title,
                 isOnlyOpMode: viewModel.isOnlyOp,
+                onRecommendTap: _handleThreadRecommendTap,
+                onRecommendRefreshTap: _handleThreadRecommendProbeTap,
                 onOnlyOpTap: () {
                   if (viewModel.isOnlyOp) {
                     _clearAuthorFilter();
@@ -1528,7 +1610,9 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                 },
               ),
               floatingActionButton: Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(
+                  bottom: _floatingActionGroupBottomOffset,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,

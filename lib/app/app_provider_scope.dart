@@ -23,6 +23,7 @@ import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/services/user_home/current_user_profile_service.dart';
 import 'package:bluefish/services/user_home/user_home_service.dart';
 import 'package:bluefish/services/vote/vote_service.dart';
+import 'package:bluefish/userdata/thread_recommend_status_store.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
 import 'package:bluefish/viewModels/current_user_profile_view_model.dart';
 import 'package:flutter/widgets.dart';
@@ -90,6 +91,9 @@ class AppProviderScope extends StatelessWidget {
         ),
         Provider<VoteService>.value(value: appServices.voteService),
         Provider<MediaSaveService>.value(value: appServices.mediaSaveService),
+        Provider<ThreadRecommendStatusStore>.value(
+          value: threadRecommendStatusStore,
+        ),
         ChangeNotifierProvider<AppSettingsViewModel>.value(
           value: settingsViewModel,
         ),

@@ -53,6 +53,7 @@ class AppSettings {
   static const int defaultReplyLocateCoarseProbeStride = 100;
   static const bool defaultGenerateJumpLogs = true;
   static const bool defaultCollapseLightedRepliesEnabled = false;
+  static const bool defaultAutoProbeThreadRecommendStatus = false;
   static const int defaultSeedColorValue = 0xFF0B6E4F;
   static const double _imageWidthFactorStep = 0.05;
   static const Object _unset = Object();
@@ -69,6 +70,7 @@ class AppSettings {
     replyLocateCoarseProbeStride: defaultReplyLocateCoarseProbeStride,
     generateJumpLogs: defaultGenerateJumpLogs,
     defaultCollapseLightedReplies: defaultCollapseLightedRepliesEnabled,
+    autoProbeThreadRecommendStatus: defaultAutoProbeThreadRecommendStatus,
     imageSaveDirectoryPath: null,
     videoSaveDirectoryPath: null,
     apiVersionOverride: null,
@@ -86,6 +88,7 @@ class AppSettings {
   final int replyLocateCoarseProbeStride;
   final bool generateJumpLogs;
   final bool defaultCollapseLightedReplies;
+  final bool autoProbeThreadRecommendStatus;
   final String? imageSaveDirectoryPath;
   final String? videoSaveDirectoryPath;
   final String? apiVersionOverride;
@@ -103,6 +106,7 @@ class AppSettings {
     required this.replyLocateCoarseProbeStride,
     required this.generateJumpLogs,
     required this.defaultCollapseLightedReplies,
+    required this.autoProbeThreadRecommendStatus,
     required this.imageSaveDirectoryPath,
     required this.videoSaveDirectoryPath,
     required this.apiVersionOverride,
@@ -122,6 +126,8 @@ class AppSettings {
     bool generateJumpLogs = defaultGenerateJumpLogs,
     bool defaultCollapseLightedReplies =
         AppSettings.defaultCollapseLightedRepliesEnabled,
+    bool autoProbeThreadRecommendStatus =
+        AppSettings.defaultAutoProbeThreadRecommendStatus,
     String? imageSaveDirectoryPath,
     String? videoSaveDirectoryPath,
     String? apiVersionOverride,
@@ -154,6 +160,7 @@ class AppSettings {
       ),
       generateJumpLogs: generateJumpLogs,
       defaultCollapseLightedReplies: defaultCollapseLightedReplies,
+      autoProbeThreadRecommendStatus: autoProbeThreadRecommendStatus,
       imageSaveDirectoryPath: _normalizeDirectoryPath(imageSaveDirectoryPath),
       videoSaveDirectoryPath: _normalizeDirectoryPath(videoSaveDirectoryPath),
       apiVersionOverride: _normalizeApiVersionOverride(apiVersionOverride),
@@ -177,6 +184,7 @@ class AppSettings {
     int? replyLocateCoarseProbeStride,
     bool? generateJumpLogs,
     bool? defaultCollapseLightedReplies,
+    bool? autoProbeThreadRecommendStatus,
     Object? imageSaveDirectoryPath = _unset,
     Object? videoSaveDirectoryPath = _unset,
     Object? apiVersionOverride = _unset,
@@ -200,6 +208,8 @@ class AppSettings {
       generateJumpLogs: generateJumpLogs ?? this.generateJumpLogs,
       defaultCollapseLightedReplies:
           defaultCollapseLightedReplies ?? this.defaultCollapseLightedReplies,
+      autoProbeThreadRecommendStatus:
+          autoProbeThreadRecommendStatus ?? this.autoProbeThreadRecommendStatus,
       imageSaveDirectoryPath: identical(imageSaveDirectoryPath, _unset)
           ? this.imageSaveDirectoryPath
           : imageSaveDirectoryPath as String?,
@@ -303,6 +313,8 @@ class AppSettings {
         other.replyLocateCoarseProbeStride == replyLocateCoarseProbeStride &&
         other.generateJumpLogs == generateJumpLogs &&
         other.defaultCollapseLightedReplies == defaultCollapseLightedReplies &&
+        other.autoProbeThreadRecommendStatus ==
+            autoProbeThreadRecommendStatus &&
         other.imageSaveDirectoryPath == imageSaveDirectoryPath &&
         other.videoSaveDirectoryPath == videoSaveDirectoryPath &&
         other.apiVersionOverride == apiVersionOverride;
@@ -322,6 +334,7 @@ class AppSettings {
     replyLocateCoarseProbeStride,
     generateJumpLogs,
     defaultCollapseLightedReplies,
+    autoProbeThreadRecommendStatus,
     imageSaveDirectoryPath,
     videoSaveDirectoryPath,
     apiVersionOverride,

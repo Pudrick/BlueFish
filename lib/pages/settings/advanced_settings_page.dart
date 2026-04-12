@@ -362,6 +362,20 @@ class AdvancedSettingsPage extends StatelessWidget {
                 child: Column(
                   children: [
                     SwitchListTile.adaptive(
+                      secondary: const Icon(Icons.thumb_up_alt_outlined),
+                      title: const Text('自动探测主贴推荐状态'),
+                      subtitle: const Text(
+                        '开启后帖子页会切换到自动探测模式。当前仅保留入口，实际探测流程待接入。',
+                      ),
+                      value: settings.autoProbeThreadRecommendStatus,
+                      onChanged: (value) {
+                        settingsViewModel.updateAutoProbeThreadRecommendStatus(
+                          value,
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile.adaptive(
                       secondary: const Icon(Icons.receipt_long_rounded),
                       title: const Text('生成跳转日志'),
                       subtitle: const Text('记录回复跳转到详情页时的定位计算过程。'),

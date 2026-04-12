@@ -196,6 +196,8 @@ class _ThreadLightedRepliesHeader extends StatelessWidget {
                       children: [
                         Text(
                           '亮回复',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: textTheme.titleSmall?.copyWith(
                             color: colorScheme.onSurface,
                             fontWeight: FontWeight.w800,
@@ -206,6 +208,8 @@ class _ThreadLightedRepliesHeader extends StatelessWidget {
                           isCollapsed
                               ? '已收起 · 共 $replyCount 条'
                               : '点击收起 · 共 $replyCount 条',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),

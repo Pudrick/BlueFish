@@ -146,6 +146,16 @@ class AppSettingsViewModel extends ChangeNotifier {
     );
   }
 
+  Future<void> updateAutoProbeThreadRecommendStatus(
+    bool autoProbeThreadRecommendStatus,
+  ) {
+    return _applyAndPersist(
+      _settings.copyWith(
+        autoProbeThreadRecommendStatus: autoProbeThreadRecommendStatus,
+      ),
+    );
+  }
+
   Future<void> updateImageSaveDirectoryPath(String? imageSaveDirectoryPath) {
     return _applyAndPersist(
       _settings.copyWith(imageSaveDirectoryPath: imageSaveDirectoryPath),
