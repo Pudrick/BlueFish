@@ -9,11 +9,14 @@ import 'package:bluefish/models/thread/single_reply_floor.dart';
 class ReplyFloor extends StatelessWidget {
   final SingleReplyFloor replyFloor;
   final bool isLightedByViewer;
+  final bool isLightingLightAction;
   final bool isQuote;
   final int? floorNumber;
+  final int? lightCountOverride;
   final double contentMaxWidth;
   final String? imageHeroScope;
   final String cardKeyPrefix;
+  final VoidCallback? onLightTap;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
   final VoidCallback? onOnlySeeAuthorTap;
@@ -25,11 +28,14 @@ class ReplyFloor extends StatelessWidget {
     super.key,
     required this.replyFloor,
     this.isLightedByViewer = false,
+    this.isLightingLightAction = false,
     required this.isQuote,
     this.floorNumber,
+    this.lightCountOverride,
     this.contentMaxWidth = double.infinity,
     this.imageHeroScope,
     this.cardKeyPrefix = 'reply-floor-card',
+    this.onLightTap,
     this.onReplyTap,
     this.onReplyChainTap,
     this.onOnlySeeAuthorTap,
@@ -43,13 +49,15 @@ class ReplyFloor extends StatelessWidget {
     return _ReplyFloorContent(
       content: replyFloor,
       isLightedByViewer: isLightedByViewer,
+      isLightingLightAction: isLightingLightAction,
       isQuote: isQuote,
       floorNumber: floorNumber ?? replyFloor.serverFloorNumber,
-      lightCount: replyFloor.lightCount,
+      lightCount: lightCountOverride ?? replyFloor.lightCount,
       showOpBadge: replyFloor.isOp,
       contentMaxWidth: contentMaxWidth,
       imageHeroScope: imageHeroScope,
       cardKeyPrefix: cardKeyPrefix,
+      onLightTap: onLightTap,
       replyCount: replyFloor.replyNum,
       onReplyTap: onReplyTap,
       onReplyChainTap: onReplyChainTap,
@@ -64,6 +72,7 @@ class ReplyFloor extends StatelessWidget {
 class _ReplyFloorContent extends StatelessWidget {
   final ReplyContent content;
   final bool isLightedByViewer;
+  final bool isLightingLightAction;
   final bool isQuote;
   final int? floorNumber;
   final int? lightCount;
@@ -71,6 +80,7 @@ class _ReplyFloorContent extends StatelessWidget {
   final double contentMaxWidth;
   final String? imageHeroScope;
   final String cardKeyPrefix;
+  final VoidCallback? onLightTap;
   final int? replyCount;
   final VoidCallback? onReplyTap;
   final VoidCallback? onReplyChainTap;
@@ -82,6 +92,7 @@ class _ReplyFloorContent extends StatelessWidget {
   const _ReplyFloorContent({
     required this.content,
     required this.isLightedByViewer,
+    required this.isLightingLightAction,
     required this.isQuote,
     required this.floorNumber,
     required this.lightCount,
@@ -89,6 +100,7 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.contentMaxWidth,
     required this.imageHeroScope,
     required this.cardKeyPrefix,
+    required this.onLightTap,
     required this.replyCount,
     required this.onReplyTap,
     required this.onReplyChainTap,
@@ -162,6 +174,7 @@ class _ReplyFloorContent extends StatelessWidget {
               quoteWidget: _ReplyFloorContent(
                 content: content.quote!,
                 isLightedByViewer: false,
+                isLightingLightAction: false,
                 isQuote: true,
                 floorNumber: null,
                 lightCount: null,
@@ -169,6 +182,7 @@ class _ReplyFloorContent extends StatelessWidget {
                 contentMaxWidth: contentMaxWidth,
                 imageHeroScope: '$resolvedImageHeroScope:quote',
                 cardKeyPrefix: cardKeyPrefix,
+                onLightTap: null,
                 replyCount: null,
                 onReplyTap: null,
                 onReplyChainTap: null,
@@ -213,8 +227,9 @@ class _ReplyFloorContent extends StatelessWidget {
               replyPid: content.pid,
               lightCount: lightCount!,
               isLightedByViewer: isLightedByViewer,
+              isLightingLightAction: isLightingLightAction,
               replyCount: replyCount ?? 0,
-              onLightTap: () {},
+              onLightTap: onLightTap,
               onReplyChainTap: onReplyChainTap,
               onGiftTap: () {},
               onReplyTap: onReplyTap ?? () {},
@@ -618,8 +633,9 @@ class _ReplyActionRow extends StatelessWidget {
   final String replyPid;
   final int lightCount;
   final bool isLightedByViewer;
+  final bool isLightingLightAction;
   final int replyCount;
-  final VoidCallback onLightTap;
+  final VoidCallback? onLightTap;
   final VoidCallback? onReplyChainTap;
   final VoidCallback onGiftTap;
   final VoidCallback onReplyTap;
@@ -628,6 +644,7 @@ class _ReplyActionRow extends StatelessWidget {
     required this.replyPid,
     required this.lightCount,
     required this.isLightedByViewer,
+    required this.isLightingLightAction,
     required this.replyCount,
     required this.onLightTap,
     required this.onReplyChainTap,
@@ -645,6 +662,7 @@ class _ReplyActionRow extends StatelessWidget {
             : Icons.wb_incandescent_outlined,
         count: lightCount,
         isActive: isLightedByViewer,
+        isBusy: isLightingLightAction,
         tooltip: isLightedByViewer ? '已点亮 · 亮了 $lightCount' : '亮了 $lightCount',
         onTap: onLightTap,
       ),
@@ -744,14 +762,16 @@ class _CountActionChip extends StatelessWidget {
   final IconData icon;
   final int count;
   final bool isActive;
+  final bool isBusy;
   final String tooltip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _CountActionChip({
     this.actionKey,
     required this.icon,
     required this.count,
     this.isActive = false,
+    this.isBusy = false,
     required this.tooltip,
     required this.onTap,
   });
@@ -784,7 +804,17 @@ class _CountActionChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: foregroundColor),
+                if (isBusy)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: foregroundColor,
+                    ),
+                  )
+                else
+                  Icon(icon, size: 16, color: foregroundColor),
                 const SizedBox(width: 6),
                 Text(
                   _formatCompactCount(count),

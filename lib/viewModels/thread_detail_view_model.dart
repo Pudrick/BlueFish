@@ -4,6 +4,8 @@ import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:flutter/foundation.dart';
 
+import 'dart:convert';
+
 /// State of the thread detail page.
 enum ThreadDetailState { initial, loading, loaded, error }
 
@@ -176,7 +178,7 @@ class ThreadDetailViewModel extends ChangeNotifier {
         if (data.topicId != mainTopicID) {
           _data = null;
           _errorMessage = null;
-          _pendingInterceptMessage = '仅支持打开崩版';
+          _pendingInterceptMessage = utf8.decode(base64Decode("5LuF5pSv5oyB5omT5byA5bSp54mI"));
           _state = ThreadDetailState.error;
           return;
         }

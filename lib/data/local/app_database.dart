@@ -86,6 +86,29 @@ class ReplyLightRecordDao extends DatabaseAccessor<AppDatabase>
     return rows.map((row) => row.pid).toSet();
   }
 
+  Future<void> unmarkLighted({
+    required String actorKey,
+    required String tid,
+    required String pid,
+  }) async {
+    final normalizedActorKey = actorKey.trim();
+    final normalizedTid = tid.trim();
+    final normalizedPid = pid.trim();
+    if (normalizedActorKey.isEmpty ||
+        normalizedTid.isEmpty ||
+        normalizedPid.isEmpty) {
+      return;
+    }
+
+    await (delete(replyLightRecords)..where(
+          (table) =>
+              table.actorKey.equals(normalizedActorKey) &
+              table.tid.equals(normalizedTid) &
+              table.pid.equals(normalizedPid),
+        ))
+        .go();
+  }
+
   Stream<Set<String>> watchLightedPids({
     required String actorKey,
     required String tid,

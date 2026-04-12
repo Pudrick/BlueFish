@@ -13,6 +13,14 @@ class ReplyLightRecordService {
     return _dao.markLighted(actorKey: actorKey, tid: tid, pid: pid);
   }
 
+  Future<void> unmarkLighted({
+    required String actorKey,
+    required String tid,
+    required String pid,
+  }) {
+    return _dao.unmarkLighted(actorKey: actorKey, tid: tid, pid: pid);
+  }
+
   Future<Set<String>> findThreadLightedPids({
     required String? actorKey,
     required String tid,

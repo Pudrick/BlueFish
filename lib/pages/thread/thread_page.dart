@@ -3,6 +3,7 @@ import 'package:bluefish/models/author_identity.dart';
 import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/services/thread/reply_light_action_service.dart';
 import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
@@ -102,6 +103,9 @@ class _ThreadPageContent extends StatefulWidget {
 
 class _ThreadPageContentState extends State<_ThreadPageContent> {
   final ScrollController _scrollController = ScrollController();
+  final Map<String, bool> _lightStateOverrides = <String, bool>{};
+  final Set<String> _lightingReplyPids = <String>{};
+  final Map<String, int> _lightCountOverrides = <String, int>{};
   String? _lastSyncedLocation;
   String? _pendingTargetPid;
   String? _persistedLightedRequestKey;
@@ -477,15 +481,279 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   }
 
   void _showTargetReplyNotFoundTip() {
+    _showTransientSnackBar('未找到目标回复，已停留在当前页。');
+  }
+
+  void _showTransientSnackBar(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger
       ?..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('未找到目标回复，已停留在当前页。'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
+  }
+
+  String? _resolvedActorKey({
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) {
+    final normalizedActorKey = currentActorKey?.trim();
+    if (normalizedActorKey != null && normalizedActorKey.isNotEmpty) {
+      return normalizedActorKey;
+    }
+
+    final normalizedPuid = currentUserPuid?.trim();
+    if (normalizedPuid == null || normalizedPuid.isEmpty) {
+      return null;
+    }
+    return 'puid:$normalizedPuid';
+  }
+
+  bool _isReplyLighted({
+    required String pid,
+    required Set<String> persistedLightedPids,
+  }) {
+    final localOverride = _lightStateOverrides[pid];
+    return localOverride ?? persistedLightedPids.contains(pid);
+  }
+
+  Set<String> _effectiveLightedPids({
+    required Set<String> trackedReplyPids,
+    required Set<String> persistedLightedPids,
+  }) {
+    return trackedReplyPids
+        .where(
+          (pid) => _isReplyLighted(
+            pid: pid,
+            persistedLightedPids: persistedLightedPids,
+          ),
+        )
+        .toSet();
+  }
+
+  int _effectiveLightCount(SingleReplyFloor reply) {
+    return _lightCountOverrides[reply.pid] ?? reply.lightCount;
+  }
+
+  VoidCallback? _buildReplyLightTapCallback({
+    required SingleReplyFloor reply,
+    required Set<String> persistedLightedPids,
+    required ThreadDetailViewModel viewModel,
+    required ReplyLightActionService replyLightActionService,
+    required ReplyLightRecordService replyLightRecordService,
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) {
+    if (_lightingReplyPids.contains(reply.pid)) {
+      return null;
+    }
+
+    final isLighted = _isReplyLighted(
+      pid: reply.pid,
+      persistedLightedPids: persistedLightedPids,
+    );
+
+    return () {
+      if (isLighted) {
+        _handleReplyCancelLightTap(
+          reply: reply,
+          tid: viewModel.tid,
+          replyLightActionService: replyLightActionService,
+          replyLightRecordService: replyLightRecordService,
+          currentActorKey: currentActorKey,
+          currentUserPuid: currentUserPuid,
+        );
+        return;
+      }
+
+      _handleReplyLightTap(
+        reply: reply,
+        tid: viewModel.tid,
+        replyLightActionService: replyLightActionService,
+        replyLightRecordService: replyLightRecordService,
+        currentActorKey: currentActorKey,
+        currentUserPuid: currentUserPuid,
+      );
+    };
+  }
+
+  Future<void> _handleReplyLightTap({
+    required SingleReplyFloor reply,
+    required String tid,
+    required ReplyLightActionService replyLightActionService,
+    required ReplyLightRecordService replyLightRecordService,
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) async {
+    final normalizedPuid = currentUserPuid?.trim();
+    if (normalizedPuid == null || normalizedPuid.isEmpty) {
+      _showTransientSnackBar('请先登录后再点亮');
+      return;
+    }
+    if (_lightingReplyPids.contains(reply.pid)) {
+      return;
+    }
+
+    final actorKey = _resolvedActorKey(
+      currentActorKey: currentActorKey,
+      currentUserPuid: normalizedPuid,
+    );
+
+    setState(() {
+      _lightingReplyPids.add(reply.pid);
+    });
+
+    final result = await replyLightActionService.lightReply(
+      tid: tid,
+      pid: reply.pid,
+      puid: normalizedPuid,
+    );
+
+    if (actorKey != null && (result.isSuccess || result.isAlreadyLighted)) {
+      await _persistReplyLightedRecord(
+        replyLightRecordService: replyLightRecordService,
+        actorKey: actorKey,
+        tid: tid,
+        pid: reply.pid,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    String? snackBarMessage;
+    final shouldMarkLighted = result.isSuccess || result.isAlreadyLighted;
+    final shouldIncreaseLightCount = result.isSuccess;
+
+    if (result.isAlreadyLighted) {
+      snackBarMessage = result.message ?? '你已经点亮过这个回帖了';
+    } else if (!result.isSuccess) {
+      snackBarMessage = result.message ?? '点亮失败，请稍后重试。';
+    }
+
+    setState(() {
+      _lightingReplyPids.remove(reply.pid);
+      if (!shouldMarkLighted) {
+        return;
+      }
+
+      _lightStateOverrides[reply.pid] = true;
+      if (shouldIncreaseLightCount) {
+        _lightCountOverrides[reply.pid] = _effectiveLightCount(reply) + 1;
+      } else {
+        _lightCountOverrides.putIfAbsent(reply.pid, () => reply.lightCount);
+      }
+    });
+
+    if (snackBarMessage != null) {
+      _showTransientSnackBar(snackBarMessage);
+    }
+  }
+
+  Future<void> _handleReplyCancelLightTap({
+    required SingleReplyFloor reply,
+    required String tid,
+    required ReplyLightActionService replyLightActionService,
+    required ReplyLightRecordService replyLightRecordService,
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) async {
+    final normalizedPuid = currentUserPuid?.trim();
+    if (normalizedPuid == null || normalizedPuid.isEmpty) {
+      _showTransientSnackBar('请先登录后再取消点亮');
+      return;
+    }
+    if (_lightingReplyPids.contains(reply.pid)) {
+      return;
+    }
+
+    final actorKey = _resolvedActorKey(
+      currentActorKey: currentActorKey,
+      currentUserPuid: normalizedPuid,
+    );
+
+    setState(() {
+      _lightingReplyPids.add(reply.pid);
+    });
+
+    final result = await replyLightActionService.cancelLight(
+      tid: tid,
+      pid: reply.pid,
+      puid: normalizedPuid,
+    );
+
+    if (actorKey != null && (result.isSuccess || result.isNotLighted)) {
+      await _removeReplyLightedRecord(
+        replyLightRecordService: replyLightRecordService,
+        actorKey: actorKey,
+        tid: tid,
+        pid: reply.pid,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    String? snackBarMessage;
+    final shouldMarkUnlighted = result.isSuccess || result.isNotLighted;
+    final shouldDecreaseLightCount = result.isSuccess;
+
+    if (result.isNotLighted) {
+      snackBarMessage = result.message ?? '请先点亮后再操作';
+    } else if (!result.isSuccess) {
+      snackBarMessage = result.message ?? '取消点亮失败，请稍后重试。';
+    }
+
+    setState(() {
+      _lightingReplyPids.remove(reply.pid);
+      if (!shouldMarkUnlighted) {
+        return;
+      }
+
+      _lightStateOverrides[reply.pid] = false;
+      if (shouldDecreaseLightCount) {
+        final nextCount = _effectiveLightCount(reply) - 1;
+        _lightCountOverrides[reply.pid] = nextCount < 0 ? 0 : nextCount;
+      } else {
+        _lightCountOverrides.putIfAbsent(reply.pid, () => reply.lightCount);
+      }
+    });
+
+    if (snackBarMessage != null) {
+      _showTransientSnackBar(snackBarMessage);
+    }
+  }
+
+  Future<void> _persistReplyLightedRecord({
+    required ReplyLightRecordService replyLightRecordService,
+    required String actorKey,
+    required String tid,
+    required String pid,
+  }) async {
+    try {
+      await replyLightRecordService.markLighted(
+        actorKey: actorKey,
+        tid: tid,
+        pid: pid,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _removeReplyLightedRecord({
+    required ReplyLightRecordService replyLightRecordService,
+    required String actorKey,
+    required String tid,
+    required String pid,
+  }) async {
+    try {
+      await replyLightRecordService.unmarkLighted(
+        actorKey: actorKey,
+        tid: tid,
+        pid: pid,
+      );
+    } catch (_) {}
   }
 
   void _ensurePersistedLightedFuture({
@@ -564,6 +832,7 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         .select<AppSettingsViewModel, bool>(
           (settings) => settings.settings.defaultCollapseLightedReplies,
         );
+    final replyLightActionService = context.read<ReplyLightActionService>();
     final replyLightRecordService = context.read<ReplyLightRecordService>();
 
     return Consumer<ThreadDetailViewModel>(
@@ -656,6 +925,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
           builder: (context, lightedPidsSnapshot) {
             final persistedLightedPids =
                 lightedPidsSnapshot.data ?? const <String>{};
+            final effectiveLightedPids = _effectiveLightedPids(
+              trackedReplyPids: trackedReplyPids,
+              persistedLightedPids: persistedLightedPids,
+            );
 
             return Scaffold(
               body: LayoutBuilder(
@@ -779,11 +1052,28 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                       sliver: ThreadLightedRepliesSection(
                                         lightedReplies: data.lightedReplies,
                                         persistedLightedPids:
-                                            persistedLightedPids,
+                                            effectiveLightedPids,
+                                        lightingReplyPids: _lightingReplyPids,
+                                        lightCountOverrides:
+                                            _lightCountOverrides,
                                         initiallyCollapsed:
                                             defaultCollapseLightedReplies,
                                         contentMaxWidth: contentBodyMaxWidth,
                                         viewerPuid: currentUserPuid,
+                                        onLightTapBuilder: (reply) {
+                                          return _buildReplyLightTapCallback(
+                                            reply: reply,
+                                            persistedLightedPids:
+                                                persistedLightedPids,
+                                            viewModel: viewModel,
+                                            replyLightActionService:
+                                                replyLightActionService,
+                                            replyLightRecordService:
+                                                replyLightRecordService,
+                                            currentActorKey: currentActorKey,
+                                            currentUserPuid: currentUserPuid,
+                                          );
+                                        },
                                         onOnlySeeAuthorTapBuilder: (reply) {
                                           final identity = reply.meta.author
                                               .preferredIdentity();
@@ -862,14 +1152,35 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                           child: ReplyFloor(
                                             replyFloor: reply,
                                             isLightedByViewer:
-                                                persistedLightedPids.contains(
+                                                effectiveLightedPids.contains(
+                                                  reply.pid,
+                                                ),
+                                            isLightingLightAction:
+                                                _lightingReplyPids.contains(
                                                   reply.pid,
                                                 ),
                                             isQuote: false,
+                                            lightCountOverride:
+                                                _lightCountOverrides[reply.pid],
                                             viewerPuid: currentUserPuid,
                                             floorNumber: displayFloorNumber,
                                             contentMaxWidth:
                                                 contentBodyMaxWidth,
+                                            onLightTap:
+                                                _buildReplyLightTapCallback(
+                                                  reply: reply,
+                                                  persistedLightedPids:
+                                                      persistedLightedPids,
+                                                  viewModel: viewModel,
+                                                  replyLightActionService:
+                                                      replyLightActionService,
+                                                  replyLightRecordService:
+                                                      replyLightRecordService,
+                                                  currentActorKey:
+                                                      currentActorKey,
+                                                  currentUserPuid:
+                                                      currentUserPuid,
+                                                ),
                                             onOnlySeeAuthorTap:
                                                 reply.meta.author
                                                         .preferredIdentity() ==

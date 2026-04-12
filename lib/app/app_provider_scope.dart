@@ -12,6 +12,7 @@ import 'package:bluefish/services/mention/mention_light_service.dart';
 import 'package:bluefish/services/mention/mention_reply_service.dart';
 import 'package:bluefish/services/private_message/private_message_detail_service.dart';
 import 'package:bluefish/services/private_message/private_message_list_service.dart';
+import 'package:bluefish/services/thread/reply_light_action_service.dart';
 import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_cache_service.dart';
 import 'package:bluefish/services/thread/reply_page_locator_service.dart';
@@ -50,6 +51,9 @@ class AppProviderScope extends StatelessWidget {
         ),
         Provider<AppHttpClient>.value(value: appSession.httpClient),
         Provider<AppDatabase>.value(value: appServices.appDatabase),
+        Provider<ReplyLightActionService>.value(
+          value: appServices.replyLightActionService,
+        ),
         Provider<ReplyLightRecordService>.value(
           value: appServices.replyLightRecordService,
         ),

@@ -6,9 +6,12 @@ import 'package:flutter/material.dart';
 class ThreadLightedRepliesSection extends StatefulWidget {
   final List<SingleReplyFloor> lightedReplies;
   final Set<String> persistedLightedPids;
+  final Set<String> lightingReplyPids;
+  final Map<String, int> lightCountOverrides;
   final bool initiallyCollapsed;
   final double contentMaxWidth;
   final String? viewerPuid;
+  final VoidCallback? Function(SingleReplyFloor reply)? onLightTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)? onReplyTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)? onReplyChainTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)?
@@ -18,9 +21,12 @@ class ThreadLightedRepliesSection extends StatefulWidget {
     super.key,
     required this.lightedReplies,
     this.persistedLightedPids = const <String>{},
+    this.lightingReplyPids = const <String>{},
+    this.lightCountOverrides = const <String, int>{},
     required this.initiallyCollapsed,
     required this.contentMaxWidth,
     this.viewerPuid,
+    this.onLightTapBuilder,
     this.onReplyTapBuilder,
     this.onReplyChainTapBuilder,
     this.onOnlySeeAuthorTapBuilder,
@@ -82,12 +88,17 @@ class _ThreadLightedRepliesSectionState
                         isLightedByViewer: widget.persistedLightedPids.contains(
                           replies[i].pid,
                         ),
+                        isLightingLightAction: widget.lightingReplyPids
+                            .contains(replies[i].pid),
                         isQuote: false,
+                        lightCountOverride:
+                            widget.lightCountOverrides[replies[i].pid],
                         contentMaxWidth: widget.contentMaxWidth,
                         imageHeroScope:
                             'thread-lighted-reply:${replies[i].pid}',
                         cardKeyPrefix: 'lighted-reply-floor-card',
                         viewerPuid: widget.viewerPuid,
+                        onLightTap: widget.onLightTapBuilder?.call(replies[i]),
                         onReplyTap: widget.onReplyTapBuilder?.call(replies[i]),
                         onReplyChainTap: widget.onReplyChainTapBuilder?.call(
                           replies[i],
