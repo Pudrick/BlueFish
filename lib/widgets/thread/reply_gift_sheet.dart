@@ -12,6 +12,18 @@ typedef ReplyGiftTapCallback =
 typedef ReplyReceivedGiftListTapCallback =
     void Function(SingleReplyFloor reply);
 
+const double _kReplyGiftSheetRecommendedHeightFactor = 0.28;
+const double _kReplyGiftSheetMinHeightFactor = 0.25;
+const double _kReplyGiftSheetMaxHeightFactor = 0.31;
+const double _kReplyGiftGridRowSpacing = 8;
+const BorderRadius _kReplyGiftTileBorderRadius = BorderRadius.all(
+  Radius.circular(14),
+);
+const double _kReplyGiftTileIconScale = 0.72;
+const double _kReplyGiftTileIconMinSize = 34;
+const double _kReplyGiftTileIconMaxSize = 56;
+const EdgeInsets _kReplyGiftFooterPadding = EdgeInsets.fromLTRB(16, 8, 16, 12);
+
 Future<String?> showReplyGiftBottomSheetForReply({
   required BuildContext context,
   required SingleReplyFloor reply,
@@ -266,9 +278,10 @@ class _ReplyGiftSheetState extends State<_ReplyGiftSheet> {
         final availableHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : MediaQuery.sizeOf(context).height;
-        final recommendedHeight = availableHeight * 0.30;
-        final minHeight = availableHeight * 0.25;
-        final maxHeight = availableHeight * 0.33;
+        final recommendedHeight =
+            availableHeight * _kReplyGiftSheetRecommendedHeightFactor;
+        final minHeight = availableHeight * _kReplyGiftSheetMinHeightFactor;
+        final maxHeight = availableHeight * _kReplyGiftSheetMaxHeightFactor;
         final sheetHeight = recommendedHeight
             .clamp(minHeight, maxHeight)
             .toDouble();
@@ -420,7 +433,7 @@ class _ReplyGiftSheetSurface extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              padding: _kReplyGiftFooterPadding,
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.tonalIcon(
@@ -575,7 +588,7 @@ class _ReplyGiftGrid extends StatelessWidget {
             isGiftActionRunning: isGiftActionRunning,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _kReplyGiftGridRowSpacing),
         Expanded(
           child: _ReplyGiftRow(
             rowGifts: secondRowGifts,
@@ -616,14 +629,31 @@ class _ReplyGiftRow extends StatelessWidget {
         Expanded(
           child: gift == null
               ? const SizedBox.expand()
-              : _ReplyGiftTile(
-                  gift: gift,
-                  isBusy: isGiftActionRunning,
-                  onTap: onGiftTap == null || isGiftActionRunning
-                      ? null
-                      : () {
-                          unawaited(onGiftTap!.call(gift));
-                        },
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tileSize = math.min(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    if (tileSize <= 0) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Center(
+                      child: SizedBox.square(
+                        dimension: tileSize,
+                        child: _ReplyGiftTile(
+                          gift: gift,
+                          isBusy: isGiftActionRunning,
+                          onTap: onGiftTap == null || isGiftActionRunning
+                              ? null
+                              : () {
+                                  unawaited(onGiftTap!.call(gift));
+                                },
+                        ),
+                      ),
+                    );
+                  },
                 ),
         ),
       );
@@ -656,22 +686,25 @@ class _ReplyGiftTile extends StatelessWidget {
       child: Material(
         key: ValueKey('reply-gift-item-${gift.giftId}'),
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: _kReplyGiftTileBorderRadius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final iconSize = (constraints.biggest.shortestSide * 0.58).clamp(
-                28.0,
-                44.0,
-              );
+              final iconSize =
+                  (constraints.biggest.shortestSide * _kReplyGiftTileIconScale)
+                      .clamp(
+                        _kReplyGiftTileIconMinSize,
+                        _kReplyGiftTileIconMaxSize,
+                      );
 
               return Stack(
                 fit: StackFit.expand,
                 children: [
                   Center(
                     child: SizedBox(
+                      key: ValueKey('reply-gift-icon-${gift.giftId}'),
                       width: iconSize,
                       height: iconSize,
                       child: ClipRRect(

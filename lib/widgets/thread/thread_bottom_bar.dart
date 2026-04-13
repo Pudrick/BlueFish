@@ -21,6 +21,10 @@ class ThreadBottomBar extends StatelessWidget {
   final VoidCallback? onOnlyOpTap;
   final VoidCallback? onRecommendTap;
   final VoidCallback? onRecommendRefreshTap;
+  final bool showReportAction;
+  final bool isReportActionEnabled;
+  final VoidCallback? onReportTap;
+  final double actionAreaRightReserveWidth;
 
   const ThreadBottomBar({
     super.key,
@@ -33,6 +37,10 @@ class ThreadBottomBar extends StatelessWidget {
     this.onOnlyOpTap,
     this.onRecommendTap,
     this.onRecommendRefreshTap,
+    this.showReportAction = false,
+    this.isReportActionEnabled = true,
+    this.onReportTap,
+    this.actionAreaRightReserveWidth = 0,
   });
 
   Future<void> _togglePinnedShortcut(BuildContext context) async {
@@ -83,20 +91,34 @@ class ThreadBottomBar extends StatelessWidget {
                 ),
                 for (final action in actions)
                   ListTile(
+                    enabled: action.enabled,
                     leading: Icon(
                       action.icon,
-                      color: action.selected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
+                      color: action.enabled
+                          ? (action.selected
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant)
+                          : colorScheme.onSurface.withValues(alpha: 0.38),
                     ),
-                    title: Text(action.label),
+                    title: Text(
+                      action.label,
+                      style: action.enabled
+                          ? null
+                          : TextStyle(
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.38,
+                              ),
+                            ),
+                    ),
                     trailing: action.selected
                         ? Icon(Icons.check_rounded, color: colorScheme.primary)
                         : null,
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      action.onTap();
-                    },
+                    onTap: action.enabled
+                        ? () {
+                            Navigator.of(sheetContext).pop();
+                            action.onTap?.call();
+                          }
+                        : null,
                   ),
               ],
             ),
@@ -144,6 +166,16 @@ class ThreadBottomBar extends StatelessWidget {
         selected: hasFavorated,
         onTap: () {},
       ),
+      if (showReportAction)
+        _ThreadBottomBarActionSpec(
+          id: 'report',
+          icon: Icons.flag_outlined,
+          label: '举报',
+          selected: false,
+          enabled: isReportActionEnabled,
+          overflowOnly: true,
+          onTap: onReportTap,
+        ),
     ];
   }
 
@@ -152,10 +184,34 @@ class ThreadBottomBar extends StatelessWidget {
     required List<_ThreadBottomBarActionSpec> actions,
     required double availableWidth,
   }) {
-    if (actions.isEmpty || availableWidth <= 0) {
+    if (actions.isEmpty) {
       return const _ThreadBottomBarActionLayout(
         visibleActions: <_ThreadBottomBarActionSpec>[],
         overflowActions: <_ThreadBottomBarActionSpec>[],
+      );
+    }
+
+    final forcedOverflowActions = actions
+        .where((action) => action.overflowOnly)
+        .toList(growable: false);
+    final layoutCandidates = actions
+        .where((action) => !action.overflowOnly)
+        .toList(growable: false);
+
+    if (availableWidth <= 0) {
+      return _ThreadBottomBarActionLayout(
+        visibleActions: const <_ThreadBottomBarActionSpec>[],
+        overflowActions: <_ThreadBottomBarActionSpec>[
+          ...layoutCandidates,
+          ...forcedOverflowActions,
+        ],
+      );
+    }
+
+    if (layoutCandidates.isEmpty) {
+      return _ThreadBottomBarActionLayout(
+        visibleActions: const <_ThreadBottomBarActionSpec>[],
+        overflowActions: forcedOverflowActions,
       );
     }
 
@@ -163,13 +219,15 @@ class ThreadBottomBar extends StatelessWidget {
     final visibleActions = <_ThreadBottomBarActionSpec>[];
     double usedWidth = 0;
 
-    for (var index = 0; index < actions.length; index += 1) {
-      final action = actions[index];
+    for (var index = 0; index < layoutCandidates.length; index += 1) {
+      final action = layoutCandidates[index];
       final double actionWidth = _measurePillWidth(context, action.label);
       final double nextWidth = visibleActions.isEmpty
           ? actionWidth
           : actionWidth + _actionSpacing;
-      final bool willOverflow = index < actions.length - 1;
+      final bool willOverflow =
+          index < layoutCandidates.length - 1 ||
+          forcedOverflowActions.isNotEmpty;
       final double overflowReserve = willOverflow
           ? visibleActions.isEmpty
                 ? moreButtonWidth
@@ -184,13 +242,16 @@ class ThreadBottomBar extends StatelessWidget {
 
       return _ThreadBottomBarActionLayout(
         visibleActions: visibleActions,
-        overflowActions: actions.sublist(index),
+        overflowActions: <_ThreadBottomBarActionSpec>[
+          ...layoutCandidates.sublist(index),
+          ...forcedOverflowActions,
+        ],
       );
     }
 
     return _ThreadBottomBarActionLayout(
       visibleActions: visibleActions,
-      overflowActions: const <_ThreadBottomBarActionSpec>[],
+      overflowActions: forcedOverflowActions,
     );
   }
 
@@ -262,11 +323,13 @@ class ThreadBottomBar extends StatelessWidget {
                         context,
                       );
                       final remainingWidth =
-                          constraints.maxWidth - recommendWidth;
+                          constraints.maxWidth -
+                          recommendWidth -
+                          actionAreaRightReserveWidth;
                       final layout = _resolveActionLayout(
                         context: context,
                         actions: actions,
-                        availableWidth: remainingWidth,
+                        availableWidth: remainingWidth > 0 ? remainingWidth : 0,
                       );
                       final children = <Widget>[
                         _ThreadRecommendActionPill(
@@ -297,6 +360,7 @@ class ThreadBottomBar extends StatelessWidget {
                             icon: layout.visibleActions[index].icon,
                             label: layout.visibleActions[index].label,
                             selected: layout.visibleActions[index].selected,
+                            enabled: layout.visibleActions[index].enabled,
                             onTap: layout.visibleActions[index].onTap,
                           ),
                         ],
@@ -540,13 +604,17 @@ class _ThreadBottomBarActionSpec {
   final IconData icon;
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final bool enabled;
+  final bool overflowOnly;
+  final VoidCallback? onTap;
 
   const _ThreadBottomBarActionSpec({
     required this.id,
     required this.icon,
     required this.label,
     required this.selected,
+    this.enabled = true,
+    this.overflowOnly = false,
     required this.onTap,
   });
 }
@@ -565,13 +633,15 @@ class _BottomActionPill extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   const _BottomActionPill({
     super.key,
     required this.icon,
     required this.label,
     required this.selected,
+    this.enabled = true,
     required this.onTap,
   });
 
@@ -587,7 +657,7 @@ class _BottomActionPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: Padding(
           padding: ThreadBottomBar._pillPadding,
           child: Row(
@@ -596,17 +666,21 @@ class _BottomActionPill extends StatelessWidget {
               Icon(
                 icon,
                 size: ThreadBottomBar._pillIconSize,
-                color: selected
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
+                color: enabled
+                    ? (selected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurfaceVariant)
+                    : colorScheme.onSurface.withValues(alpha: 0.38),
               ),
               const SizedBox(width: 4),
               Text(
                 label,
                 style: textTheme.labelMedium?.copyWith(
-                  color: selected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurfaceVariant,
+                  color: enabled
+                      ? (selected
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSurfaceVariant)
+                      : colorScheme.onSurface.withValues(alpha: 0.38),
                   fontWeight: FontWeight.w700,
                 ),
               ),

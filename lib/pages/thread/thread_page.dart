@@ -29,6 +29,30 @@ import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:provider/provider.dart';
 
+const double _threadBottomBarCompactReserveWidth = 68;
+const double _threadBottomBarWideReserveWidth = 24;
+const double _threadBottomBarReserveDecayStartWidth = 600;
+const double _threadBottomBarReserveDecayEndWidth = 1024;
+
+double resolveThreadBottomBarActionRightReserveWidth(double barWidth) {
+  if (barWidth < _threadBottomBarReserveDecayStartWidth) {
+    return _threadBottomBarCompactReserveWidth;
+  }
+
+  if (barWidth >= _threadBottomBarReserveDecayEndWidth) {
+    return _threadBottomBarWideReserveWidth;
+  }
+
+  final progress =
+      (barWidth - _threadBottomBarReserveDecayStartWidth) /
+      (_threadBottomBarReserveDecayEndWidth -
+          _threadBottomBarReserveDecayStartWidth);
+  return _threadBottomBarCompactReserveWidth -
+      ((_threadBottomBarCompactReserveWidth -
+              _threadBottomBarWideReserveWidth) *
+          progress);
+}
+
 /// Thread detail page entry point.
 ///
 /// Creates a [ThreadDetailViewModel] and provides it to [_ThreadPageContent].
@@ -567,6 +591,17 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     _showTransientSnackBar('主贴推荐状态探测暂未实现。');
   }
 
+  void _handleMainThreadReportTap({required bool isLoggedIn}) {
+    if (!isLoggedIn) {
+      // TODO: Route to login flow before entering report submission.
+      _showTransientSnackBar('请先登录后再举报');
+      return;
+    }
+
+    // TODO: Implement main-thread report flow.
+    _showTransientSnackBar('举报功能开发中');
+  }
+
   String? _resolvedActorKey({
     required String? currentActorKey,
     required String? currentUserPuid,
@@ -1019,6 +1054,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         .select<CurrentUserIdentityController, String?>(
           (identity) => identity.currentUserPuid,
         );
+    final isCurrentUserLoggedIn = context
+        .select<CurrentUserIdentityController, bool>(
+          (identity) => identity.isLoggedIn,
+        );
     final currentActorKey = context
         .select<CurrentUserIdentityController, String?>(
           (identity) => identity.currentActorKey,
@@ -1104,6 +1143,12 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
         // Loaded state
         final data = viewModel.data!;
+        final normalizedCurrentUserPuid = currentUserPuid?.trim();
+        final normalizedOpPuid = viewModel.opPuid?.trim();
+        final bool isViewingOwnMainThread =
+            normalizedCurrentUserPuid != null &&
+            normalizedCurrentUserPuid.isNotEmpty &&
+            normalizedCurrentUserPuid == normalizedOpPuid;
         final bool canPrev = viewModel.canGoPrev;
         final bool canNext = viewModel.canGoNext;
         final activeFilterLabel = _resolveActiveFilterLabel(viewModel, data);
@@ -1586,27 +1631,45 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                 },
               ),
 
-              bottomNavigationBar: ThreadBottomBar(
-                recommendState: _threadRecommendState,
-                autoProbeThreadRecommendStatusEnabled:
-                    autoProbeThreadRecommendStatus,
-                hasFavorated: false,
-                threadTid: viewModel.tid,
-                threadTitle: data.mainFloor.title,
-                isOnlyOpMode: viewModel.isOnlyOp,
-                onRecommendTap: _handleThreadRecommendTap,
-                onRecommendRefreshTap: _handleThreadRecommendProbeTap,
-                onOnlyOpTap: () {
-                  if (viewModel.isOnlyOp) {
-                    _clearAuthorFilter();
-                    return;
-                  }
-                  final opIdentity = data.mainFloor.meta.author
-                      .preferredIdentity();
-                  if (opIdentity == null) {
-                    return;
-                  }
-                  _applyAuthorFilter(opIdentity);
+              bottomNavigationBar: LayoutBuilder(
+                builder: (context, constraints) {
+                  final barWidth = constraints.hasBoundedWidth
+                      ? constraints.maxWidth
+                      : MediaQuery.sizeOf(context).width;
+                  final actionAreaRightReserveWidth =
+                      resolveThreadBottomBarActionRightReserveWidth(barWidth);
+
+                  return ThreadBottomBar(
+                    recommendState: _threadRecommendState,
+                    autoProbeThreadRecommendStatusEnabled:
+                        autoProbeThreadRecommendStatus,
+                    hasFavorated: false,
+                    threadTid: viewModel.tid,
+                    threadTitle: data.mainFloor.title,
+                    actionAreaRightReserveWidth: actionAreaRightReserveWidth,
+                    showReportAction: true,
+                    isReportActionEnabled: !isViewingOwnMainThread,
+                    onReportTap: () {
+                      _handleMainThreadReportTap(
+                        isLoggedIn: isCurrentUserLoggedIn,
+                      );
+                    },
+                    isOnlyOpMode: viewModel.isOnlyOp,
+                    onRecommendTap: _handleThreadRecommendTap,
+                    onRecommendRefreshTap: _handleThreadRecommendProbeTap,
+                    onOnlyOpTap: () {
+                      if (viewModel.isOnlyOp) {
+                        _clearAuthorFilter();
+                        return;
+                      }
+                      final opIdentity = data.mainFloor.meta.author
+                          .preferredIdentity();
+                      if (opIdentity == null) {
+                        return;
+                      }
+                      _applyAuthorFilter(opIdentity);
+                    },
+                  );
                 },
               ),
               floatingActionButton: Padding(
