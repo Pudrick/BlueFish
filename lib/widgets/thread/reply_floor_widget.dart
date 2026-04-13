@@ -24,6 +24,8 @@ class ReplyFloor extends StatelessWidget {
   final VoidCallback? onReplyChainTap;
   final VoidCallback? onGiftTap;
   final VoidCallback? onOnlySeeAuthorTap;
+  final VoidCallback? onUnlightTap;
+  final VoidCallback? onReportTap;
   final bool showActionRow;
   final bool showOverflowAction;
   final String? viewerPuid;
@@ -44,6 +46,8 @@ class ReplyFloor extends StatelessWidget {
     this.onReplyChainTap,
     this.onGiftTap,
     this.onOnlySeeAuthorTap,
+    this.onUnlightTap,
+    this.onReportTap,
     this.showActionRow = true,
     this.showOverflowAction = true,
     this.viewerPuid,
@@ -74,6 +78,8 @@ class ReplyFloor extends StatelessWidget {
       onReplyChainTap: onReplyChainTap,
       onGiftTap: onGiftTap,
       onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+      onUnlightTap: onUnlightTap,
+      onReportTap: onReportTap,
       showActionRow: showActionRow,
       showOverflowAction: showOverflowAction,
       isMine: viewerPuid != null && viewerPuid == replyFloor.meta.author.puid,
@@ -101,6 +107,8 @@ class _ReplyFloorContent extends StatelessWidget {
   final VoidCallback? onReplyChainTap;
   final VoidCallback? onGiftTap;
   final VoidCallback? onOnlySeeAuthorTap;
+  final VoidCallback? onUnlightTap;
+  final VoidCallback? onReportTap;
   final bool showActionRow;
   final bool showOverflowAction;
   final bool isMine;
@@ -125,6 +133,8 @@ class _ReplyFloorContent extends StatelessWidget {
     required this.onReplyChainTap,
     required this.onGiftTap,
     required this.onOnlySeeAuthorTap,
+    required this.onUnlightTap,
+    required this.onReportTap,
     required this.showActionRow,
     required this.showOverflowAction,
     required this.isMine,
@@ -160,6 +170,8 @@ class _ReplyFloorContent extends StatelessWidget {
               context,
               isMine: isMine,
               onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+              onUnlightTap: onUnlightTap,
+              onReportTap: onReportTap,
             );
           }
         : null;
@@ -211,6 +223,8 @@ class _ReplyFloorContent extends StatelessWidget {
                 onReplyChainTap: null,
                 onGiftTap: null,
                 onOnlySeeAuthorTap: null,
+                onUnlightTap: null,
+                onReportTap: null,
                 showActionRow: false,
                 showOverflowAction: false,
                 isMine: false,
@@ -1062,6 +1076,8 @@ void _showReplyOverflowActionsSheet(
   BuildContext context, {
   required bool isMine,
   VoidCallback? onOnlySeeAuthorTap,
+  VoidCallback? onUnlightTap,
+  VoidCallback? onReportTap,
 }) {
   showModalBottomSheet<void>(
     context: context,
@@ -1072,6 +1088,8 @@ void _showReplyOverflowActionsSheet(
       return _ReplyOverflowActionsSheet(
         isMine: isMine,
         onOnlySeeAuthorTap: onOnlySeeAuthorTap,
+        onUnlightTap: onUnlightTap,
+        onReportTap: onReportTap,
       );
     },
   );
@@ -1080,10 +1098,14 @@ void _showReplyOverflowActionsSheet(
 class _ReplyOverflowActionsSheet extends StatelessWidget {
   final bool isMine;
   final VoidCallback? onOnlySeeAuthorTap;
+  final VoidCallback? onUnlightTap;
+  final VoidCallback? onReportTap;
 
   const _ReplyOverflowActionsSheet({
     required this.isMine,
     this.onOnlySeeAuthorTap,
+    this.onUnlightTap,
+    this.onReportTap,
   });
 
   @override
@@ -1091,73 +1113,90 @@ class _ReplyOverflowActionsSheet extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(24),
-            clipBehavior: Clip.antiAlias,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.42),
-                ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).maybePop(),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Material(
+                key: const ValueKey('reply-overflow-actions-sheet'),
+                color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(24),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colorScheme.outlineVariant.withValues(
-                            alpha: 0.7,
+                clipBehavior: Clip.antiAlias,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.42),
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: colorScheme.outlineVariant.withValues(
+                                alpha: 0.7,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(999),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '更多操作',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (onOnlySeeAuthorTap != null)
+                          _OverflowActionTile(
+                            icon: Icons.filter_alt_outlined,
+                            label: '只看TA',
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              onOnlySeeAuthorTap!();
+                            },
+                          ),
+                        _OverflowActionTile(
+                          icon: Icons.thumb_down_alt_outlined,
+                          label: '点灭',
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            onUnlightTap?.call();
+                          },
+                        ),
+                        if (!isMine && onReportTap != null)
+                          _OverflowActionTile(
+                            icon: Icons.flag_outlined,
+                            label: '举报',
+                            onTap: onReportTap!,
+                          ),
+                        if (isMine)
+                          _OverflowActionTile(
+                            icon: Icons.delete_outline_rounded,
+                            label: '删除回复',
+                            danger: true,
+                            onTap: () => Navigator.of(context).pop(),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '更多操作',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (onOnlySeeAuthorTap != null)
-                      _OverflowActionTile(
-                        icon: Icons.filter_alt_outlined,
-                        label: '只看TA',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onOnlySeeAuthorTap!();
-                        },
-                      ),
-                    if (!isMine)
-                      _OverflowActionTile(
-                        icon: Icons.flag_outlined,
-                        label: '举报',
-                        onTap: () => Navigator.of(context).pop(),
-                      ),
-                    if (isMine)
-                      _OverflowActionTile(
-                        icon: Icons.delete_outline_rounded,
-                        label: '删除回复',
-                        danger: true,
-                        onTap: () => Navigator.of(context).pop(),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),

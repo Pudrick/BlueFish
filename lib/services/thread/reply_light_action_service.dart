@@ -4,7 +4,13 @@ import 'dart:io';
 import 'package:bluefish/network/api_config.dart';
 import 'package:http/http.dart' as http;
 
-enum ReplyLightActionStatus { success, alreadyLighted, notLighted, failure }
+enum ReplyLightActionStatus {
+  success,
+  alreadyLighted,
+  notLighted,
+  alreadyUnlighted,
+  failure,
+}
 
 class ReplyLightActionResult {
   final ReplyLightActionStatus status;
@@ -18,6 +24,9 @@ class ReplyLightActionResult {
   const ReplyLightActionResult.alreadyLighted(String message)
     : this._(status: ReplyLightActionStatus.alreadyLighted, message: message);
 
+  const ReplyLightActionResult.alreadyUnlighted(String message)
+    : this._(status: ReplyLightActionStatus.alreadyUnlighted, message: message);
+
   const ReplyLightActionResult.failure([String? message])
     : this._(status: ReplyLightActionStatus.failure, message: message);
 
@@ -26,14 +35,19 @@ class ReplyLightActionResult {
   bool get isAlreadyLighted => status == ReplyLightActionStatus.alreadyLighted;
 
   bool get isNotLighted => status == ReplyLightActionStatus.notLighted;
+
+  bool get isAlreadyUnlighted =>
+      status == ReplyLightActionStatus.alreadyUnlighted;
 }
 
 class ReplyLightActionService {
   static const String _replyLightPath = 'bbslightapi/light/v1/replyLightNew';
   static const String _cancelLightPath = 'bbslightapi/light/v1/cancelLight';
+  static const String _unlightPath = 'bbslightapi/light/v1/replyUnlightNew';
   static const String _fixedFid = '4875';
   static const String _lightFailureMessage = '点亮失败，请稍后重试。';
   static const String _cancelFailureMessage = '取消点亮失败，请稍后重试。';
+  static const String _unlightFailureMessage = '点灭失败，请稍后重试。';
 
   final http.Client _client;
 
@@ -135,6 +149,55 @@ class ReplyLightActionService {
     );
   }
 
+  Future<ReplyLightActionResult> unlightReply({
+    required String tid,
+    required String pid,
+    required String puid,
+  }) async {
+    final normalizedTid = tid.trim();
+    final normalizedPid = pid.trim();
+    final normalizedPuid = puid.trim();
+    if (normalizedTid.isEmpty ||
+        normalizedPid.isEmpty ||
+        normalizedPuid.isEmpty) {
+      return const ReplyLightActionResult.failure(_unlightFailureMessage);
+    }
+
+    return _postLightRequest(
+      url: Uri.parse(ApiConfig.apiPath(_unlightPath)),
+      headers: const <String, String>{
+        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      },
+      body: <String, String>{
+        'tid': normalizedTid,
+        'fid': _fixedFid,
+        'pid': normalizedPid,
+        'puid': normalizedPuid,
+      },
+      requestFailureMessage: _unlightFailureMessage,
+      handlePayload: (decoded) {
+        final errorText = _errorTextFromPayload(decoded);
+        final errorId = _errorIdFromPayload(decoded);
+        if (errorId == 6 || errorText.contains('已经点灭过')) {
+          return ReplyLightActionResult.alreadyUnlighted(
+            errorText.isEmpty ? '你已经点灭过这个回帖了' : errorText,
+          );
+        }
+
+        final status = decoded['status'];
+        if (status is num && status.toInt() == HttpStatus.ok) {
+          return const ReplyLightActionResult.success();
+        }
+
+        if (errorText.isNotEmpty) {
+          return ReplyLightActionResult.failure(errorText);
+        }
+
+        return const ReplyLightActionResult.failure(_unlightFailureMessage);
+      },
+    );
+  }
+
   Future<ReplyLightActionResult> _postLightRequest({
     required Uri url,
     required Map<String, String> headers,
@@ -171,5 +234,16 @@ class ReplyLightActionService {
       return '${error['text'] ?? ''}'.trim();
     }
     return '';
+  }
+
+  int? _errorIdFromPayload(Map<String, dynamic> decoded) {
+    final error = decoded['error'];
+    if (error is Map) {
+      final id = error['id'];
+      if (id is num) {
+        return id.toInt();
+      }
+    }
+    return null;
   }
 }

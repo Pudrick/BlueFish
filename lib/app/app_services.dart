@@ -12,6 +12,8 @@ import 'package:bluefish/services/thread/reply_page_locator_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/services/thread/thread_gift_service.dart';
 import 'package:bluefish/services/thread/thread_list_service.dart';
+import 'package:bluefish/services/thread/thread_recommend_action_service.dart';
+import 'package:bluefish/services/thread/thread_report_service.dart';
 import 'package:bluefish/services/thread/thread_reply_service.dart';
 import 'package:bluefish/services/user_home/current_user_profile_service.dart';
 import 'package:bluefish/services/user_home/user_home_service.dart';
@@ -25,6 +27,8 @@ class AppServices {
   final ReplyPageLocatorCacheService replyPageLocatorCacheService;
   final ThreadDetailService threadDetailService;
   final ThreadGiftService threadGiftService;
+  final ThreadRecommendActionService threadRecommendActionService;
+  final ThreadReportService threadReportService;
   final ReplyPageLocatorService replyPageLocatorService;
   final ThreadListService threadListService;
   final ThreadReplyService threadReplyService;
@@ -44,6 +48,8 @@ class AppServices {
     required this.replyPageLocatorCacheService,
     required this.threadDetailService,
     required this.threadGiftService,
+    required this.threadRecommendActionService,
+    required this.threadReportService,
     required this.replyPageLocatorService,
     required this.threadListService,
     required this.threadReplyService,
@@ -80,6 +86,10 @@ class AppServices {
       replyPageLocatorCacheService: cacheService,
       threadDetailService: threadDetailService,
       threadGiftService: ThreadGiftService(client: httpClient),
+      threadRecommendActionService: ThreadRecommendActionService(
+        client: httpClient,
+      ),
+      threadReportService: ThreadReportService(client: httpClient),
       replyPageLocatorService: ReplyPageLocatorService(
         client: httpClient,
         threadDetailService: threadDetailService,

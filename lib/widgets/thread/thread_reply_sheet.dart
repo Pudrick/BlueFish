@@ -22,6 +22,7 @@ Future<void> showThreadReplySheet({
   String? onlyEuid,
   String? onlyPuid,
   ThreadReplyService? service,
+  Future<void> Function(SingleReplyFloor reply)? onReportTap,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -39,6 +40,7 @@ Future<void> showThreadReplySheet({
         onlyEuid: onlyEuid,
         onlyPuid: onlyPuid,
         service: service,
+        onReportTap: onReportTap,
       );
     },
   );
@@ -52,6 +54,7 @@ class ThreadReplySheet extends StatefulWidget {
   final String? onlyEuid;
   final String? onlyPuid;
   final ThreadReplyService? service;
+  final Future<void> Function(SingleReplyFloor reply)? onReportTap;
 
   const ThreadReplySheet({
     super.key,
@@ -62,6 +65,7 @@ class ThreadReplySheet extends StatefulWidget {
     this.onlyEuid,
     this.onlyPuid,
     this.service,
+    this.onReportTap,
   });
 
   @override
@@ -614,6 +618,7 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                 reply: node.reply,
                 floorNumber: node.floorNumber,
                 viewerPuid: viewerPuid,
+                onReportTap: widget.onReportTap,
               ),
             ),
           ),
@@ -736,7 +741,12 @@ class _ThreadReplySheetState extends State<ThreadReplySheet> {
                 onReplyChainTap: reply.replyNum > 0
                     ? () => _openReplyChain(reply)
                     : null,
-                showOverflowAction: false,
+                showOverflowAction: widget.onReportTap != null,
+                onReportTap: widget.onReportTap == null
+                    ? null
+                    : () {
+                        unawaited(widget.onReportTap!(reply));
+                      },
               ),
             );
           }, childCount: node.replies.length + 1),
@@ -766,12 +776,14 @@ class _SourceReplySection extends StatelessWidget {
   final SingleReplyFloor reply;
   final int? floorNumber;
   final String? viewerPuid;
+  final Future<void> Function(SingleReplyFloor reply)? onReportTap;
 
   const _SourceReplySection({
     super.key,
     required this.reply,
     required this.floorNumber,
     required this.viewerPuid,
+    required this.onReportTap,
   });
 
   @override
@@ -795,6 +807,7 @@ class _SourceReplySection extends StatelessWidget {
             floorNumber: floorNumber,
             imageHeroScope: 'thread-reply-sheet:${reply.pid}:source',
             viewerPuid: viewerPuid,
+            onReportTap: onReportTap,
           ),
         ),
       ),
@@ -809,12 +822,14 @@ class _CollapsibleReplyCard extends StatefulWidget {
   final int? floorNumber;
   final String imageHeroScope;
   final String? viewerPuid;
+  final Future<void> Function(SingleReplyFloor reply)? onReportTap;
 
   const _CollapsibleReplyCard({
     required this.reply,
     required this.floorNumber,
     required this.imageHeroScope,
     required this.viewerPuid,
+    required this.onReportTap,
   });
 
   @override
@@ -959,7 +974,12 @@ class _CollapsibleReplyCardState extends State<_CollapsibleReplyCard> {
         floorNumber: widget.floorNumber,
         imageHeroScope: widget.imageHeroScope,
         showActionRow: false,
-        showOverflowAction: false,
+        showOverflowAction: widget.onReportTap != null,
+        onReportTap: widget.onReportTap == null
+            ? null
+            : () {
+                unawaited(widget.onReportTap!(widget.reply));
+              },
       ),
     );
   }

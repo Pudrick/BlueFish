@@ -24,6 +24,21 @@ class AuthGuardPolicies {
     title: '需要登录',
     message: '访问用户主页需要先登录，是否前往登录页？',
   );
+
+  static const AuthGuardPolicy threadReport = AuthGuardPolicy(
+    title: '需要登录',
+    message: '举报主贴需要先登录，是否前往登录页？',
+  );
+
+  static const AuthGuardPolicy replyReport = AuthGuardPolicy(
+    title: '需要登录',
+    message: '举报回帖需要先登录，是否前往登录页？',
+  );
+
+  static const AuthGuardPolicy threadDislike = AuthGuardPolicy(
+    title: '需要登录',
+    message: '点踩主贴需要先登录，是否前往登录页？',
+  );
 }
 
 class AuthNavigationGuard {

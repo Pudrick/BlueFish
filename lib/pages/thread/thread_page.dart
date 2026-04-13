@@ -6,10 +6,13 @@ import 'package:bluefish/models/thread/thread_detail.dart';
 import 'package:bluefish/models/thread/single_reply_floor.dart';
 import 'package:bluefish/models/thread/thread_recommend_state.dart';
 import 'package:bluefish/router/app_routes.dart';
+import 'package:bluefish/router/auth_guard.dart';
 import 'package:bluefish/services/thread/reply_light_action_service.dart';
 import 'package:bluefish/services/thread/reply_light_record_service.dart';
 import 'package:bluefish/services/thread/thread_detail_service.dart';
 import 'package:bluefish/services/thread/thread_gift_service.dart';
+import 'package:bluefish/services/thread/thread_recommend_action_service.dart';
+import 'package:bluefish/services/thread/thread_report_service.dart';
 import 'package:bluefish/userdata/thread_recommend_status_store.dart';
 import 'package:bluefish/utils/result.dart';
 import 'package:bluefish/viewModels/app_settings_view_model.dart';
@@ -33,6 +36,16 @@ const double _threadBottomBarCompactReserveWidth = 68;
 const double _threadBottomBarWideReserveWidth = 24;
 const double _threadBottomBarReserveDecayStartWidth = 600;
 const double _threadBottomBarReserveDecayEndWidth = 1024;
+
+class _ThreadReportReasonOption {
+  final String typeId;
+  final String content;
+
+  const _ThreadReportReasonOption({
+    required this.typeId,
+    required this.content,
+  });
+}
 
 double resolveThreadBottomBarActionRightReserveWidth(double barWidth) {
   if (barWidth < _threadBottomBarReserveDecayStartWidth) {
@@ -152,6 +165,8 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   ThreadRecommendState _threadRecommendState = ThreadRecommendState.unknown;
   String? _threadRecommendHydratedTid;
   bool _didAttemptAutomaticThreadRecommendProbe = false;
+  bool _isSubmittingMainThreadReport = false;
+  bool _isSubmittingReplyReport = false;
 
   static const Duration _scrollAnimationDuration = Duration(milliseconds: 260);
   static const Duration _quickActionAnimationDuration = Duration(
@@ -162,6 +177,16 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
   static const String _giftTotalPlaceholder = '--';
   static const int _giftTotalRefreshPageSize = 20;
   static const double _floatingActionGroupBottomOffset = 12;
+  static const List<_ThreadReportReasonOption> _mainThreadReportReasons =
+      <_ThreadReportReasonOption>[
+        _ThreadReportReasonOption(typeId: '1', content: '违反法律、时政敏感'),
+        _ThreadReportReasonOption(typeId: '2', content: '未经许可的广告行为'),
+        _ThreadReportReasonOption(typeId: '3', content: '色情淫秽、血腥暴恐'),
+        _ThreadReportReasonOption(typeId: '4', content: '低俗谩骂、攻击引战'),
+        _ThreadReportReasonOption(typeId: '5', content: '造谣造假、诈骗信息'),
+        _ThreadReportReasonOption(typeId: '6', content: '其他恶意行为'),
+        _ThreadReportReasonOption(typeId: '10', content: '侵权投诉'),
+      ];
 
   @override
   void initState() {
@@ -568,38 +593,463 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
 
   void _maybeScheduleAutomaticThreadRecommendProbe({
     required bool autoProbeEnabled,
+    required bool isLoggedIn,
     required String tid,
+    required ThreadRecommendActionService threadRecommendActionService,
+    required ThreadRecommendStatusStore threadRecommendStatusStore,
   }) {
     if (!autoProbeEnabled ||
+        !isLoggedIn ||
         _didAttemptAutomaticThreadRecommendProbe ||
+        _threadRecommendState != ThreadRecommendState.unknown ||
         _threadRecommendHydratedTid != tid) {
       return;
     }
 
     _didAttemptAutomaticThreadRecommendProbe = true;
 
-    // TODO: Trigger automatic "recommend then cancel" probing after the
-    // thread recommend action service is implemented.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _threadRecommendHydratedTid != tid ||
+          _threadRecommendState != ThreadRecommendState.unknown) {
+        return;
+      }
+
+      unawaited(
+        _probeThreadRecommendState(
+          isLoggedIn: isLoggedIn,
+          tid: tid,
+          threadRecommendActionService: threadRecommendActionService,
+          threadRecommendStatusStore: threadRecommendStatusStore,
+          silent: true,
+        ),
+      );
+    });
   }
 
-  void _handleThreadRecommendTap() {
-    // TODO: Implement main thread recommend / cancel action flow.
-  }
-
-  void _handleThreadRecommendProbeTap() {
-    // TODO: Implement manual "recommend then cancel" probing.
-    _showTransientSnackBar('主贴推荐状态探测暂未实现。');
-  }
-
-  void _handleMainThreadReportTap({required bool isLoggedIn}) {
+  Future<void> _probeThreadRecommendState({
+    required bool isLoggedIn,
+    required String tid,
+    required ThreadRecommendActionService threadRecommendActionService,
+    required ThreadRecommendStatusStore threadRecommendStatusStore,
+    required bool silent,
+  }) async {
     if (!isLoggedIn) {
-      // TODO: Route to login flow before entering report submission.
-      _showTransientSnackBar('请先登录后再举报');
+      if (!silent) {
+        _showTransientSnackBar('请先登录后再探测推荐状态');
+      }
+      return;
+    }
+    if (_threadRecommendState.isChecking) {
       return;
     }
 
-    // TODO: Implement main-thread report flow.
-    _showTransientSnackBar('举报功能开发中');
+    final previousState = _threadRecommendState;
+    setState(() {
+      _threadRecommendState = ThreadRecommendState.checking;
+    });
+
+    final recommendResult = await threadRecommendActionService.recommend(
+      tid: tid,
+    );
+
+    if (!mounted || _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    if (recommendResult.isDuplicate) {
+      const nextState = ThreadRecommendState.recommended;
+      setState(() {
+        _threadRecommendState = nextState;
+      });
+      await threadRecommendStatusStore.write(tid: tid, state: nextState);
+
+      if (!silent) {
+        _showTransientSnackBar('探测完成：当前已推荐');
+      }
+      return;
+    }
+
+    if (!recommendResult.isSuccess) {
+      final failureMessage = recommendResult.message?.trim();
+      setState(() {
+        _threadRecommendState = previousState;
+      });
+
+      if (!silent) {
+        _showTransientSnackBar(
+          failureMessage == null || failureMessage.isEmpty
+              ? '推荐状态探测失败，请稍后重试。'
+              : failureMessage,
+        );
+      }
+      return;
+    }
+
+    final cancelResult = await threadRecommendActionService.cancelRecommend(
+      tid: tid,
+    );
+
+    if (!mounted || _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    if (cancelResult.isSuccess) {
+      const nextState = ThreadRecommendState.notRecommended;
+      setState(() {
+        _threadRecommendState = nextState;
+      });
+      await threadRecommendStatusStore.write(tid: tid, state: nextState);
+
+      if (!silent) {
+        _showTransientSnackBar('探测完成：当前未推荐');
+      }
+      return;
+    }
+
+    const fallbackState = ThreadRecommendState.recommended;
+    setState(() {
+      _threadRecommendState = fallbackState;
+    });
+    await threadRecommendStatusStore.write(tid: tid, state: fallbackState);
+
+    if (!silent) {
+      final failureMessage = cancelResult.message?.trim();
+      _showTransientSnackBar(
+        failureMessage == null || failureMessage.isEmpty
+            ? '探测完成但回滚失败，当前视为已推荐。'
+            : '探测完成但回滚失败：$failureMessage',
+      );
+    }
+  }
+
+  Future<void> _handleThreadRecommendTap({
+    required bool isLoggedIn,
+    required String tid,
+    required ThreadRecommendActionService threadRecommendActionService,
+    required ThreadRecommendStatusStore threadRecommendStatusStore,
+  }) async {
+    if (!isLoggedIn) {
+      _showTransientSnackBar('请先登录后再推荐');
+      return;
+    }
+    if (_threadRecommendState.isChecking) {
+      return;
+    }
+
+    final previousState = _threadRecommendState;
+    final shouldCancelRecommend = previousState.isRecommended;
+
+    setState(() {
+      _threadRecommendState = ThreadRecommendState.checking;
+    });
+
+    final result = shouldCancelRecommend
+        ? await threadRecommendActionService.cancelRecommend(tid: tid)
+        : await threadRecommendActionService.recommend(tid: tid);
+
+    if (!mounted || _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    final successState = shouldCancelRecommend
+        ? ThreadRecommendState.notRecommended
+        : ThreadRecommendState.recommended;
+
+    if (result.isSuccess || result.isDuplicate) {
+      setState(() {
+        _threadRecommendState = successState;
+      });
+      await threadRecommendStatusStore.write(tid: tid, state: successState);
+
+      if (result.isDuplicate) {
+        final duplicateMessage = result.message?.trim();
+        if (duplicateMessage != null && duplicateMessage.isNotEmpty) {
+          _showTransientSnackBar(duplicateMessage);
+        }
+      }
+      return;
+    }
+
+    final failureMessage = result.message?.trim();
+    setState(() {
+      _threadRecommendState = previousState;
+    });
+    _showTransientSnackBar(
+      failureMessage == null || failureMessage.isEmpty
+          ? (shouldCancelRecommend ? '取消推荐失败，请稍后重试。' : '推荐失败，请稍后重试。')
+          : failureMessage,
+    );
+  }
+
+  Future<void> _handleThreadDislikeTap({
+    required bool isLoggedIn,
+    required String tid,
+    required ThreadRecommendActionService threadRecommendActionService,
+    required ThreadRecommendStatusStore threadRecommendStatusStore,
+  }) async {
+    if (_threadRecommendState.isChecking) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      final decision = await AuthNavigationGuard.checkAccess(
+        context: context,
+        isLoggedIn: isLoggedIn,
+        policy: AuthGuardPolicies.threadDislike,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (decision == AuthGuardDecision.goToLogin) {
+        await context.pushLogin<void>();
+      }
+      if (!mounted) {
+        return;
+      }
+      return;
+    }
+
+    final previousState = _threadRecommendState;
+    setState(() {
+      _threadRecommendState = ThreadRecommendState.checking;
+    });
+
+    final result = await threadRecommendActionService.downvote(tid: tid);
+
+    if (!mounted || _threadRecommendHydratedTid != tid) {
+      return;
+    }
+
+    if (result.isSuccess || result.isDuplicate) {
+      const nextState = ThreadRecommendState.notRecommended;
+      setState(() {
+        _threadRecommendState = nextState;
+      });
+      await threadRecommendStatusStore.write(tid: tid, state: nextState);
+
+      if (result.isDuplicate) {
+        final duplicateMessage = result.message?.trim();
+        if (duplicateMessage != null && duplicateMessage.isNotEmpty) {
+          _showTransientSnackBar(duplicateMessage);
+        }
+      }
+      return;
+    }
+
+    final failureMessage = result.message?.trim();
+    setState(() {
+      _threadRecommendState = previousState;
+    });
+    _showTransientSnackBar(
+      failureMessage == null || failureMessage.isEmpty
+          ? '点踩失败，请稍后重试。'
+          : failureMessage,
+    );
+  }
+
+  Future<void> _handleThreadRecommendProbeTap({
+    required bool isLoggedIn,
+    required String tid,
+    required ThreadRecommendActionService threadRecommendActionService,
+    required ThreadRecommendStatusStore threadRecommendStatusStore,
+  }) {
+    return _probeThreadRecommendState(
+      isLoggedIn: isLoggedIn,
+      tid: tid,
+      threadRecommendActionService: threadRecommendActionService,
+      threadRecommendStatusStore: threadRecommendStatusStore,
+      silent: false,
+    );
+  }
+
+  Future<_ThreadReportReasonOption?> _showMainThreadReportReasonSheet() {
+    return showModalBottomSheet<_ThreadReportReasonOption>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Text(
+                    '选择举报原因',
+                    style: Theme.of(sheetContext).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                for (final reason in _mainThreadReportReasons)
+                  ListTile(
+                    leading: const Icon(Icons.flag_outlined),
+                    title: Text(reason.content),
+                    onTap: () => Navigator.of(sheetContext).pop(reason),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _resolveThreadReportSuccessMessage(String rawMessage) {
+    final normalizedMessage = rawMessage.trim();
+    if (normalizedMessage.isEmpty || normalizedMessage == '成功') {
+      return '举报成功';
+    }
+    return normalizedMessage;
+  }
+
+  Future<void> _handleMainThreadReportTap({
+    required bool isLoggedIn,
+    required String tid,
+    required String topicId,
+    required ThreadReportService threadReportService,
+  }) async {
+    if (_isSubmittingMainThreadReport) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      final decision = await AuthNavigationGuard.checkAccess(
+        context: context,
+        isLoggedIn: isLoggedIn,
+        policy: AuthGuardPolicies.threadReport,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (decision == AuthGuardDecision.goToLogin) {
+        await context.pushLogin<void>();
+      }
+      if (!mounted) {
+        return;
+      }
+      return;
+    }
+
+    final selectedReason = await _showMainThreadReportReasonSheet();
+    if (!mounted || selectedReason == null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmittingMainThreadReport = true;
+    });
+
+    late final Result<String> result;
+    try {
+      result = await threadReportService.reportThread(
+        tid: tid,
+        topicId: topicId,
+        typeId: selectedReason.typeId,
+        content: selectedReason.content,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingMainThreadReport = false;
+        });
+      } else {
+        _isSubmittingMainThreadReport = false;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    result.when(
+      success: (message) {
+        _showTransientSnackBar(_resolveThreadReportSuccessMessage(message));
+      },
+      failure: (message, exception) {
+        final normalizedMessage = message.trim();
+        _showTransientSnackBar(
+          normalizedMessage.isEmpty ? '举报失败，请稍后重试。' : normalizedMessage,
+        );
+      },
+    );
+  }
+
+  Future<void> _handleReplyReportTap({
+    required bool isLoggedIn,
+    required String tid,
+    required String topicId,
+    required String pid,
+    required ThreadReportService threadReportService,
+  }) async {
+    if (_isSubmittingReplyReport) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      final decision = await AuthNavigationGuard.checkAccess(
+        context: context,
+        isLoggedIn: isLoggedIn,
+        policy: AuthGuardPolicies.replyReport,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (decision == AuthGuardDecision.goToLogin) {
+        await context.pushLogin<void>();
+      }
+      if (!mounted) {
+        return;
+      }
+      return;
+    }
+
+    final selectedReason = await _showMainThreadReportReasonSheet();
+    if (!mounted || selectedReason == null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmittingReplyReport = true;
+    });
+
+    late final Result<String> result;
+    try {
+      result = await threadReportService.reportReply(
+        tid: tid,
+        topicId: topicId,
+        pid: pid,
+        typeId: selectedReason.typeId,
+        content: selectedReason.content,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingReplyReport = false;
+        });
+      } else {
+        _isSubmittingReplyReport = false;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    result.when(
+      success: (message) {
+        _showTransientSnackBar(_resolveThreadReportSuccessMessage(message));
+      },
+      failure: (message, exception) {
+        final normalizedMessage = message.trim();
+        _showTransientSnackBar(
+          normalizedMessage.isEmpty ? '举报失败，请稍后重试。' : normalizedMessage,
+        );
+      },
+    );
   }
 
   String? _resolvedActorKey({
@@ -807,6 +1257,32 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     };
   }
 
+  VoidCallback? _buildReplyUnlightTapCallback({
+    required SingleReplyFloor reply,
+    required ThreadDetailViewModel viewModel,
+    required ReplyLightActionService replyLightActionService,
+    required ReplyLightRecordService replyLightRecordService,
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) {
+    if (_lightingReplyPids.contains(reply.pid)) {
+      return null;
+    }
+
+    return () {
+      unawaited(
+        _handleReplyUnlightTap(
+          reply: reply,
+          tid: viewModel.tid,
+          replyLightActionService: replyLightActionService,
+          replyLightRecordService: replyLightRecordService,
+          currentActorKey: currentActorKey,
+          currentUserPuid: currentUserPuid,
+        ),
+      );
+    };
+  }
+
   Future<void> _handleReplyLightTap({
     required SingleReplyFloor reply,
     required String tid,
@@ -956,6 +1432,80 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     }
   }
 
+  Future<void> _handleReplyUnlightTap({
+    required SingleReplyFloor reply,
+    required String tid,
+    required ReplyLightActionService replyLightActionService,
+    required ReplyLightRecordService replyLightRecordService,
+    required String? currentActorKey,
+    required String? currentUserPuid,
+  }) async {
+    final normalizedPuid = currentUserPuid?.trim();
+    if (normalizedPuid == null || normalizedPuid.isEmpty) {
+      _showTransientSnackBar('请先登录后再点灭');
+      return;
+    }
+    if (_lightingReplyPids.contains(reply.pid)) {
+      return;
+    }
+
+    final actorKey = _resolvedActorKey(
+      currentActorKey: currentActorKey,
+      currentUserPuid: normalizedPuid,
+    );
+
+    setState(() {
+      _lightingReplyPids.add(reply.pid);
+    });
+
+    final result = await replyLightActionService.unlightReply(
+      tid: tid,
+      pid: reply.pid,
+      puid: normalizedPuid,
+    );
+
+    if (actorKey != null && (result.isSuccess || result.isAlreadyUnlighted)) {
+      await _removeReplyLightedRecord(
+        replyLightRecordService: replyLightRecordService,
+        actorKey: actorKey,
+        tid: tid,
+        pid: reply.pid,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    String? snackBarMessage;
+    final shouldMarkUnlighted = result.isSuccess || result.isAlreadyUnlighted;
+    final shouldDecreaseLightCount = result.isSuccess;
+
+    if (result.isAlreadyUnlighted) {
+      snackBarMessage = result.message ?? '你已经点灭过这个回帖了';
+    } else if (!result.isSuccess) {
+      snackBarMessage = result.message ?? '点灭失败，请稍后重试。';
+    }
+
+    setState(() {
+      _lightingReplyPids.remove(reply.pid);
+      if (!shouldMarkUnlighted) {
+        return;
+      }
+
+      _lightStateOverrides[reply.pid] = false;
+      if (shouldDecreaseLightCount) {
+        _lightCountOverrides[reply.pid] = _effectiveLightCount(reply) - 1;
+      } else {
+        _lightCountOverrides.putIfAbsent(reply.pid, () => reply.lightCount);
+      }
+    });
+
+    if (snackBarMessage != null) {
+      _showTransientSnackBar(snackBarMessage);
+    }
+  }
+
   Future<void> _persistReplyLightedRecord({
     required ReplyLightRecordService replyLightRecordService,
     required String actorKey,
@@ -1073,6 +1623,9 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
     final replyLightActionService = context.read<ReplyLightActionService>();
     final replyLightRecordService = context.read<ReplyLightRecordService>();
     final threadGiftService = context.read<ThreadGiftService>();
+    final threadRecommendActionService = context
+        .read<ThreadRecommendActionService>();
+    final threadReportService = context.read<ThreadReportService>();
     final threadRecommendStatusStore = context
         .read<ThreadRecommendStatusStore>();
 
@@ -1162,7 +1715,10 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
         );
         _maybeScheduleAutomaticThreadRecommendProbe(
           autoProbeEnabled: autoProbeThreadRecommendStatus,
+          isLoggedIn: isCurrentUserLoggedIn,
           tid: viewModel.tid,
+          threadRecommendActionService: threadRecommendActionService,
+          threadRecommendStatusStore: threadRecommendStatusStore,
         );
         _ensurePersistedLightedFuture(
           replyLightRecordService: replyLightRecordService,
@@ -1329,6 +1885,18 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                             currentUserPuid: currentUserPuid,
                                           );
                                         },
+                                        onUnlightTapBuilder: (reply) {
+                                          return _buildReplyUnlightTapCallback(
+                                            reply: reply,
+                                            viewModel: viewModel,
+                                            replyLightActionService:
+                                                replyLightActionService,
+                                            replyLightRecordService:
+                                                replyLightRecordService,
+                                            currentActorKey: currentActorKey,
+                                            currentUserPuid: currentUserPuid,
+                                          );
+                                        },
                                         onGiftTapBuilder: (reply) {
                                           return () {
                                             unawaited(
@@ -1394,6 +1962,22 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                             );
                                           };
                                         },
+                                        onReportTapBuilder: (reply) {
+                                          return () {
+                                            unawaited(
+                                              _handleReplyReportTap(
+                                                isLoggedIn:
+                                                    isCurrentUserLoggedIn,
+                                                tid: viewModel.tid,
+                                                topicId: data.topicId
+                                                    .toString(),
+                                                pid: reply.pid,
+                                                threadReportService:
+                                                    threadReportService,
+                                              ),
+                                            );
+                                          };
+                                        },
                                         onReplyChainTapBuilder: (reply) {
                                           if (reply.replyNum <= 0) {
                                             return null;
@@ -1408,6 +1992,18 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                               threadPage: viewModel.currentPage,
                                               onlyEuid: viewModel.filterEuid,
                                               onlyPuid: viewModel.filterPuid,
+                                              onReportTap: (targetReply) {
+                                                return _handleReplyReportTap(
+                                                  isLoggedIn:
+                                                      isCurrentUserLoggedIn,
+                                                  tid: viewModel.tid,
+                                                  topicId: data.topicId
+                                                      .toString(),
+                                                  pid: targetReply.pid,
+                                                  threadReportService:
+                                                      threadReportService,
+                                                );
+                                              },
                                             );
                                           };
                                         },
@@ -1502,6 +2098,19 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                                   currentUserPuid:
                                                       currentUserPuid,
                                                 ),
+                                            onUnlightTap:
+                                                _buildReplyUnlightTapCallback(
+                                                  reply: reply,
+                                                  viewModel: viewModel,
+                                                  replyLightActionService:
+                                                      replyLightActionService,
+                                                  replyLightRecordService:
+                                                      replyLightRecordService,
+                                                  currentActorKey:
+                                                      currentActorKey,
+                                                  currentUserPuid:
+                                                      currentUserPuid,
+                                                ),
                                             onOnlySeeAuthorTap:
                                                 reply.meta.author
                                                         .preferredIdentity() ==
@@ -1528,6 +2137,20 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                                     ),
                                               );
                                             },
+                                            onReportTap: () {
+                                              unawaited(
+                                                _handleReplyReportTap(
+                                                  isLoggedIn:
+                                                      isCurrentUserLoggedIn,
+                                                  tid: viewModel.tid,
+                                                  topicId: data.topicId
+                                                      .toString(),
+                                                  pid: reply.pid,
+                                                  threadReportService:
+                                                      threadReportService,
+                                                ),
+                                              );
+                                            },
                                             onReplyChainTap: reply.replyNum > 0
                                                 ? () {
                                                     showThreadReplySheet(
@@ -1542,6 +2165,18 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                                                           viewModel.filterEuid,
                                                       onlyPuid:
                                                           viewModel.filterPuid,
+                                                      onReportTap: (targetReply) {
+                                                        return _handleReplyReportTap(
+                                                          isLoggedIn:
+                                                              isCurrentUserLoggedIn,
+                                                          tid: viewModel.tid,
+                                                          topicId: data.topicId
+                                                              .toString(),
+                                                          pid: targetReply.pid,
+                                                          threadReportService:
+                                                              threadReportService,
+                                                        );
+                                                      },
                                                     );
                                                   }
                                                 : null,
@@ -1652,11 +2287,48 @@ class _ThreadPageContentState extends State<_ThreadPageContent> {
                     onReportTap: () {
                       _handleMainThreadReportTap(
                         isLoggedIn: isCurrentUserLoggedIn,
+                        tid: viewModel.tid,
+                        topicId: data.topicId.toString(),
+                        threadReportService: threadReportService,
                       );
                     },
                     isOnlyOpMode: viewModel.isOnlyOp,
-                    onRecommendTap: _handleThreadRecommendTap,
-                    onRecommendRefreshTap: _handleThreadRecommendProbeTap,
+                    onRecommendTap: () {
+                      unawaited(
+                        _handleThreadRecommendTap(
+                          isLoggedIn: isCurrentUserLoggedIn,
+                          tid: viewModel.tid,
+                          threadRecommendActionService:
+                              threadRecommendActionService,
+                          threadRecommendStatusStore:
+                              threadRecommendStatusStore,
+                        ),
+                      );
+                    },
+                    onRecommendRefreshTap: () {
+                      unawaited(
+                        _handleThreadRecommendProbeTap(
+                          isLoggedIn: isCurrentUserLoggedIn,
+                          tid: viewModel.tid,
+                          threadRecommendActionService:
+                              threadRecommendActionService,
+                          threadRecommendStatusStore:
+                              threadRecommendStatusStore,
+                        ),
+                      );
+                    },
+                    onDislikeTap: () {
+                      unawaited(
+                        _handleThreadDislikeTap(
+                          isLoggedIn: isCurrentUserLoggedIn,
+                          tid: viewModel.tid,
+                          threadRecommendActionService:
+                              threadRecommendActionService,
+                          threadRecommendStatusStore:
+                              threadRecommendStatusStore,
+                        ),
+                      );
+                    },
                     onOnlyOpTap: () {
                       if (viewModel.isOnlyOp) {
                         _clearAuthorFilter();

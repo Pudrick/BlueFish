@@ -21,6 +21,7 @@ class ThreadBottomBar extends StatelessWidget {
   final VoidCallback? onOnlyOpTap;
   final VoidCallback? onRecommendTap;
   final VoidCallback? onRecommendRefreshTap;
+  final VoidCallback? onDislikeTap;
   final bool showReportAction;
   final bool isReportActionEnabled;
   final VoidCallback? onReportTap;
@@ -37,6 +38,7 @@ class ThreadBottomBar extends StatelessWidget {
     this.onOnlyOpTap,
     this.onRecommendTap,
     this.onRecommendRefreshTap,
+    this.onDislikeTap,
     this.showReportAction = false,
     this.isReportActionEnabled = true,
     this.onReportTap,
@@ -166,6 +168,15 @@ class ThreadBottomBar extends StatelessWidget {
         selected: hasFavorated,
         onTap: () {},
       ),
+      if (onDislikeTap != null)
+        _ThreadBottomBarActionSpec(
+          id: 'dislike',
+          icon: Icons.thumb_down_outlined,
+          label: '点踩',
+          selected: false,
+          overflowOnly: true,
+          onTap: onDislikeTap,
+        ),
       if (showReportAction)
         _ThreadBottomBarActionSpec(
           id: 'report',

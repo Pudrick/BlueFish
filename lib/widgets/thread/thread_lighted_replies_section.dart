@@ -15,6 +15,8 @@ class ThreadLightedRepliesSection extends StatefulWidget {
   final double contentMaxWidth;
   final String? viewerPuid;
   final VoidCallback? Function(SingleReplyFloor reply)? onLightTapBuilder;
+  final VoidCallback? Function(SingleReplyFloor reply)? onUnlightTapBuilder;
+  final VoidCallback? Function(SingleReplyFloor reply)? onReportTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)? onGiftTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)? onReplyTapBuilder;
   final VoidCallback? Function(SingleReplyFloor reply)? onReplyChainTapBuilder;
@@ -34,6 +36,8 @@ class ThreadLightedRepliesSection extends StatefulWidget {
     required this.contentMaxWidth,
     this.viewerPuid,
     this.onLightTapBuilder,
+    this.onUnlightTapBuilder,
+    this.onReportTapBuilder,
     this.onGiftTapBuilder,
     this.onReplyTapBuilder,
     this.onReplyChainTapBuilder,
@@ -117,6 +121,12 @@ class _ThreadLightedRepliesSectionState
                         cardKeyPrefix: 'lighted-reply-floor-card',
                         viewerPuid: widget.viewerPuid,
                         onLightTap: widget.onLightTapBuilder?.call(replies[i]),
+                        onUnlightTap: widget.onUnlightTapBuilder?.call(
+                          replies[i],
+                        ),
+                        onReportTap: widget.onReportTapBuilder?.call(
+                          replies[i],
+                        ),
                         onGiftTap: widget.onGiftTapBuilder?.call(replies[i]),
                         onReplyTap: widget.onReplyTapBuilder?.call(replies[i]),
                         onReplyChainTap: widget.onReplyChainTapBuilder?.call(
