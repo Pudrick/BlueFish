@@ -70,6 +70,12 @@ dependency_overrides:
       ref: chewie-Windows
       path: packages/fwfh_chewie
 
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+      name_windows: winsqlite3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
